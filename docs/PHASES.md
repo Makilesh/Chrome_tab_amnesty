@@ -98,6 +98,11 @@ swap identities across a restart.
 
 **Protocol note:** if fewer than five browsers can be collected, the protocol is amended here
 first and the shortfall is stated in the result — the gate is not restated to match what was got.
+Chrome gates "Organize tabs" by sign-in, UI language and region; a browser without it counts for
+the ablation half only, and the result must say how many of the five had it.
+
+**Fixtures so far:** `makilesh` (2026-09-12) — 12 http tabs, all history-backfilled, no Chrome
+organiser on the profile. Pipeline smoke test; does not count toward the five.
 
 ---
 

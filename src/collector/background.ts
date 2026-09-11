@@ -437,6 +437,8 @@ async function refreshBackfilled(): Promise<void> {
 }
 
 chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfilled));
+// Also on every worker start: idempotent, cheap, and independent of whether onInstalled fired.
+void refreshBackfilled();
 chrome.runtime.onStartup.addListener(() => void rebindAll());
 
 // The x-ray page is read-only and reads IndexedDB directly; no messaging surface is needed.
