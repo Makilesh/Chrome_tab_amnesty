@@ -139,3 +139,38 @@ Append; never rewrite history.
 - **Decision:** The integration check opens the x-ray page, screenshots it, greps the rendered text for §6.2 words and for "N tabs", and clicks Export to prove the shareable file downloads, loads, and is redacted (url reduced to host+path, query values blank, leadText empty).
 - **Rejected:** Trusting the code review for §6 compliance.
 - **Why:** The brief says each §6 rule has a visible failure you can check for; so check for it.
+
+## 2026-09-12 — The gate is measured on the TS partition; Python clustering is opt-in
+- **Decision:** `ta-score`, `ta-ablate` and `ta-report` run `tools/cluster-cli.ts` (the shipped code) and score what it produced. Ablation partitions come from the TS CLI's `--ablate` (one partition per beta config). Python-side clustering is behind `--python`, whose output is labelled "PYTHON BENCH … not a gate number". Every score/ablate/report header prints the parity result next to `partition source:`; a parity failure prints a do-not-report warning and exits 1.
+- **Rejected:** The previous wiring, where score/ablate/report clustered in Python by default.
+- **Why:** As wired before, Phase 0 would have passed or failed on numbers the extension never produced. Reviewer catch.
+
+## 2026-09-12 — Parity threshold 0.98 (observed 1.0); parity runs inside `npm run check` and over every fixture
+- **Decision:** `MIN_ARI = 0.98`; anything below is a bug to investigate. `npm run parity` with no args checks every `fixtures/<name>.json`; `npm run check` = build + integration check + parity.
+- **Rejected:** 0.90 (a couple of whole groups on 137 tabs), and parity as an optional command.
+- **Why:** Signals agree to 1e-15, so any partition divergence is algorithmic, not arithmetic, and should be reproducible rather than tolerated.
+
+## 2026-09-12 — SUPERSEDES "graphology-communities-louvain" / "networkx louvain": one deterministic Louvain ported to both sides
+- **Decision:** `src/cluster/louvain.ts` and `analysis/tabamnesty/louvain.py` implement standard two-phase Louvain with resolution, visiting nodes in input order, moving only on strictly positive gain (> 1e-12) with first-found tie-breaking, renumbering communities by first appearance, and summing aggregate weights in node order. `graphology` stays as the graph structure; `graphology-communities-louvain` is removed. This deviates from the §8 stack line naming that package — flagged to the user in the review response.
+- **Rejected:** Keeping the two library Louvains and tolerating ARI ≥ 0.9 between them.
+- **Why:** With the positive-control fixtures the two libraries, both seeded, agreed only at ARI 0.77–0.79 — signals identical to 1e-15, partitions differing purely by visiting order on a dense near-uniform graph. After the port, all four fixtures give partition ARI 1.0000 between TS and Python.
+
+## 2026-09-12 — S8 co-activation normalised by the strongest partner, not by activation count
+- **Decision:** S8 = c(a,b) / max(strongest(a), strongest(b), c(a,b)) where c is the pair's count summed over both sides and strongest(x) is x's heaviest pair. 1.0 = "the tab you switch to most".
+- **Rejected:** c(a,b) / (2 · min(activationCount)) — the earlier choice.
+- **Why:** The co-activation positive control showed the old normalisation flattening every pair in a well-connected project to ~1/k (within-project mean 0.10); zeroing S8 changed ARI by 0.004, i.e. the clusterer could not use it. With strongest-partner normalisation the same fixture goes from ARI 0.77 to 0.19 when S8 is zeroed.
+
+## 2026-09-12 — Positive controls for the ablation: `synthetic_lineage`, `synthetic_coactive`, `synthetic_temporal`
+- **Decision:** Four projects on the same host with the same vocabulary, interleaved in bursts of 1–4 tabs, distinguishable by exactly one behavioural signal. Tests assert: zeroing S1 drops ARI ≥ 0.10 on the lineage fixture (0.27 → 0.10); zeroing S8 drops ≥ 0.30 on the co-activation fixture (0.77 → 0.19); on the temporal fixture zeroing S2 alone changes nothing (S3, same session, encodes the same boundary) and zeroing S2+S3 craters (1.0 → 0.07). Mechanics only; never count toward the gate.
+- **Rejected:** Strict one-tab round-robin interleaving. With the brief's weights it defeats lineage even at full S1 (ARI −0.07): every tab's nearest neighbours in time and on the strip belong to other projects, so S2+S3+S4 (≈4.5 combined) outvote S1 (≈0.9 mean, since 1/(1+d) decays fast inside a 10-tab tree).
+- **Why:** Reviewer point: without a positive control a flat real-browser ablation is uninterpretable. Two findings to carry into the gate reading: (1) on interleaved work the contemporaneity signals actively mislead — on the lineage fixture zeroing S2 *raises* ARI from 0.27 to 1.0; (2) the gate's "zero S1/S2/S8" run leaves S3 standing, so it under-states how much timing contributes. Weights were not tuned on any of this — that is what `refit.py` on labelled real pairs is for.
+
+## 2026-09-12 — Known limitation: startup re-bind can attach a trace to the wrong duplicate-URL tab
+- **Decision:** Documented, not fixed. `findOrphanFor` matches open orphan traces by URL, preferring the same window and then the nearest strip index. Two tabs on the same URL (common: two copies of the same issue, doc or dashboard) can swap identities across a restart, carrying `openerTraceId`, `coActive` and activity with them.
+- **Rejected:** Matching on (url, title, index) — title is identical too; using session-restore ordering — not exposed to extensions.
+- **Why:** Window ids are reassigned on restart, so nothing stronger than URL is available. Relevant when interpreting S1's ablation delta on a fixture from a browser that has been restarted: some lineage will be attached to the wrong twin.
+
+## 2026-09-12 — Lane ordering invariant is a comment, not a runtime check
+- **Decision:** `background.ts` names the invariant (tab lanes may await the activity lane; the activity lane never awaits a tab lane) and lists the functions bound by it.
+- **Rejected:** A module-level "inside activity lane" flag that throws on violation.
+- **Why:** A flag set across an `await` is also seen by unrelated events that fire while the activity lane is waiting on IndexedDB, so it would throw on legitimate concurrent work; service workers have no AsyncLocalStorage to scope it properly.

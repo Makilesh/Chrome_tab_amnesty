@@ -9,14 +9,12 @@ import math
 from dataclasses import dataclass, field
 
 import networkx as nx
-from networkx.algorithms.community import louvain_communities
 
 from .config import (MAX_COMMUNITY, RESOLUTION_ITERS, SIGNALS, TARGET_HI, TARGET_LO, W_MIN,
                      load_betas)
+from .louvain import louvain
 from .signals import Context, affinity, eligible, signal_vector
 from .traces import Trace
-
-SEED = 0  # Louvain is randomised; fixed so runs are reproducible
 
 
 @dataclass
@@ -61,9 +59,9 @@ def build_graph(traces: list[Trace], betas: dict[str, float], w_min: float = W_M
 
 
 def _louvain(g: nx.Graph, resolution: float) -> list[set[str]]:
-    if g.number_of_edges() == 0:
-        return [{n} for n in g.nodes]
-    return [set(c) for c in louvain_communities(g, weight="weight", resolution=resolution, seed=SEED)]
+    """Our deterministic Louvain (louvain.py), not networkx's — see that file for why."""
+    edges = [(a, b, d["weight"]) for a, b, d in g.edges(data=True)]
+    return [set(c) for c in louvain(list(g.nodes), edges, resolution)]
 
 
 def partition_to_target(g: nx.Graph, lo: int = TARGET_LO, hi: int = TARGET_HI,

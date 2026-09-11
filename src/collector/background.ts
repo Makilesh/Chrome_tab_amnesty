@@ -133,6 +133,15 @@ const chains = new Map<number, Promise<unknown>>();
 /** Activity handlers touch the shared activeNow / recentActivations meta, so they share a lane. */
 const ACTIVITY_LANE = -1;
 
+/**
+ * LANE ORDERING INVARIANT: a tab lane may await the activity lane (onRemoved does); the activity
+ * lane must never await a tab lane. Lanes are FIFO promise chains, so a cycle
+ * (tab -> activity -> tab) would deadlock the worker silently — no error, just handlers that never
+ * run again until Chrome kills the worker. There is no runtime check: a flag set across an await
+ * would misfire on unrelated concurrent events, and workers have no AsyncLocalStorage. The
+ * structural rule instead: nothing that runs inside `serial(ACTIVITY_LANE, ...)` — `foreground`,
+ * `accrueDwell`, the onFocusChanged body, the reset in rebindAll — may call `serial` at all.
+ */
 function serial<T>(tabId: number, fn: () => Promise<T>): Promise<T> {
   const prev = chains.get(tabId) ?? Promise.resolve();
   const next = prev.then(fn, fn);
