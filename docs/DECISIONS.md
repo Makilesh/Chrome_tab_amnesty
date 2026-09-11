@@ -174,3 +174,13 @@ Append; never rewrite history.
 - **Decision:** `background.ts` names the invariant (tab lanes may await the activity lane; the activity lane never awaits a tab lane) and lists the functions bound by it.
 - **Rejected:** A module-level "inside activity lane" flag that throws on violation.
 - **Why:** A flag set across an `await` is also seen by unrelated events that fire while the activity lane is waiting on IndexedDB, so it would throw on legitimate concurrent work; service workers have no AsyncLocalStorage to scope it properly.
+
+## 2026-09-12 — Backfill prefers the latest non-reload visit (first real export exposed it)
+- **Decision:** `lastVisit()` picks the most recent visit whose transition is not `reload`, falling back to the most recent of any kind; `onInstalled` re-derives `openedAt`/`transition` for already-backfilled traces.
+- **Rejected:** Latest visit regardless of type (the first rule); earliest visit ever (a tab can be opened long after the first visit to its URL).
+- **Why:** The first real export (22 tabs) had every transition = `reload` and every `openedAt` inside the five minutes after Chrome restored the session, because session restore writes a `reload` visit. That collapses S2/S3 to "one burst". Synthetic data could not have shown this.
+
+## 2026-09-12 — First real fixture: `makilesh`, 12 http tabs, pipeline smoke test only
+- **Decision:** Recorded as a real export but explicitly NOT a gate browser: 12 http tabs (gate wants 80+), all backfilled (no lineage, no co-activation), no digests (content scripts do not reach pre-install tabs). The TS clusterer put all 9 eligible tabs in one community with 13 excluded (chrome://, extension pages, local PDFs, Gmail, Google search).
+- **Rejected:** Counting it toward the five.
+- **Why:** The protocol note in PHASES.md: the gate is not restated to match what was got.
