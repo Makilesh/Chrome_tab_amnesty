@@ -81,8 +81,9 @@ class Context:
             cur = self.parent.get(cur)  # ids outside the corpus have no parent entry -> root
         if cur is not None and cur in self.depth:
             base_depth, base_root = self.depth[cur], self.root[cur]
-        else:  # reached a root (or a cycle, treated as a root at the last node)
+        else:  # reached a root (or a cycle, cut at the last node so the forest stays a forest)
             base_depth, base_root = -1, chain[-1]
+            self.parent[chain[-1]] = None
         for i, node in enumerate(reversed(chain)):
             self.depth[node] = base_depth + 1 + i
             self.root[node] = base_root

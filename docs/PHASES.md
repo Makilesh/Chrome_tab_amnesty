@@ -31,17 +31,17 @@ recovering someone's real projects?
 - [x] Incognito never touched
 
 **b. Clusterer** (`src/cluster/`, zero `chrome.*` imports, runs in plain Node)
-- [ ] `segment(traces, gapMs = 25*60_000)` — cut on gap > gapMs OR
+- [~] `segment(traces, gapMs = 25*60_000)` — cut on gap > gapMs OR
       `NEW_INTENT.has(transition) && !openerTraceId`, `NEW_INTENT = {typed, generated, auto_bookmark}`
-- [ ] `affinity(a, b)` — weighted sum, weights in one exported const (S1 3.0, S2 2.0, S8 1.5,
+- [~] `affinity(a, b)` — weighted sum, weights in one exported const (S1 3.0, S2 2.0, S8 1.5,
       S3 1.5, S6 1.2, S4 1.0, S7 1.0, S5 0.8, N1 −0.5)
-- [ ] Exclusion (not down-weighting) of pinned tabs and ambient hosts (mail, calendar, chat,
+- [~] Exclusion (not down-weighting) of pinned tabs and ambient hosts (mail, calendar, chat,
       music, search results)
-- [ ] Weighted undirected graph, prune edges below `w_min`, Louvain via
+- [~] Weighted undirected graph, prune edges below `w_min`, Louvain via
       `graphology-communities-louvain` (not connected components, not single-link)
-- [ ] `partitionToTarget(graph, lo=3, hi=9)` — binary-search resolution over ~8 iterations
-- [ ] Split communities over ~15 tabs by re-running Louvain on the induced subgraph
-- [ ] Orphans → `looseEnds` array; never a "Miscellaneous" group
+- [~] `partitionToTarget(graph, lo=3, hi=9)` — binary-search resolution over ~8 iterations
+- [~] Split communities over ~15 tabs by re-running Louvain on the induced subgraph
+- [~] Orphans → `looseEnds` array; never a "Miscellaneous" group
 - [ ] Unit tests for all of the above
 
 **c. Scoring harness** (Node CLI)
@@ -55,10 +55,10 @@ recovering someone's real projects?
       `fixtures/<name>.chrome.json` `{ method, capturedAt, groups[], ungrouped[] }`
 - [ ] `npm run score` prints ARI (primary), pairwise precision/recall/F1, cluster count for both
       partitions against labels
-- [ ] ARI + pairwise P/R/F1 via `sklearn` in `analysis/score.py` (no hand-rolled ARI, no TS metrics)
+- [x] ARI + pairwise P/R/F1 via `sklearn` in `analysis/score.py` (no hand-rolled ARI, no TS metrics)
 - [ ] Ungrouped convention printed in score header + README: each ungrouped / loose-end tab is
       its own singleton cluster, applied identically to both partitions
-- [ ] ARI reported on the full tab set AND on the subset both partitions placed
+- [x] ARI reported on the full tab set AND on the subset both partitions placed
 - [ ] `npm run ablate` — TS cluster CLI emits one partition per beta-override config;
       `analysis/ablate.py` scores and tabulates ARI delta per signal
 - [ ] `npm run score` / `npm run ablate` are thin wrappers; extension builds with zero Python

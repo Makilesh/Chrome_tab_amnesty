@@ -7,3 +7,6 @@ analysis/.venv/
 __pycache__/
 fixtures/*.full.json
 chrome/
+fixtures/synthetic*.json
+fixtures/*.partition.json
+fixtures/report.png

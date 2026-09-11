@@ -1,0 +1,3188 @@
+{
+ "schemaVersion": 1,
+ "exportedAt": 1757558440000,
+ "mode": "full",
+ "_synthetic": true,
+ "traceCount": 83,
+ "openedAtMin": 1757496400000,
+ "openedAtMax": 1757558440000,
+ "traces": [
+  {
+   "traceId": "bc89e2b0-db58-403e-a016-50436d01c23d",
+   "tabId": 1007,
+   "windowId": 1,
+   "index": 7,
+   "openerTraceId": "f627ed8f-454e-4462-ba01-d1a423e77acd",
+   "openedAt": 1757503642000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757503642000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "284d49d1-11b7-4f21-807b-6b082fefeaed": 1,
+    "8ceface9-05d0-412b-8d23-1742e34cb9e8": 1,
+    "12f9bd08-3c28-4926-8058-31287832d0dd": 1
+   },
+   "url": "https://github.com/acme/deploy/deploy/2",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "deploy",
+    "2"
+   ],
+   "queryKeys": {},
+   "title": "deploy incident 4",
+   "digest": {
+    "description": "deploy incident 4. Page about acme deploy deploy 2.",
+    "headings": [
+     "deploy incident 4"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757503645000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "a02bfe43-3212-48c9-9fb8-b2193e412a27",
+   "tabId": 1031,
+   "windowId": 1,
+   "index": 31,
+   "openerTraceId": "38ece289-f4dc-48e8-bf7d-2950c05dce21",
+   "openedAt": 1757514684000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757514684000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "c8ea35be-2b0f-48f1-bbc4-84ba42442c58": 1,
+    "84119b24-db00-4050-bfae-24cc586c7e7b": 1
+   },
+   "url": "https://notion.so/acme/website/pricing/pricing/14",
+   "host": "notion.so",
+   "eTLD1": "notion.so",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "pricing",
+    "14"
+   ],
+   "queryKeys": {},
+   "title": "tiers plans 2",
+   "digest": {
+    "description": "tiers plans 2. Page about acme website pricing pricing 14.",
+    "headings": [
+     "tiers plans 2"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757514687000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "e874b038-12de-42f6-a19d-95647f5c519f",
+   "tabId": 2020,
+   "windowId": 2,
+   "index": 20,
+   "openerTraceId": "a2528bc1-52c1-43ec-84d9-c0f63f1c9cbc",
+   "openedAt": 1757529492000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529492000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "46288bd6-d062-4a3b-947d-7ea1e8770b4a": 1
+   },
+   "url": "https://maps.google.com/property/flat/flat/6",
+   "host": "maps.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "property",
+    "flat",
+    "flat",
+    "6"
+   ],
+   "queryKeys": {},
+   "title": "flat flat 3",
+   "digest": {
+    "description": "flat flat 3. Page about property flat flat 6.",
+    "headings": [
+     "flat flat 3"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529495000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "284d49d1-11b7-4f21-807b-6b082fefeaed",
+   "tabId": 1012,
+   "windowId": 1,
+   "index": 12,
+   "openerTraceId": "12f9bd08-3c28-4926-8058-31287832d0dd",
+   "openedAt": 1757504180000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757504180000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "bc89e2b0-db58-403e-a016-50436d01c23d": 1,
+    "5fd65d2a-66db-42ae-99fd-799748363fb3": 1,
+    "51628b97-c061-4ecd-b6f1-334a7f603493": 1,
+    "ceec846a-79e2-45f1-98a4-579b8480a57b": 1
+   },
+   "url": "https://docs.aws.amazon.com/acme/deploy/deploy/7",
+   "host": "docs.aws.amazon.com",
+   "eTLD1": "amazon.com",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "deploy",
+    "7"
+   ],
+   "queryKeys": {},
+   "title": "k8s k8s 76",
+   "digest": {
+    "description": "k8s k8s 76. Page about acme deploy deploy 7.",
+    "headings": [
+     "k8s k8s 76"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757504183000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "96a89cde-2d77-4f23-a685-9dc895a8ac3b",
+   "tabId": 1044,
+   "windowId": 1,
+   "index": 44,
+   "openerTraceId": "e472c904-a042-42c0-bf72-cb8124d22a47",
+   "openedAt": 1757537786000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537786000,
+   "activationCount": 7,
+   "dwellMs": 20000,
+   "coActive": {
+    "5674d981-4542-4226-bc6b-5f0924754dcd": 1,
+    "c81928f8-0764-4977-b32b-03158177a473": 2,
+    "f17ee9ce-a3ec-4f1e-83ac-6ec2593a68aa": 2,
+    "4ef63561-1217-4674-9463-3cb06cdf767c": 1
+   },
+   "url": "https://docs.python.org/questions/pandas/pandas/11",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "pandas",
+    "11"
+   ],
+   "queryKeys": {},
+   "title": "groupby error 96",
+   "digest": {
+    "description": "groupby error 96. Page about questions pandas pandas 11.",
+    "headings": [
+     "groupby error 96"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537789000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f2142f2d-42c6-41ac-8608-707d2b905649",
+   "tabId": 1025,
+   "windowId": 1,
+   "index": 25,
+   "openerTraceId": "3dccd867-536d-42f2-9a4e-56218cbb602c",
+   "openedAt": 1757513929000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513929000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "5a2de450-cf74-4d40-8a5a-846467823bb9": 1,
+    "530014b8-8d25-4604-9169-6cd7d77b4f5b": 1,
+    "84119b24-db00-4050-bfae-24cc586c7e7b": 1
+   },
+   "url": "https://notion.so/acme/website/pricing/tiers/8",
+   "host": "notion.so",
+   "eTLD1": "notion.so",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "8"
+   ],
+   "queryKeys": {},
+   "title": "plans tiers 14",
+   "digest": {
+    "description": "plans tiers 14. Page about acme website pricing tiers 8.",
+    "headings": [
+     "plans tiers 14"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513932000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "42529b59-2beb-4f66-8230-57c02ba7f41e",
+   "tabId": 1017,
+   "windowId": 1,
+   "index": 17,
+   "openerTraceId": "84119b24-db00-4050-bfae-24cc586c7e7b",
+   "openedAt": 1757513056000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513056000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "afb8abb6-dfdf-457e-904e-7eb439700867": 1
+   },
+   "url": "https://github.com/acme/website/pricing/landing/0",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "landing",
+    "0"
+   ],
+   "queryKeys": {},
+   "title": "plans landing 8",
+   "digest": {
+    "description": "plans landing 8. Page about acme website pricing landing 0.",
+    "headings": [
+     "plans landing 8"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513059000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "12f9bd08-3c28-4926-8058-31287832d0dd",
+   "tabId": 1010,
+   "windowId": 1,
+   "index": 10,
+   "openerTraceId": "bc89e2b0-db58-403e-a016-50436d01c23d",
+   "openedAt": 1757504016000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757504016000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "ceec846a-79e2-45f1-98a4-579b8480a57b": 1,
+    "bc89e2b0-db58-403e-a016-50436d01c23d": 1
+   },
+   "url": "https://grafana.acme.io/acme/deploy/deploy/5",
+   "host": "grafana.acme.io",
+   "eTLD1": "acme.io",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "deploy",
+    "5"
+   ],
+   "queryKeys": {},
+   "title": "incident deploy 54",
+   "digest": {
+    "description": "incident deploy 54. Page about acme deploy deploy 5.",
+    "headings": [
+     "incident deploy 54"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757504019000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "51e84a57-b251-4249-9059-58fbf7b395f0",
+   "tabId": 2016,
+   "windowId": 2,
+   "index": 16,
+   "openerTraceId": "46288bd6-d062-4a3b-947d-7ea1e8770b4a",
+   "openedAt": 1757529167000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529167000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://rightmove.co.uk/property/flat/flat/2",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "flat",
+    "2"
+   ],
+   "queryKeys": {},
+   "title": "bedroom flat 36",
+   "digest": {
+    "description": "bedroom flat 36. Page about property flat flat 2.",
+    "headings": [
+     "bedroom flat 36"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529170000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "5674d981-4542-4226-bc6b-5f0924754dcd",
+   "tabId": 1041,
+   "windowId": 1,
+   "index": 41,
+   "openerTraceId": "3602890e-8d80-4582-9cb2-21b0469cfbd9",
+   "openedAt": 1757537332000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537332000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "96a89cde-2d77-4f23-a685-9dc895a8ac3b": 1,
+    "a295712c-a5b1-41d5-8a55-3f9b9a015e15": 1
+   },
+   "url": "https://stackoverflow.com/questions/pandas/error/8",
+   "host": "stackoverflow.com",
+   "eTLD1": "stackoverflow.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "error",
+    "8"
+   ],
+   "queryKeys": {},
+   "title": "pandas error 31",
+   "digest": {
+    "description": "pandas error 31. Page about questions pandas error 8.",
+    "headings": [
+     "pandas error 31"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537335000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "e7422079-bf26-4027-a5b6-aa319a17b639",
+   "tabId": 2006,
+   "windowId": 2,
+   "index": 6,
+   "openerTraceId": "b6387fd0-4394-4920-a326-af6e4afa7155",
+   "openedAt": 1757520976000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757520976000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "13b17aa7-f64d-49d8-a107-0b63987c7a2b": 1,
+    "cfb680ea-3ec7-43a2-92fe-baa583f655fa": 1,
+    "28a89b7b-331e-4407-aaa2-9e0b43a49a28": 1
+   },
+   "url": "https://arxiv.org/abs/2406/attention/4",
+   "host": "arxiv.org",
+   "eTLD1": "arxiv.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "attention",
+    "4"
+   ],
+   "queryKeys": {},
+   "title": "survey survey 99",
+   "digest": {
+    "description": "survey survey 99. Page about abs 2406 attention 4.",
+    "headings": [
+     "survey survey 99"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757520979000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "68d5331c-d8a8-43e0-b68b-12712befc010",
+   "tabId": 1002,
+   "windowId": 1,
+   "index": 2,
+   "openerTraceId": null,
+   "openedAt": 1757496400000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757496400000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://open.spotify.com/",
+   "host": "open.spotify.com",
+   "eTLD1": "spotify.com",
+   "pathTokens": [],
+   "queryKeys": {},
+   "title": "Spotify",
+   "digest": {
+    "description": "Spotify. Page about .",
+    "headings": [
+     "Spotify"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757496403000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "8732ebb4-418d-49a2-bf96-42ac192ecf47",
+   "tabId": 2009,
+   "windowId": 2,
+   "index": 9,
+   "openerTraceId": "e7422079-bf26-4027-a5b6-aa319a17b639",
+   "openedAt": 1757521345000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757521345000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "b6387fd0-4394-4920-a326-af6e4afa7155": 2
+   },
+   "url": "https://docs.python.org/abs/2406/transformers/7",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "transformers",
+    "7"
+   ],
+   "queryKeys": {},
+   "title": "attention transformers 47",
+   "digest": {
+    "description": "attention transformers 47. Page about abs 2406 transformers 7.",
+    "headings": [
+     "attention transformers 47"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757521348000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "6d1f9725-cb11-4edb-8615-d20690963a92",
+   "tabId": 2017,
+   "windowId": 2,
+   "index": 17,
+   "openerTraceId": "51e84a57-b251-4249-9059-58fbf7b395f0",
+   "openedAt": 1757529379000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529379000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "66ee088b-f5d7-4fe3-b80f-66f2ffb38768": 2,
+    "da7c76b4-f70b-4dc0-a440-bfb8de223259": 1
+   },
+   "url": "https://rightmove.co.uk/property/flat/bedroom/3",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "bedroom",
+    "3"
+   ],
+   "queryKeys": {},
+   "title": "bedroom rent 50",
+   "digest": {
+    "description": "bedroom rent 50. Page about property flat bedroom 3.",
+    "headings": [
+     "bedroom rent 50"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529382000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "c8ea35be-2b0f-48f1-bbc4-84ba42442c58",
+   "tabId": 1019,
+   "windowId": 1,
+   "index": 19,
+   "openerTraceId": "84119b24-db00-4050-bfae-24cc586c7e7b",
+   "openedAt": 1757513277000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513277000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "a02bfe43-3212-48c9-9fb8-b2193e412a27": 1,
+    "530014b8-8d25-4604-9169-6cd7d77b4f5b": 1,
+    "08be8392-2abc-41d3-b4c5-8db132384f57": 1
+   },
+   "url": "https://github.com/acme/website/pricing/pricing/2",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "pricing",
+    "2"
+   ],
+   "queryKeys": {},
+   "title": "tiers landing 77",
+   "digest": {
+    "description": "tiers landing 77. Page about acme website pricing pricing 2.",
+    "headings": [
+     "tiers landing 77"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513280000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "4de8a530-00bd-4a27-bd2e-68ac9182870f",
+   "tabId": 1038,
+   "windowId": 1,
+   "index": 38,
+   "openerTraceId": "a295712c-a5b1-41d5-8a55-3f9b9a015e15",
+   "openedAt": 1757536939000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757536939000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "c81928f8-0764-4977-b32b-03158177a473": 1,
+    "4ef63561-1217-4674-9463-3cb06cdf767c": 1
+   },
+   "url": "https://docs.python.org/questions/pandas/pandas/5",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "pandas",
+    "5"
+   ],
+   "queryKeys": {},
+   "title": "error groupby 73",
+   "digest": {
+    "description": "error groupby 73. Page about questions pandas pandas 5.",
+    "headings": [
+     "error groupby 73"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536942000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "19c78b72-e07c-4b5e-8cba-2c00430e6e95",
+   "tabId": 2022,
+   "windowId": 2,
+   "index": 22,
+   "openerTraceId": "952b3149-04c0-467a-a15c-fd7fc536466f",
+   "openedAt": 1757529625000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529625000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "952b3149-04c0-467a-a15c-fd7fc536466f": 2,
+    "66ee088b-f5d7-4fe3-b80f-66f2ffb38768": 2
+   },
+   "url": "https://rightmove.co.uk/property/flat/bedroom/8",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "bedroom",
+    "8"
+   ],
+   "queryKeys": {},
+   "title": "rent rent 41",
+   "digest": {
+    "description": "rent rent 41. Page about property flat bedroom 8.",
+    "headings": [
+     "rent rent 41"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529628000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "5a2de450-cf74-4d40-8a5a-846467823bb9",
+   "tabId": 1029,
+   "windowId": 1,
+   "index": 29,
+   "openerTraceId": "da012c9c-83ef-4ac0-9039-36a687a1317a",
+   "openedAt": 1757514536000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757514536000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "f2142f2d-42c6-41ac-8608-707d2b905649": 1
+   },
+   "url": "https://github.com/acme/website/pricing/tiers/12",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "12"
+   ],
+   "queryKeys": {},
+   "title": "landing pricing 95",
+   "digest": {
+    "description": "landing pricing 95. Page about acme website pricing tiers 12.",
+    "headings": [
+     "landing pricing 95"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757514539000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "a2dd6fa9-35f0-4670-80f0-a8f39271f6de",
+   "tabId": 1047,
+   "windowId": 1,
+   "index": 47,
+   "openerTraceId": null,
+   "openedAt": 1757542287000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757542287000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "614cfb68-c64d-49e8-b80a-183b2d5a3b0b": 1,
+    "2ea6f433-f258-4972-b2de-f0fdf6b897f6": 1
+   },
+   "url": "https://booking.com/hotel/lisbon",
+   "host": "booking.com",
+   "eTLD1": "booking.com",
+   "pathTokens": [
+    "hotel",
+    "lisbon"
+   ],
+   "queryKeys": {},
+   "title": "Lisbon hotel overview",
+   "digest": {
+    "description": "Lisbon hotel overview. Page about hotel lisbon.",
+    "headings": [
+     "Lisbon hotel overview"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757542290000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "d7c52215-e0a8-447c-a779-68b073c23bde",
+   "tabId": 1001,
+   "windowId": 1,
+   "index": 1,
+   "openerTraceId": null,
+   "openedAt": 1757496400000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757496400000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://mail.google.com/",
+   "host": "mail.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [],
+   "queryKeys": {},
+   "title": "Inbox",
+   "digest": {
+    "description": "Inbox. Page about .",
+    "headings": [
+     "Inbox"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757496403000,
+   "pinned": true,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "46288bd6-d062-4a3b-947d-7ea1e8770b4a",
+   "tabId": 2013,
+   "windowId": 2,
+   "index": 13,
+   "openerTraceId": null,
+   "openedAt": 1757528813000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757528813000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "952b3149-04c0-467a-a15c-fd7fc536466f": 1,
+    "e874b038-12de-42f6-a19d-95647f5c519f": 1,
+    "da7c76b4-f70b-4dc0-a440-bfb8de223259": 1
+   },
+   "url": "https://rightmove.co.uk/property/flat",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat"
+   ],
+   "queryKeys": {},
+   "title": "Flat rent overview",
+   "digest": {
+    "description": "Flat rent overview. Page about property flat.",
+    "headings": [
+     "Flat rent overview"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757528816000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "da012c9c-83ef-4ac0-9039-36a687a1317a",
+   "tabId": 1027,
+   "windowId": 1,
+   "index": 27,
+   "openerTraceId": "f42aa916-e360-403e-bc22-ffd0d1c97865",
+   "openedAt": 1757514256000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757514256000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://figma.com/acme/website/pricing/landing/10",
+   "host": "figma.com",
+   "eTLD1": "figma.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "landing",
+    "10"
+   ],
+   "queryKeys": {},
+   "title": "plans landing 91",
+   "digest": {
+    "description": "plans landing 91. Page about acme website pricing landing 10.",
+    "headings": [
+     "plans landing 91"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757514259000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "38ece289-f4dc-48e8-bf7d-2950c05dce21",
+   "tabId": 1028,
+   "windowId": 1,
+   "index": 28,
+   "openerTraceId": "f2142f2d-42c6-41ac-8608-707d2b905649",
+   "openedAt": 1757514415000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757514415000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "9c6ad67d-f281-407d-a807-c4524cbd5013": 1,
+    "b86cd9d4-7e25-4dd7-ac20-00131dd56013": 1,
+    "530014b8-8d25-4604-9169-6cd7d77b4f5b": 1
+   },
+   "url": "https://github.com/acme/website/pricing/pricing/11",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "pricing",
+    "11"
+   ],
+   "queryKeys": {},
+   "title": "landing plans 68",
+   "digest": {
+    "description": "landing plans 68. Page about acme website pricing pricing 11.",
+    "headings": [
+     "landing plans 68"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757514418000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "4a02e032-956f-4b1e-a5b5-aa8ab09e518b",
+   "tabId": 1008,
+   "windowId": 1,
+   "index": 8,
+   "openerTraceId": "8ceface9-05d0-412b-8d23-1742e34cb9e8",
+   "openedAt": 1757503668000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757503668000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "413f09af-8b07-4d6b-a6e7-0dc8091d86bf": 1
+   },
+   "url": "https://grafana.acme.io/acme/deploy/deploy/3",
+   "host": "grafana.acme.io",
+   "eTLD1": "acme.io",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "deploy",
+    "3"
+   ],
+   "queryKeys": {},
+   "title": "rollout k8s 93",
+   "digest": {
+    "description": "rollout k8s 93. Page about acme deploy deploy 3.",
+    "headings": [
+     "rollout k8s 93"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757503671000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "2ea6f433-f258-4972-b2de-f0fdf6b897f6",
+   "tabId": 1049,
+   "windowId": 1,
+   "index": 49,
+   "openerTraceId": "f6482a7b-9d98-4e36-8d14-f99412eee63b",
+   "openedAt": 1757542612000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757542612000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "65a42ae2-d9f1-4807-bbe9-9aae960bdc36": 1,
+    "77bae5ff-391c-4ad0-bfff-f063ae3e6365": 1,
+    "a2dd6fa9-35f0-4670-80f0-a8f39271f6de": 1
+   },
+   "url": "https://skyscanner.net/hotel/lisbon/lisbon/1",
+   "host": "skyscanner.net",
+   "eTLD1": "skyscanner.net",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "lisbon",
+    "1"
+   ],
+   "queryKeys": {},
+   "title": "flight flight 1",
+   "digest": {
+    "description": "flight flight 1. Page about hotel lisbon lisbon 1.",
+    "headings": [
+     "flight flight 1"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757542615000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "e472c904-a042-42c0-bf72-cb8124d22a47",
+   "tabId": 1042,
+   "windowId": 1,
+   "index": 42,
+   "openerTraceId": "5674d981-4542-4226-bc6b-5f0924754dcd",
+   "openedAt": 1757537557000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537557000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "9f06121b-51eb-45df-b7ed-7441006d64f1": 1
+   },
+   "url": "https://docs.python.org/questions/pandas/groupby/9",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "groupby",
+    "9"
+   ],
+   "queryKeys": {},
+   "title": "groupby dtype 57",
+   "digest": {
+    "description": "groupby dtype 57. Page about questions pandas groupby 9.",
+    "headings": [
+     "groupby dtype 57"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537560000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "08ff773e-e9ed-4d28-88b5-c108a4714c58",
+   "tabId": 2007,
+   "windowId": 2,
+   "index": 7,
+   "openerTraceId": "f07a45c7-46bd-453a-adce-999a381e234d",
+   "openedAt": 1757521078000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757521078000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "dbe8fdfe-a566-485b-8a1d-9d65f606d99b": 1
+   },
+   "url": "https://scholar.google.com/abs/2406/attention/5",
+   "host": "scholar.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "attention",
+    "5"
+   ],
+   "queryKeys": {},
+   "title": "attention transformers 19",
+   "digest": {
+    "description": "attention transformers 19. Page about abs 2406 attention 5.",
+    "headings": [
+     "attention transformers 19"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757521081000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "49382cdc-4070-4121-9ea6-313f0586401b",
+   "tabId": 1043,
+   "windowId": 1,
+   "index": 43,
+   "openerTraceId": "e472c904-a042-42c0-bf72-cb8124d22a47",
+   "openedAt": 1757537736000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537736000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://stackoverflow.com/questions/pandas/error/10",
+   "host": "stackoverflow.com",
+   "eTLD1": "stackoverflow.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "error",
+    "10"
+   ],
+   "queryKeys": {},
+   "title": "pandas error 77",
+   "digest": {
+    "description": "pandas error 77. Page about questions pandas error 10.",
+    "headings": [
+     "pandas error 77"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537739000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "cfb680ea-3ec7-43a2-92fe-baa583f655fa",
+   "tabId": 2001,
+   "windowId": 2,
+   "index": 1,
+   "openerTraceId": null,
+   "openedAt": 1757520324000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757520324000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "e7422079-bf26-4027-a5b6-aa319a17b639": 1,
+    "dbe8fdfe-a566-485b-8a1d-9d65f606d99b": 1
+   },
+   "url": "https://arxiv.org/abs/2406",
+   "host": "arxiv.org",
+   "eTLD1": "arxiv.org",
+   "pathTokens": [
+    "abs",
+    "2406"
+   ],
+   "queryKeys": {},
+   "title": "Attention transformers overview",
+   "digest": {
+    "description": "Attention transformers overview. Page about abs 2406.",
+    "headings": [
+     "Attention transformers overview"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757520327000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "3e040c56-4b61-4bf4-bc07-7921d234c2b1",
+   "tabId": 2021,
+   "windowId": 2,
+   "index": 21,
+   "openerTraceId": "952b3149-04c0-467a-a15c-fd7fc536466f",
+   "openedAt": 1757529586000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529586000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://zoopla.co.uk/property/flat/bedroom/7",
+   "host": "zoopla.co.uk",
+   "eTLD1": "zoopla.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "bedroom",
+    "7"
+   ],
+   "queryKeys": {},
+   "title": "balcony rent 13",
+   "digest": {
+    "description": "balcony rent 13. Page about property flat bedroom 7.",
+    "headings": [
+     "balcony rent 13"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529589000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "bdbe9918-fd60-4c18-ad21-1d2e46bca511",
+   "tabId": 1036,
+   "windowId": 1,
+   "index": 36,
+   "openerTraceId": "f49f82a2-9a5b-4766-8702-06fd4cc55504",
+   "openedAt": 1757536637000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757536637000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "4ef63561-1217-4674-9463-3cb06cdf767c": 1,
+    "c81928f8-0764-4977-b32b-03158177a473": 1,
+    "a295712c-a5b1-41d5-8a55-3f9b9a015e15": 1
+   },
+   "url": "https://stackoverflow.com/questions/pandas/dtype/3",
+   "host": "stackoverflow.com",
+   "eTLD1": "stackoverflow.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "dtype",
+    "3"
+   ],
+   "queryKeys": {},
+   "title": "groupby dtype 39",
+   "digest": {
+    "description": "groupby dtype 39. Page about questions pandas dtype 3.",
+    "headings": [
+     "groupby dtype 39"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536640000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "a947f161-a4ea-4ef1-a61e-0de3309676ec",
+   "tabId": 2011,
+   "windowId": 2,
+   "index": 11,
+   "openerTraceId": "08ff773e-e9ed-4d28-88b5-c108a4714c58",
+   "openedAt": 1757521532000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757521532000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "6e710953-8792-4b52-958a-9b3b060c8598": 1
+   },
+   "url": "https://arxiv.org/abs/2406/attention/9",
+   "host": "arxiv.org",
+   "eTLD1": "arxiv.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "attention",
+    "9"
+   ],
+   "queryKeys": {},
+   "title": "transformers attention 6",
+   "digest": {
+    "description": "transformers attention 6. Page about abs 2406 attention 9.",
+    "headings": [
+     "transformers attention 6"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757521535000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "a295712c-a5b1-41d5-8a55-3f9b9a015e15",
+   "tabId": 1035,
+   "windowId": 1,
+   "index": 35,
+   "openerTraceId": "f49f82a2-9a5b-4766-8702-06fd4cc55504",
+   "openedAt": 1757536422000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757536422000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "5674d981-4542-4226-bc6b-5f0924754dcd": 1,
+    "bdbe9918-fd60-4c18-ad21-1d2e46bca511": 1
+   },
+   "url": "https://github.com/questions/pandas/pandas/2",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "pandas",
+    "2"
+   ],
+   "queryKeys": {},
+   "title": "dtype groupby 7",
+   "digest": {
+    "description": "dtype groupby 7. Page about questions pandas pandas 2.",
+    "headings": [
+     "dtype groupby 7"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536425000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "5fd65d2a-66db-42ae-99fd-799748363fb3",
+   "tabId": 1015,
+   "windowId": 1,
+   "index": 15,
+   "openerTraceId": "ceec846a-79e2-45f1-98a4-579b8480a57b",
+   "openedAt": 1757504549000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757504549000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "8c84a7b9-95ef-4964-b8f1-135cb9a16e69": 2,
+    "f627ed8f-454e-4462-ba01-d1a423e77acd": 1,
+    "284d49d1-11b7-4f21-807b-6b082fefeaed": 1
+   },
+   "url": "https://docs.aws.amazon.com/acme/deploy/incident/10",
+   "host": "docs.aws.amazon.com",
+   "eTLD1": "amazon.com",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "incident",
+    "10"
+   ],
+   "queryKeys": {},
+   "title": "deploy k8s 6",
+   "digest": {
+    "description": "deploy k8s 6. Page about acme deploy incident 10.",
+    "headings": [
+     "deploy k8s 6"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757504552000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "3dccd867-536d-42f2-9a4e-56218cbb602c",
+   "tabId": 1023,
+   "windowId": 1,
+   "index": 23,
+   "openerTraceId": "9c6ad67d-f281-407d-a807-c4524cbd5013",
+   "openedAt": 1757513675000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513675000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "afb8abb6-dfdf-457e-904e-7eb439700867": 1
+   },
+   "url": "https://notion.so/acme/website/pricing/tiers/6",
+   "host": "notion.so",
+   "eTLD1": "notion.so",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "6"
+   ],
+   "queryKeys": {},
+   "title": "plans tiers 83",
+   "digest": {
+    "description": "plans tiers 83. Page about acme website pricing tiers 6.",
+    "headings": [
+     "plans tiers 83"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513678000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "952b3149-04c0-467a-a15c-fd7fc536466f",
+   "tabId": 2019,
+   "windowId": 2,
+   "index": 19,
+   "openerTraceId": "66ee088b-f5d7-4fe3-b80f-66f2ffb38768",
+   "openedAt": 1757529454000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529454000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "46288bd6-d062-4a3b-947d-7ea1e8770b4a": 1,
+    "19c78b72-e07c-4b5e-8cba-2c00430e6e95": 2,
+    "66ee088b-f5d7-4fe3-b80f-66f2ffb38768": 1
+   },
+   "url": "https://rightmove.co.uk/property/flat/balcony/5",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "balcony",
+    "5"
+   ],
+   "queryKeys": {},
+   "title": "rent flat 32",
+   "digest": {
+    "description": "rent flat 32. Page about property flat balcony 5.",
+    "headings": [
+     "rent flat 32"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529457000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "65a42ae2-d9f1-4807-bbe9-9aae960bdc36",
+   "tabId": 1052,
+   "windowId": 1,
+   "index": 52,
+   "openerTraceId": "2ea6f433-f258-4972-b2de-f0fdf6b897f6",
+   "openedAt": 1757542942000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757542942000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "fa22b0ba-d87c-47b3-94c6-0f47727502e7": 1,
+    "2ea6f433-f258-4972-b2de-f0fdf6b897f6": 1
+   },
+   "url": "https://skyscanner.net/hotel/lisbon/hotel/4",
+   "host": "skyscanner.net",
+   "eTLD1": "skyscanner.net",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "hotel",
+    "4"
+   ],
+   "queryKeys": {},
+   "title": "june flight 90",
+   "digest": {
+    "description": "june flight 90. Page about hotel lisbon hotel 4.",
+    "headings": [
+     "june flight 90"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757542945000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "358282ea-2c80-4a4d-9e04-7fa1a6df23fb",
+   "tabId": 2025,
+   "windowId": 2,
+   "index": 25,
+   "openerTraceId": "19c78b72-e07c-4b5e-8cba-2c00430e6e95",
+   "openedAt": 1757530048000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757530048000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "e99fbbe5-1b98-4446-ab0c-bfbb86c86a43": 1
+   },
+   "url": "https://rightmove.co.uk/property/flat/balcony/11",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "balcony",
+    "11"
+   ],
+   "queryKeys": {},
+   "title": "rent bedroom 9",
+   "digest": {
+    "description": "rent bedroom 9. Page about property flat balcony 11.",
+    "headings": [
+     "rent bedroom 9"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757530051000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "413f09af-8b07-4d6b-a6e7-0dc8091d86bf",
+   "tabId": 1011,
+   "windowId": 1,
+   "index": 11,
+   "openerTraceId": "51628b97-c061-4ecd-b6f1-334a7f603493",
+   "openedAt": 1757504083000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757504083000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "4a02e032-956f-4b1e-a5b5-aa8ab09e518b": 1
+   },
+   "url": "https://github.com/acme/deploy/rollout/6",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "rollout",
+    "6"
+   ],
+   "queryKeys": {},
+   "title": "incident k8s 65",
+   "digest": {
+    "description": "incident k8s 65. Page about acme deploy rollout 6.",
+    "headings": [
+     "incident k8s 65"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757504086000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "8ceface9-05d0-412b-8d23-1742e34cb9e8",
+   "tabId": 1004,
+   "windowId": 1,
+   "index": 4,
+   "openerTraceId": null,
+   "openedAt": 1757503360000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757503360000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "bc89e2b0-db58-403e-a016-50436d01c23d": 1
+   },
+   "url": "https://github.com/acme/deploy",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "deploy"
+   ],
+   "queryKeys": {},
+   "title": "Deploy rollout overview",
+   "digest": {
+    "description": "Deploy rollout overview. Page about acme deploy.",
+    "headings": [
+     "Deploy rollout overview"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757503363000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "b6387fd0-4394-4920-a326-af6e4afa7155",
+   "tabId": 2005,
+   "windowId": 2,
+   "index": 5,
+   "openerTraceId": "f07a45c7-46bd-453a-adce-999a381e234d",
+   "openedAt": 1757520896000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757520896000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "8732ebb4-418d-49a2-bf96-42ac192ecf47": 2,
+    "89f50551-c7e6-4da4-990a-e7ec2ae4dab5": 1
+   },
+   "url": "https://scholar.google.com/abs/2406/transformers/3",
+   "host": "scholar.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "transformers",
+    "3"
+   ],
+   "queryKeys": {},
+   "title": "transformers transformers 15",
+   "digest": {
+    "description": "transformers transformers 15. Page about abs 2406 transformers 3.",
+    "headings": [
+     "transformers transformers 15"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757520899000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "13b17aa7-f64d-49d8-a107-0b63987c7a2b",
+   "tabId": 2002,
+   "windowId": 2,
+   "index": 2,
+   "openerTraceId": "cfb680ea-3ec7-43a2-92fe-baa583f655fa",
+   "openedAt": 1757520516000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757520516000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "dbe8fdfe-a566-485b-8a1d-9d65f606d99b": 1,
+    "e7422079-bf26-4027-a5b6-aa319a17b639": 1
+   },
+   "url": "https://scholar.google.com/abs/2406/survey/0",
+   "host": "scholar.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "survey",
+    "0"
+   ],
+   "queryKeys": {},
+   "title": "survey transformers 88",
+   "digest": {
+    "description": "survey transformers 88. Page about abs 2406 survey 0.",
+    "headings": [
+     "survey transformers 88"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757520519000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "b86cd9d4-7e25-4dd7-ac20-00131dd56013",
+   "tabId": 1030,
+   "windowId": 1,
+   "index": 30,
+   "openerTraceId": "da012c9c-83ef-4ac0-9039-36a687a1317a",
+   "openedAt": 1757514588000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757514588000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "afb8abb6-dfdf-457e-904e-7eb439700867": 1,
+    "703dc5cb-40de-4546-9920-46d905d2506c": 1,
+    "38ece289-f4dc-48e8-bf7d-2950c05dce21": 1
+   },
+   "url": "https://figma.com/acme/website/pricing/tiers/13",
+   "host": "figma.com",
+   "eTLD1": "figma.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "13"
+   ],
+   "queryKeys": {},
+   "title": "tiers pricing 10",
+   "digest": {
+    "description": "tiers pricing 10. Page about acme website pricing tiers 13.",
+    "headings": [
+     "tiers pricing 10"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757514591000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f42aa916-e360-403e-bc22-ffd0d1c97865",
+   "tabId": 1024,
+   "windowId": 1,
+   "index": 24,
+   "openerTraceId": "afb8abb6-dfdf-457e-904e-7eb439700867",
+   "openedAt": 1757513811000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513811000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://notion.so/acme/website/pricing/tiers/7",
+   "host": "notion.so",
+   "eTLD1": "notion.so",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "7"
+   ],
+   "queryKeys": {},
+   "title": "landing pricing 4",
+   "digest": {
+    "description": "landing pricing 4. Page about acme website pricing tiers 7.",
+    "headings": [
+     "landing pricing 4"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513814000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "dbe8fdfe-a566-485b-8a1d-9d65f606d99b",
+   "tabId": 2012,
+   "windowId": 2,
+   "index": 12,
+   "openerTraceId": "a947f161-a4ea-4ef1-a61e-0de3309676ec",
+   "openedAt": 1757521613000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757521613000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "13b17aa7-f64d-49d8-a107-0b63987c7a2b": 1,
+    "08ff773e-e9ed-4d28-88b5-c108a4714c58": 1,
+    "28a89b7b-331e-4407-aaa2-9e0b43a49a28": 1,
+    "cfb680ea-3ec7-43a2-92fe-baa583f655fa": 1
+   },
+   "url": "https://arxiv.org/abs/2406/survey/10",
+   "host": "arxiv.org",
+   "eTLD1": "arxiv.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "survey",
+    "10"
+   ],
+   "queryKeys": {},
+   "title": "attention transformers 22",
+   "digest": {
+    "description": "attention transformers 22. Page about abs 2406 survey 10.",
+    "headings": [
+     "attention transformers 22"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757521616000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "e99fbbe5-1b98-4446-ab0c-bfbb86c86a43",
+   "tabId": 2023,
+   "windowId": 2,
+   "index": 23,
+   "openerTraceId": "3e040c56-4b61-4bf4-bc07-7921d234c2b1",
+   "openedAt": 1757529672000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529672000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "358282ea-2c80-4a4d-9e04-7fa1a6df23fb": 1
+   },
+   "url": "https://rightmove.co.uk/property/flat/flat/9",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "flat",
+    "9"
+   ],
+   "queryKeys": {},
+   "title": "rent rent 70",
+   "digest": {
+    "description": "rent rent 70. Page about property flat flat 9.",
+    "headings": [
+     "rent rent 70"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529675000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f17ee9ce-a3ec-4f1e-83ac-6ec2593a68aa",
+   "tabId": 1033,
+   "windowId": 1,
+   "index": 33,
+   "openerTraceId": "983ca623-86ab-4375-aec4-5b73437781e1",
+   "openedAt": 1757536235000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757536235000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "96a89cde-2d77-4f23-a685-9dc895a8ac3b": 2
+   },
+   "url": "https://github.com/questions/pandas/groupby/0",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "groupby",
+    "0"
+   ],
+   "queryKeys": {},
+   "title": "dtype error 88",
+   "digest": {
+    "description": "dtype error 88. Page about questions pandas groupby 0.",
+    "headings": [
+     "dtype error 88"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536238000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "a2528bc1-52c1-43ec-84d9-c0f63f1c9cbc",
+   "tabId": 2018,
+   "windowId": 2,
+   "index": 18,
+   "openerTraceId": "51e84a57-b251-4249-9059-58fbf7b395f0",
+   "openedAt": 1757529409000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529409000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "da7c76b4-f70b-4dc0-a440-bfb8de223259": 1,
+    "dcb491fc-a17f-4cab-99d7-bd1aef627c5d": 1
+   },
+   "url": "https://rightmove.co.uk/property/flat/bedroom/4",
+   "host": "rightmove.co.uk",
+   "eTLD1": "rightmove.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "bedroom",
+    "4"
+   ],
+   "queryKeys": {},
+   "title": "bedroom bedroom 32",
+   "digest": {
+    "description": "bedroom bedroom 32. Page about property flat bedroom 4.",
+    "headings": [
+     "bedroom bedroom 32"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529412000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "a4679a5f-927a-4185-9340-2161f8f41988",
+   "tabId": 1005,
+   "windowId": 1,
+   "index": 5,
+   "openerTraceId": "8ceface9-05d0-412b-8d23-1742e34cb9e8",
+   "openedAt": 1757503410000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757503410000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://grafana.acme.io/acme/deploy/deploy/0",
+   "host": "grafana.acme.io",
+   "eTLD1": "acme.io",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "deploy",
+    "0"
+   ],
+   "queryKeys": {},
+   "title": "k8s k8s 27",
+   "digest": {
+    "description": "k8s k8s 27. Page about acme deploy deploy 0.",
+    "headings": [
+     "k8s k8s 27"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757503413000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "983ca623-86ab-4375-aec4-5b73437781e1",
+   "tabId": 1032,
+   "windowId": 1,
+   "index": 32,
+   "openerTraceId": null,
+   "openedAt": 1757536214000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757536214000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://stackoverflow.com/questions/pandas",
+   "host": "stackoverflow.com",
+   "eTLD1": "stackoverflow.com",
+   "pathTokens": [
+    "questions",
+    "pandas"
+   ],
+   "queryKeys": {},
+   "title": "Pandas groupby overview",
+   "digest": {
+    "description": "Pandas groupby overview. Page about questions pandas.",
+    "headings": [
+     "Pandas groupby overview"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536217000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f6482a7b-9d98-4e36-8d14-f99412eee63b",
+   "tabId": 1048,
+   "windowId": 1,
+   "index": 48,
+   "openerTraceId": "a2dd6fa9-35f0-4670-80f0-a8f39271f6de",
+   "openedAt": 1757542446000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757542446000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "77bae5ff-391c-4ad0-bfff-f063ae3e6365": 1
+   },
+   "url": "https://wikipedia.org/hotel/lisbon/flight/0",
+   "host": "wikipedia.org",
+   "eTLD1": "wikipedia.org",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "flight",
+    "0"
+   ],
+   "queryKeys": {},
+   "title": "hotel lisbon 65",
+   "digest": {
+    "description": "hotel lisbon 65. Page about hotel lisbon flight 0.",
+    "headings": [
+     "hotel lisbon 65"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757542449000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "84119b24-db00-4050-bfae-24cc586c7e7b",
+   "tabId": 1016,
+   "windowId": 1,
+   "index": 16,
+   "openerTraceId": null,
+   "openedAt": 1757512829000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757512829000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "a02bfe43-3212-48c9-9fb8-b2193e412a27": 1,
+    "f2142f2d-42c6-41ac-8608-707d2b905649": 1
+   },
+   "url": "https://figma.com/acme/website/pricing",
+   "host": "figma.com",
+   "eTLD1": "figma.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing"
+   ],
+   "queryKeys": {},
+   "title": "Pricing plans overview",
+   "digest": {
+    "description": "Pricing plans overview. Page about acme website pricing.",
+    "headings": [
+     "Pricing plans overview"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757512832000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "4ef63561-1217-4674-9463-3cb06cdf767c",
+   "tabId": 1046,
+   "windowId": 1,
+   "index": 46,
+   "openerTraceId": "96a89cde-2d77-4f23-a685-9dc895a8ac3b",
+   "openedAt": 1757538087000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757538087000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "bdbe9918-fd60-4c18-ad21-1d2e46bca511": 1,
+    "4de8a530-00bd-4a27-bd2e-68ac9182870f": 1,
+    "96a89cde-2d77-4f23-a685-9dc895a8ac3b": 1
+   },
+   "url": "https://stackoverflow.com/questions/pandas/groupby/13",
+   "host": "stackoverflow.com",
+   "eTLD1": "stackoverflow.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "groupby",
+    "13"
+   ],
+   "queryKeys": {},
+   "title": "groupby dtype 19",
+   "digest": {
+    "description": "groupby dtype 19. Page about questions pandas groupby 13.",
+    "headings": [
+     "groupby dtype 19"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757538090000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "88ec6c71-f7a1-400d-bd72-5130ec22786c",
+   "tabId": 2055,
+   "windowId": 2,
+   "index": 55,
+   "openerTraceId": null,
+   "openedAt": 1757548480000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757548480000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://weather.com/weather",
+   "host": "weather.com",
+   "eTLD1": "weather.com",
+   "pathTokens": [
+    "weather"
+   ],
+   "queryKeys": {},
+   "title": "Weather",
+   "digest": {
+    "description": "Weather. Page about weather.",
+    "headings": [
+     "Weather"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757548483000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "ceec846a-79e2-45f1-98a4-579b8480a57b",
+   "tabId": 1014,
+   "windowId": 1,
+   "index": 14,
+   "openerTraceId": "284d49d1-11b7-4f21-807b-6b082fefeaed",
+   "openedAt": 1757504435000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757504435000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "12f9bd08-3c28-4926-8058-31287832d0dd": 1,
+    "284d49d1-11b7-4f21-807b-6b082fefeaed": 1
+   },
+   "url": "https://github.com/acme/deploy/k8s/9",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "k8s",
+    "9"
+   ],
+   "queryKeys": {},
+   "title": "k8s deploy 21",
+   "digest": {
+    "description": "k8s deploy 21. Page about acme deploy k8s 9.",
+    "headings": [
+     "k8s deploy 21"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757504438000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "e0c975c8-ac21-44ca-8d48-f178dbbac3c6",
+   "tabId": 2057,
+   "windowId": 2,
+   "index": 57,
+   "openerTraceId": null,
+   "openedAt": 1757558440000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757558440000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://amazon.com/usb-c-cable",
+   "host": "amazon.com",
+   "eTLD1": "amazon.com",
+   "pathTokens": [
+    "usb-c-cable"
+   ],
+   "queryKeys": {},
+   "title": "USB-C cable",
+   "digest": {
+    "description": "USB-C cable. Page about usb-c-cable.",
+    "headings": [
+     "USB-C cable"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757558443000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "28a89b7b-331e-4407-aaa2-9e0b43a49a28",
+   "tabId": 2008,
+   "windowId": 2,
+   "index": 8,
+   "openerTraceId": "6e710953-8792-4b52-958a-9b3b060c8598",
+   "openedAt": 1757521185000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757521185000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "dbe8fdfe-a566-485b-8a1d-9d65f606d99b": 1,
+    "e7422079-bf26-4027-a5b6-aa319a17b639": 1
+   },
+   "url": "https://docs.python.org/abs/2406/survey/6",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "survey",
+    "6"
+   ],
+   "queryKeys": {},
+   "title": "survey transformers 10",
+   "digest": {
+    "description": "survey transformers 10. Page about abs 2406 survey 6.",
+    "headings": [
+     "survey transformers 10"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757521188000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "703dc5cb-40de-4546-9920-46d905d2506c",
+   "tabId": 1018,
+   "windowId": 1,
+   "index": 18,
+   "openerTraceId": "84119b24-db00-4050-bfae-24cc586c7e7b",
+   "openedAt": 1757513169000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513169000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "b86cd9d4-7e25-4dd7-ac20-00131dd56013": 1
+   },
+   "url": "https://github.com/acme/website/pricing/landing/1",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "landing",
+    "1"
+   ],
+   "queryKeys": {},
+   "title": "landing landing 46",
+   "digest": {
+    "description": "landing landing 46. Page about acme website pricing landing 1.",
+    "headings": [
+     "landing landing 46"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513172000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "215f28d5-f31f-49ab-a0b3-5173c456742b",
+   "tabId": 1054,
+   "windowId": 1,
+   "index": 54,
+   "openerTraceId": "65a42ae2-d9f1-4807-bbe9-9aae960bdc36",
+   "openedAt": 1757543200000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757543200000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "77bae5ff-391c-4ad0-bfff-f063ae3e6365": 1
+   },
+   "url": "https://wikipedia.org/hotel/lisbon/hotel/6",
+   "host": "wikipedia.org",
+   "eTLD1": "wikipedia.org",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "hotel",
+    "6"
+   ],
+   "queryKeys": {},
+   "title": "lisbon june 96",
+   "digest": {
+    "description": "lisbon june 96. Page about hotel lisbon hotel 6.",
+    "headings": [
+     "lisbon june 96"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757543203000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "89f50551-c7e6-4da4-990a-e7ec2ae4dab5",
+   "tabId": 2010,
+   "windowId": 2,
+   "index": 10,
+   "openerTraceId": "e7422079-bf26-4027-a5b6-aa319a17b639",
+   "openedAt": 1757521509000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757521509000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "b6387fd0-4394-4920-a326-af6e4afa7155": 1
+   },
+   "url": "https://scholar.google.com/abs/2406/transformers/8",
+   "host": "scholar.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "transformers",
+    "8"
+   ],
+   "queryKeys": {},
+   "title": "transformers attention 6",
+   "digest": {
+    "description": "transformers attention 6. Page about abs 2406 transformers 8.",
+    "headings": [
+     "transformers attention 6"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757521512000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "530014b8-8d25-4604-9169-6cd7d77b4f5b",
+   "tabId": 1026,
+   "windowId": 1,
+   "index": 26,
+   "openerTraceId": "3dccd867-536d-42f2-9a4e-56218cbb602c",
+   "openedAt": 1757514135000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757514135000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "c8ea35be-2b0f-48f1-bbc4-84ba42442c58": 1,
+    "f2142f2d-42c6-41ac-8608-707d2b905649": 1,
+    "38ece289-f4dc-48e8-bf7d-2950c05dce21": 1
+   },
+   "url": "https://github.com/acme/website/pricing/pricing/9",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "pricing",
+    "9"
+   ],
+   "queryKeys": {},
+   "title": "landing pricing 29",
+   "digest": {
+    "description": "landing pricing 29. Page about acme website pricing pricing 9.",
+    "headings": [
+     "landing pricing 29"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757514138000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "614cfb68-c64d-49e8-b80a-183b2d5a3b0b",
+   "tabId": 1050,
+   "windowId": 1,
+   "index": 50,
+   "openerTraceId": "2ea6f433-f258-4972-b2de-f0fdf6b897f6",
+   "openedAt": 1757542745000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757542745000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "a2dd6fa9-35f0-4670-80f0-a8f39271f6de": 1
+   },
+   "url": "https://skyscanner.net/hotel/lisbon/june/2",
+   "host": "skyscanner.net",
+   "eTLD1": "skyscanner.net",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "june",
+    "2"
+   ],
+   "queryKeys": {},
+   "title": "flight flight 70",
+   "digest": {
+    "description": "flight flight 70. Page about hotel lisbon june 2.",
+    "headings": [
+     "flight flight 70"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757542748000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "9fbc39b0-f1ca-4bd9-96ee-345480d13ac9",
+   "tabId": 2014,
+   "windowId": 2,
+   "index": 14,
+   "openerTraceId": "46288bd6-d062-4a3b-947d-7ea1e8770b4a",
+   "openedAt": 1757528849000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757528849000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://zoopla.co.uk/property/flat/rent/0",
+   "host": "zoopla.co.uk",
+   "eTLD1": "zoopla.co.uk",
+   "pathTokens": [
+    "property",
+    "flat",
+    "rent",
+    "0"
+   ],
+   "queryKeys": {},
+   "title": "balcony flat 33",
+   "digest": {
+    "description": "balcony flat 33. Page about property flat rent 0.",
+    "headings": [
+     "balcony flat 33"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757528852000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "08be8392-2abc-41d3-b4c5-8db132384f57",
+   "tabId": 1021,
+   "windowId": 1,
+   "index": 21,
+   "openerTraceId": "42529b59-2beb-4f66-8230-57c02ba7f41e",
+   "openedAt": 1757513530000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513530000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "afb8abb6-dfdf-457e-904e-7eb439700867": 1,
+    "c8ea35be-2b0f-48f1-bbc4-84ba42442c58": 1,
+    "9c6ad67d-f281-407d-a807-c4524cbd5013": 1
+   },
+   "url": "https://figma.com/acme/website/pricing/tiers/4",
+   "host": "figma.com",
+   "eTLD1": "figma.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "4"
+   ],
+   "queryKeys": {},
+   "title": "pricing landing 2",
+   "digest": {
+    "description": "pricing landing 2. Page about acme website pricing tiers 4.",
+    "headings": [
+     "pricing landing 2"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513533000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "9f06121b-51eb-45df-b7ed-7441006d64f1",
+   "tabId": 1039,
+   "windowId": 1,
+   "index": 39,
+   "openerTraceId": "4de8a530-00bd-4a27-bd2e-68ac9182870f",
+   "openedAt": 1757537085000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537085000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "e472c904-a042-42c0-bf72-cb8124d22a47": 1,
+    "3602890e-8d80-4582-9cb2-21b0469cfbd9": 1
+   },
+   "url": "https://github.com/questions/pandas/groupby/6",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "groupby",
+    "6"
+   ],
+   "queryKeys": {},
+   "title": "dtype error 66",
+   "digest": {
+    "description": "dtype error 66. Page about questions pandas groupby 6.",
+    "headings": [
+     "dtype error 66"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537088000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "77bae5ff-391c-4ad0-bfff-f063ae3e6365",
+   "tabId": 1053,
+   "windowId": 1,
+   "index": 53,
+   "openerTraceId": "614cfb68-c64d-49e8-b80a-183b2d5a3b0b",
+   "openedAt": 1757543077000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757543077000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "215f28d5-f31f-49ab-a0b3-5173c456742b": 1,
+    "fa22b0ba-d87c-47b3-94c6-0f47727502e7": 1,
+    "2ea6f433-f258-4972-b2de-f0fdf6b897f6": 1,
+    "f6482a7b-9d98-4e36-8d14-f99412eee63b": 1
+   },
+   "url": "https://skyscanner.net/hotel/lisbon/june/5",
+   "host": "skyscanner.net",
+   "eTLD1": "skyscanner.net",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "june",
+    "5"
+   ],
+   "queryKeys": {},
+   "title": "lisbon june 75",
+   "digest": {
+    "description": "lisbon june 75. Page about hotel lisbon june 5.",
+    "headings": [
+     "lisbon june 75"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757543080000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f34a97b0-0814-40dd-ad6b-2bb9c40f4109",
+   "tabId": 1003,
+   "windowId": 1,
+   "index": 3,
+   "openerTraceId": null,
+   "openedAt": 1757496400000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757496400000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://calendar.google.com/",
+   "host": "calendar.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [],
+   "queryKeys": {},
+   "title": "Calendar",
+   "digest": {
+    "description": "Calendar. Page about .",
+    "headings": [
+     "Calendar"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757496403000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "da7c76b4-f70b-4dc0-a440-bfb8de223259",
+   "tabId": 2026,
+   "windowId": 2,
+   "index": 26,
+   "openerTraceId": "358282ea-2c80-4a4d-9e04-7fa1a6df23fb",
+   "openedAt": 1757530274000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757530274000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "a2528bc1-52c1-43ec-84d9-c0f63f1c9cbc": 1,
+    "46288bd6-d062-4a3b-947d-7ea1e8770b4a": 1,
+    "6d1f9725-cb11-4edb-8615-d20690963a92": 1
+   },
+   "url": "https://maps.google.com/property/flat/balcony/12",
+   "host": "maps.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "property",
+    "flat",
+    "balcony",
+    "12"
+   ],
+   "queryKeys": {},
+   "title": "bedroom balcony 69",
+   "digest": {
+    "description": "bedroom balcony 69. Page about property flat balcony 12.",
+    "headings": [
+     "bedroom balcony 69"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757530277000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "c81928f8-0764-4977-b32b-03158177a473",
+   "tabId": 1045,
+   "windowId": 1,
+   "index": 45,
+   "openerTraceId": "96a89cde-2d77-4f23-a685-9dc895a8ac3b",
+   "openedAt": 1757537854000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537854000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "bdbe9918-fd60-4c18-ad21-1d2e46bca511": 1,
+    "96a89cde-2d77-4f23-a685-9dc895a8ac3b": 2,
+    "4de8a530-00bd-4a27-bd2e-68ac9182870f": 1
+   },
+   "url": "https://github.com/questions/pandas/groupby/12",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "groupby",
+    "12"
+   ],
+   "queryKeys": {},
+   "title": "pandas pandas 81",
+   "digest": {
+    "description": "pandas pandas 81. Page about questions pandas groupby 12.",
+    "headings": [
+     "pandas pandas 81"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537857000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "66ee088b-f5d7-4fe3-b80f-66f2ffb38768",
+   "tabId": 2015,
+   "windowId": 2,
+   "index": 15,
+   "openerTraceId": "9fbc39b0-f1ca-4bd9-96ee-345480d13ac9",
+   "openedAt": 1757529069000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529069000,
+   "activationCount": 6,
+   "dwellMs": 20000,
+   "coActive": {
+    "6d1f9725-cb11-4edb-8615-d20690963a92": 2,
+    "19c78b72-e07c-4b5e-8cba-2c00430e6e95": 2,
+    "952b3149-04c0-467a-a15c-fd7fc536466f": 1
+   },
+   "url": "https://maps.google.com/property/flat/rent/1",
+   "host": "maps.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "property",
+    "flat",
+    "rent",
+    "1"
+   ],
+   "queryKeys": {},
+   "title": "bedroom bedroom 24",
+   "digest": {
+    "description": "bedroom bedroom 24. Page about property flat rent 1.",
+    "headings": [
+     "bedroom bedroom 24"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529072000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "51628b97-c061-4ecd-b6f1-334a7f603493",
+   "tabId": 1009,
+   "windowId": 1,
+   "index": 9,
+   "openerTraceId": "f627ed8f-454e-4462-ba01-d1a423e77acd",
+   "openedAt": 1757503823000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757503823000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "284d49d1-11b7-4f21-807b-6b082fefeaed": 1,
+    "8c84a7b9-95ef-4964-b8f1-135cb9a16e69": 1
+   },
+   "url": "https://grafana.acme.io/acme/deploy/rollout/4",
+   "host": "grafana.acme.io",
+   "eTLD1": "acme.io",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "rollout",
+    "4"
+   ],
+   "queryKeys": {},
+   "title": "k8s rollout 45",
+   "digest": {
+    "description": "k8s rollout 45. Page about acme deploy rollout 4.",
+    "headings": [
+     "k8s rollout 45"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757503826000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "dcb491fc-a17f-4cab-99d7-bd1aef627c5d",
+   "tabId": 2024,
+   "windowId": 2,
+   "index": 24,
+   "openerTraceId": "19c78b72-e07c-4b5e-8cba-2c00430e6e95",
+   "openedAt": 1757529891000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757529891000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "a2528bc1-52c1-43ec-84d9-c0f63f1c9cbc": 1
+   },
+   "url": "https://maps.google.com/property/flat/balcony/10",
+   "host": "maps.google.com",
+   "eTLD1": "google.com",
+   "pathTokens": [
+    "property",
+    "flat",
+    "balcony",
+    "10"
+   ],
+   "queryKeys": {},
+   "title": "rent rent 39",
+   "digest": {
+    "description": "rent rent 39. Page about property flat balcony 10.",
+    "headings": [
+     "rent rent 39"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757529894000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "8c84a7b9-95ef-4964-b8f1-135cb9a16e69",
+   "tabId": 1013,
+   "windowId": 1,
+   "index": 13,
+   "openerTraceId": "12f9bd08-3c28-4926-8058-31287832d0dd",
+   "openedAt": 1757504322000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757504322000,
+   "activationCount": 4,
+   "dwellMs": 20000,
+   "coActive": {
+    "5fd65d2a-66db-42ae-99fd-799748363fb3": 2,
+    "51628b97-c061-4ecd-b6f1-334a7f603493": 1
+   },
+   "url": "https://docs.aws.amazon.com/acme/deploy/rollout/8",
+   "host": "docs.aws.amazon.com",
+   "eTLD1": "amazon.com",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "rollout",
+    "8"
+   ],
+   "queryKeys": {},
+   "title": "k8s k8s 86",
+   "digest": {
+    "description": "k8s k8s 86. Page about acme deploy rollout 8.",
+    "headings": [
+     "k8s k8s 86"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757504325000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "fa22b0ba-d87c-47b3-94c6-0f47727502e7",
+   "tabId": 1051,
+   "windowId": 1,
+   "index": 51,
+   "openerTraceId": "614cfb68-c64d-49e8-b80a-183b2d5a3b0b",
+   "openedAt": 1757542851000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757542851000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "65a42ae2-d9f1-4807-bbe9-9aae960bdc36": 1,
+    "77bae5ff-391c-4ad0-bfff-f063ae3e6365": 1
+   },
+   "url": "https://booking.com/hotel/lisbon/lisbon/3",
+   "host": "booking.com",
+   "eTLD1": "booking.com",
+   "pathTokens": [
+    "hotel",
+    "lisbon",
+    "lisbon",
+    "3"
+   ],
+   "queryKeys": {},
+   "title": "june june 27",
+   "digest": {
+    "description": "june june 27. Page about hotel lisbon lisbon 3.",
+    "headings": [
+     "june june 27"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757542854000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "6e710953-8792-4b52-958a-9b3b060c8598",
+   "tabId": 2004,
+   "windowId": 2,
+   "index": 4,
+   "openerTraceId": "cfb680ea-3ec7-43a2-92fe-baa583f655fa",
+   "openedAt": 1757520723000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757520723000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "f07a45c7-46bd-453a-adce-999a381e234d": 1,
+    "a947f161-a4ea-4ef1-a61e-0de3309676ec": 1
+   },
+   "url": "https://docs.python.org/abs/2406/transformers/2",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "transformers",
+    "2"
+   ],
+   "queryKeys": {},
+   "title": "attention transformers 98",
+   "digest": {
+    "description": "attention transformers 98. Page about abs 2406 transformers 2.",
+    "headings": [
+     "attention transformers 98"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757520726000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f627ed8f-454e-4462-ba01-d1a423e77acd",
+   "tabId": 1006,
+   "windowId": 1,
+   "index": 6,
+   "openerTraceId": "8ceface9-05d0-412b-8d23-1742e34cb9e8",
+   "openedAt": 1757503554000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757503554000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "5fd65d2a-66db-42ae-99fd-799748363fb3": 1
+   },
+   "url": "https://grafana.acme.io/acme/deploy/k8s/1",
+   "host": "grafana.acme.io",
+   "eTLD1": "acme.io",
+   "pathTokens": [
+    "acme",
+    "deploy",
+    "k8s",
+    "1"
+   ],
+   "queryKeys": {},
+   "title": "k8s deploy 90",
+   "digest": {
+    "description": "k8s deploy 90. Page about acme deploy k8s 1.",
+    "headings": [
+     "k8s deploy 90"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757503557000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "cb41775d-71a6-4bf9-9a75-32e1e402a097",
+   "tabId": 1040,
+   "windowId": 1,
+   "index": 40,
+   "openerTraceId": "bdbe9918-fd60-4c18-ad21-1d2e46bca511",
+   "openedAt": 1757537244000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757537244000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "f49f82a2-9a5b-4766-8702-06fd4cc55504": 1
+   },
+   "url": "https://github.com/questions/pandas/pandas/7",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "pandas",
+    "7"
+   ],
+   "queryKeys": {},
+   "title": "pandas dtype 81",
+   "digest": {
+    "description": "pandas dtype 81. Page about questions pandas pandas 7.",
+    "headings": [
+     "pandas dtype 81"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757537247000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f8c30a15-b3e4-4439-ace7-6ab0f6050d84",
+   "tabId": 2056,
+   "windowId": 2,
+   "index": 56,
+   "openerTraceId": null,
+   "openedAt": 1757553340000,
+   "transition": "typed",
+   "backfilled": false,
+   "lastActiveAt": 1757553340000,
+   "activationCount": 1,
+   "dwellMs": 20000,
+   "coActive": {},
+   "url": "https://bbc.co.uk/news-front-page",
+   "host": "bbc.co.uk",
+   "eTLD1": "bbc.co.uk",
+   "pathTokens": [
+    "news-front-page"
+   ],
+   "queryKeys": {},
+   "title": "News front page",
+   "digest": {
+    "description": "News front page. Page about news-front-page.",
+    "headings": [
+     "News front page"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757553343000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "afb8abb6-dfdf-457e-904e-7eb439700867",
+   "tabId": 1022,
+   "windowId": 1,
+   "index": 22,
+   "openerTraceId": "9c6ad67d-f281-407d-a807-c4524cbd5013",
+   "openedAt": 1757513613000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513613000,
+   "activationCount": 5,
+   "dwellMs": 20000,
+   "coActive": {
+    "b86cd9d4-7e25-4dd7-ac20-00131dd56013": 1,
+    "42529b59-2beb-4f66-8230-57c02ba7f41e": 1,
+    "08be8392-2abc-41d3-b4c5-8db132384f57": 1,
+    "3dccd867-536d-42f2-9a4e-56218cbb602c": 1
+   },
+   "url": "https://figma.com/acme/website/pricing/pricing/5",
+   "host": "figma.com",
+   "eTLD1": "figma.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "pricing",
+    "5"
+   ],
+   "queryKeys": {},
+   "title": "plans tiers 38",
+   "digest": {
+    "description": "plans tiers 38. Page about acme website pricing pricing 5.",
+    "headings": [
+     "plans tiers 38"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513616000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "3602890e-8d80-4582-9cb2-21b0469cfbd9",
+   "tabId": 1037,
+   "windowId": 1,
+   "index": 37,
+   "openerTraceId": "a295712c-a5b1-41d5-8a55-3f9b9a015e15",
+   "openedAt": 1757536874000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757536874000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "9f06121b-51eb-45df-b7ed-7441006d64f1": 1
+   },
+   "url": "https://stackoverflow.com/questions/pandas/error/4",
+   "host": "stackoverflow.com",
+   "eTLD1": "stackoverflow.com",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "error",
+    "4"
+   ],
+   "queryKeys": {},
+   "title": "error pandas 16",
+   "digest": {
+    "description": "error pandas 16. Page about questions pandas error 4.",
+    "headings": [
+     "error pandas 16"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536877000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f07a45c7-46bd-453a-adce-999a381e234d",
+   "tabId": 2003,
+   "windowId": 2,
+   "index": 3,
+   "openerTraceId": "cfb680ea-3ec7-43a2-92fe-baa583f655fa",
+   "openedAt": 1757520660000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757520660000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "6e710953-8792-4b52-958a-9b3b060c8598": 1
+   },
+   "url": "https://arxiv.org/abs/2406/attention/1",
+   "host": "arxiv.org",
+   "eTLD1": "arxiv.org",
+   "pathTokens": [
+    "abs",
+    "2406",
+    "attention",
+    "1"
+   ],
+   "queryKeys": {},
+   "title": "survey attention 11",
+   "digest": {
+    "description": "survey attention 11. Page about abs 2406 attention 1.",
+    "headings": [
+     "survey attention 11"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757520663000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "f49f82a2-9a5b-4766-8702-06fd4cc55504",
+   "tabId": 1034,
+   "windowId": 1,
+   "index": 34,
+   "openerTraceId": "f17ee9ce-a3ec-4f1e-83ac-6ec2593a68aa",
+   "openedAt": 1757536316000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757536316000,
+   "activationCount": 2,
+   "dwellMs": 20000,
+   "coActive": {
+    "cb41775d-71a6-4bf9-9a75-32e1e402a097": 1
+   },
+   "url": "https://docs.python.org/questions/pandas/error/1",
+   "host": "docs.python.org",
+   "eTLD1": "python.org",
+   "pathTokens": [
+    "questions",
+    "pandas",
+    "error",
+    "1"
+   ],
+   "queryKeys": {},
+   "title": "error groupby 92",
+   "digest": {
+    "description": "error groupby 92. Page about questions pandas error 1.",
+    "headings": [
+     "error groupby 92"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757536319000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
+   "traceId": "9c6ad67d-f281-407d-a807-c4524cbd5013",
+   "tabId": 1020,
+   "windowId": 1,
+   "index": 20,
+   "openerTraceId": "42529b59-2beb-4f66-8230-57c02ba7f41e",
+   "openedAt": 1757513502000,
+   "transition": "link",
+   "backfilled": false,
+   "lastActiveAt": 1757513502000,
+   "activationCount": 3,
+   "dwellMs": 20000,
+   "coActive": {
+    "38ece289-f4dc-48e8-bf7d-2950c05dce21": 1,
+    "08be8392-2abc-41d3-b4c5-8db132384f57": 1
+   },
+   "url": "https://github.com/acme/website/pricing/tiers/3",
+   "host": "github.com",
+   "eTLD1": "github.com",
+   "pathTokens": [
+    "acme",
+    "website",
+    "pricing",
+    "tiers",
+    "3"
+   ],
+   "queryKeys": {},
+   "title": "plans plans 12",
+   "digest": {
+    "description": "plans plans 12. Page about acme website pricing tiers 3.",
+    "headings": [
+     "plans plans 12"
+    ],
+    "leadText": ""
+   },
+   "digestAt": 1757513505000,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  }
+ ]
+}

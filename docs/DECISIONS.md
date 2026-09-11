@@ -104,3 +104,13 @@ Append; never rewrite history.
 - **Decision:** `networkx.community.louvain_communities` (resolution + seed) rather than a separate louvain package; `analysis/pyproject.toml` installs into the existing root `.venv` via `uv pip install -e analysis`.
 - **Rejected:** `python-louvain`; a second venv under `analysis/`.
 - **Why:** Fewer dependencies; the user already created the root venv.
+
+## 2026-09-11 — Signal details the brief left open (Python is canonical; TS must match)
+- **Decision:** S8 = (coActive[a][b] + coActive[b][a]) / (2 * min(activationCount)) clipped to 1. S5 sibling = same leftmost label of eTLD+1 under a different suffix, label ≥ 4 chars (github.com / github.io). S6 features = path tokens ∪ "key=value" query pairs (values blank in shareable exports, so effectively keys). S7 tokens = title + digest description/headings/leadText + path tokens; tf = 1+ln(count), idf = ln((N+1)/(df+1))+1, L2 cosine, small stop list, no pure numbers. N1 = different windows AND S1 == 0. `w_min = 1.0`. Excluded (not down-weighted): pinned, ambient, non-http, closed. Louvain seed 0; resolution binary-searched on a log scale in [0.02, 20]; count target counts communities of size ≥ 2 only.
+- **Rejected:** sklearn TfidfVectorizer for S7 (would make exact TS parity impossible); normalising S8 by the global max pair count (one heavy pair would flatten everything else).
+- **Why:** Each is the simplest reading of the brief that is portable to TS with identical arithmetic.
+
+## 2026-09-11 — Synthetic fixture exists for mechanics only
+- **Decision:** `analysis/tabamnesty/synth.py` writes `fixtures/synthetic.*` (flagged `_synthetic: true`) for unit tests and the parity check. Its "chrome" baseline is one group per eTLD+1.
+- **Rejected:** Using it as one of the five gate browsers.
+- **Why:** It encodes the thesis it would be testing; on it every signal is redundant (ablation deltas ≈ 0), which says nothing about real browsers.
