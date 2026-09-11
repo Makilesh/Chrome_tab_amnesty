@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tab Amnesty</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fbfaf7;
+        --fg: #23211d;
+        --muted: #7a756b;
+        --card: #ffffff;
+        --line: #e8e4db;
+        --accent: #4a6fa5;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #1b1a18; --fg: #ebe8e1; --muted: #9a958a; --card: #242320; --line: #37352f; --accent: #8fb0e0; }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+      h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+      p.lede { color: var(--muted); margin: 0 0 28px; }
+      .group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+      .group h2 { font-size: 16px; font-weight: 600; margin: 0; }
+      .group .when { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+      .group ul { list-style: none; margin: 0; padding: 0; }
+      .group li { padding: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .group li .host { color: var(--muted); font-size: 12px; margin-left: 8px; }
+      .loose { margin-top: 28px; }
+      .loose h2 { font-size: 14px; color: var(--muted); font-weight: 500; margin: 0 0 8px; }
+      .loose li { color: var(--muted); }
+      details.study { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; }
+      details.study summary { cursor: pointer; }
+      details.study .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+      details.study input[type="text"] { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); }
+      details.study button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); cursor: pointer; }
+      details.study button:hover { border-color: var(--accent); }
+      details.study .note { margin: 6px 0; }
+      .empty { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>What you have open, by what you were doing</h1>
+      <p class="lede">Read-only. Nothing here changes your browser.</p>
+      <div id="groups"></div>
+      <section class="loose" id="loose" hidden>
+        <h2>On their own</h2>
+        <ul id="loose-list"></ul>
+      </section>
+
+      <details class="study" id="study">
+        <summary>For the study — export and baseline</summary>
+        <div class="row">
+          <label>Name <input type="text" id="name" placeholder="e.g. alice" size="12" /></label>
+          <label><input type="radio" name="mode" value="shareable" checked /> shareable</label>
+          <label><input type="radio" name="mode" value="full" /> full</label>
+          <button id="export">Export traces</button>
+        </div>
+        <p class="note" id="consent"></p>
+        <div class="row">
+          <button id="baseline">Capture Chrome's grouping</button>
+          <span>Run Chrome's <em>Organize tabs</em> first and accept its groups, then click. The groups are read, saved, and then undone so your tab strip goes back to how it was.</span>
+        </div>
+        <p class="note" id="status"></p>
+      </details>
+    </main>
+    <script type="module" src="./xray.ts"></script>
+  </body>
+</html>

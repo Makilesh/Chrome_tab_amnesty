@@ -1,0 +1,38 @@
+{
+  "name": "tab-amnesty",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A browser memory, not a tab manager. Close it, you'll still have it.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run build && tsx tools/integration-check.ts",
+    "check:setup": "puppeteer-browsers install chrome@stable",
+    "cluster": "tsx tools/cluster-cli.ts",
+    "score": "node tools/py.mjs cli score",
+    "ablate": "node tools/py.mjs cli ablate",
+    "report": "node tools/py.mjs cli report",
+    "parity": "node tools/py.mjs parity",
+    "synth": "node tools/py.mjs synth",
+    "pytest": "node tools/py.mjs pytest"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0",
+    "@types/chrome": "^0.0.280",
+    "@types/node": "^22.0.0",
+    "puppeteer-core": "^23.11.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "graphology": "^0.25.4",
+    "graphology-communities-louvain": "^2.0.1",
+    "idb": "^8.0.0"
+  }
+}

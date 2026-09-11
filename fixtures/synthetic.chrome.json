@@ -1,0 +1,166 @@
+{
+ "method": "transcribed",
+ "capturedAt": 0,
+ "_synthetic": true,
+ "groups": [
+  {
+   "name": "skyscanner.net",
+   "color": "grey",
+   "traceIds": [
+    "0cbbeab0-bc9a-4e0c-8ec2-361582f2e770",
+    "959d133d-9f22-4e0a-9c7a-92835604c3b6",
+    "7bcec85d-2c1f-4acc-a653-c3b78fa09fa2",
+    "0b9e8d4d-82a4-412e-b794-09b92b6c5763"
+   ]
+  },
+  {
+   "name": "google.com",
+   "color": "grey",
+   "traceIds": [
+    "5f221dfc-8d64-43ad-9957-7b6b4cb05ec1",
+    "ce75f4ba-60d6-4766-b6f6-2c28e927db48",
+    "d9ee50e2-707c-40b4-8a97-b9d8400e67ed",
+    "51423286-a6ec-431f-b526-3b4519a2105c",
+    "101e75eb-6607-4615-9033-2cb8642a357c",
+    "78e51061-7311-48a3-82ce-6f447ed4d57b",
+    "fbb41d14-4255-4a33-a374-75e120087497",
+    "03b96d91-aba0-48ea-9d19-ee45032b7328",
+    "907f9669-4ba9-45f3-a409-61505d698c8b"
+   ]
+  },
+  {
+   "name": "zoopla.co.uk",
+   "color": "grey",
+   "traceIds": [
+    "53c617eb-0a82-4695-8e89-6a65f772f8ea",
+    "399dab3c-f4df-49a5-ba94-6602afdbe9d2",
+    "de182747-8d1b-413a-849f-d49b12840ea1",
+    "2778507c-dbee-477a-9cd6-9029780587f0",
+    "cdc98666-9f9f-40d0-a730-cb28d22f02f3",
+    "eec1754c-a57d-441e-8b06-718c063fa2b6"
+   ]
+  },
+  {
+   "name": "figma.com",
+   "color": "grey",
+   "traceIds": [
+    "d9bc1d97-e0f3-47ef-8f8b-2b83022bc320",
+    "2904acec-f5bb-4188-b805-99e9090b20bb",
+    "6518093d-07db-4924-a604-8457861e02ec",
+    "870266c4-4155-47ef-a8dd-37eb2adf559a",
+    "1391f9b9-dbc7-49b0-921b-28004e6f5a94",
+    "8ded3c96-91eb-49fa-9d5f-576cdeb8fc4c"
+   ]
+  },
+  {
+   "name": "github.com",
+   "color": "grey",
+   "traceIds": [
+    "d5f4b3b2-e4b0-4ce6-8741-c7a87ce42c82",
+    "701966a0-c381-488f-b8c0-c8fd8712b8bc",
+    "d6730839-e1e4-4557-aa19-0b2a58068a9d",
+    "2e47dc0e-959f-4a51-8cfe-5cd12d5db79b",
+    "6de2b33b-56ce-48ec-a298-bdb1c85f0d46"
+   ]
+  },
+  {
+   "name": "amazon.com",
+   "color": "grey",
+   "traceIds": [
+    "7d5c8dfc-5eda-42d8-a4ac-5db9d707107e",
+    "b2221a58-008a-45a6-8464-7159c324c985",
+    "efba91fc-8034-48b6-b610-a9f7f9270f4e",
+    "08d6af57-da71-4448-96c8-da1964b2d2bc",
+    "1e39a54c-464a-4296-967e-8ecfa9b576d7"
+   ]
+  },
+  {
+   "name": "python.org",
+   "color": "grey",
+   "traceIds": [
+    "bfe4440e-60fc-47fa-bf8b-1baa47158a7e",
+    "4039d142-c1e6-415a-95f2-ee554fa69611",
+    "c234472f-5b58-496a-ad61-1a3e80c6bcbd",
+    "736ebf51-1d95-489b-a97a-21d76bc78bf5",
+    "f8a10e70-3db1-4a28-ac9f-6fbfd9d9320e"
+   ]
+  },
+  {
+   "name": "rightmove.co.uk",
+   "color": "grey",
+   "traceIds": [
+    "4e3d4d0f-51dd-4d5c-9d94-6658d2511c38",
+    "3f4ed95a-aaf3-4c2f-9cb2-84f8b6febc3a",
+    "8758ff4d-2d75-425d-81ea-06397c6a47a7",
+    "cebcc1ba-9438-43a5-9c84-2b6a8b525b4f",
+    "a4ba3161-9309-4287-a6ea-2981172a4012",
+    "82fe3a4a-c360-43b7-9251-310bebee3521"
+   ]
+  },
+  {
+   "name": "notion.so",
+   "color": "grey",
+   "traceIds": [
+    "47fc816a-c16e-4284-810f-aa4003ba33db",
+    "34accd78-1959-49ef-98d0-7674334de73d",
+    "4fdf8e1a-060c-4a63-9d3b-993f79490eab",
+    "58989008-6a17-49af-9b56-9643d037cdff",
+    "5349da48-0467-4b75-bff2-e341810d2e30",
+    "fa0b8518-8296-45ea-baeb-41a5e65a8149"
+   ]
+  },
+  {
+   "name": "arxiv.org",
+   "color": "grey",
+   "traceIds": [
+    "ddbd358f-6156-44df-92bc-cdcb6816de06",
+    "96605d95-9d7c-44f6-9d5c-482557450e65"
+   ]
+  },
+  {
+   "name": "wikipedia.org",
+   "color": "grey",
+   "traceIds": [
+    "43bbba66-e9a4-43ca-9975-8f830297c0d6",
+    "a117511f-b8a6-4715-a831-15a8055198c0",
+    "de518343-e63e-43d6-9a0d-bc7807d11b6b"
+   ]
+  },
+  {
+   "name": "booking.com",
+   "color": "grey",
+   "traceIds": [
+    "adb55556-00e6-4305-86b4-6f015c03151c",
+    "e2d28da8-3cbb-4615-b52c-5f80873116f0",
+    "2a04ff67-050d-458c-b146-99bda826e5f1",
+    "2a66b259-bb79-4e9b-a03a-19151291f006"
+   ]
+  },
+  {
+   "name": "acme.io",
+   "color": "grey",
+   "traceIds": [
+    "c69d4bd8-b3fa-4aa7-a1fa-b9d78c7e134f",
+    "a648a7dd-0683-4eb9-85b6-e6e307d4bedc",
+    "05805975-ed2f-49d9-8a2f-20aaf3c64af7"
+   ]
+  },
+  {
+   "name": "stackoverflow.com",
+   "color": "grey",
+   "traceIds": [
+    "156eab79-e9b1-41f4-bca5-f87b447c999d",
+    "3e036333-9b0a-4817-b91c-85fda0a59518",
+    "e1018cc5-920f-4663-b57d-6f2ec4e199a1",
+    "f59cd100-7ceb-4fb4-a8ac-abff9f55c5fc",
+    "8b97ef45-0362-4f97-bf4c-c64591be34eb"
+   ]
+  }
+ ],
+ "ungrouped": [
+  "05f5e71b-98f6-4644-8f39-efd70e2af641",
+  "1e2feb89-414c-443c-9027-c4d1c386bbc4",
+  "cd613e30-d8f1-4adf-91b7-584a2265b1f5",
+  "874e263f-b434-4622-be94-f5ab08e2fad3"
+ ]
+}
