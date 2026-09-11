@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "graphology": "^0.25.4",
-    "graphology-communities-louvain": "^2.0.1",
     "idb": "^8.0.0"
   }
 }
