@@ -8,6 +8,13 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
+    rollupOptions: {
+      // Pages not referenced from the manifest still need to be bundled.
+      input: {
+        xray: 'src/ui/xray/index.html',
+        dev: 'src/ui/dev/index.html',
+      },
+    },
   },
   test: {
     include: ['src/**/*.test.ts'],

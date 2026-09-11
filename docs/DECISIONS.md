@@ -44,3 +44,23 @@ Append; never rewrite history.
 - **Decision:** `analysis/` (own `pyproject.toml`) holds `score.py`, `ablate.py`, `report.py`, later `refit.py`. TS clusters and writes partition JSON; Python only reads JSON and does maths using `sklearn.metrics.adjusted_rand_score` and `pair_confusion_matrix`. Ablation clustering runs TS-side via a beta-override flag; Python tabulates. `npm run score` / `npm run ablate` are thin wrappers that shell out. `src/cluster/metrics.ts` and its ARI tests are dropped. Hard constraint: the extension builds and runs with zero Python installed.
 - **Rejected:** Hand-rolled ARI in TS with unit tests against known values; reimplementing any signal in Python.
 - **Why:** sklearn is the reference implementation, deleting a task outright. Two implementations of a signal drift and we end up benchmarking the one we don't ship. Python is for the gate, not the product.
+
+## 2026-09-11 — `TabTrace` gains `closedAt` and `backfilled`
+- **Decision:** A closed tab's trace is kept with `closedAt` set; open-tab views filter on `closedAt === null`. Traces adopted at install or unmatched on startup get `openedAt`/`transition` from the most recent history visit and `backfilled: true`; `openerTraceId` is never backfilled.
+- **Rejected:** Deleting traces on `onRemoved`; giving adopted tabs `openedAt = now` and `transition = 'unknown'`.
+- **Why:** "Never deletes anything" should hold in the collector too, and a closed opener still anchors lineage. The brief already anticipates "history-backfilled timing" for Phase 0; flagging it keeps the report honest about which signals were event-time.
+
+## 2026-09-11 — Startup re-bind: exact (url, windowId) first, then url-only
+- **Decision:** On startup, match open tabs to stored traces by exact (url, windowId); unmatched tabs then match by url alone (windowIds are reassigned across restarts too); still-unmatched tabs become backfilled traces; unmatched stored traces get `closedAt`.
+- **Rejected:** (url, windowId) only, as the brief literally says.
+- **Why:** Chrome reassigns window ids across restarts, so a strict match would orphan every trace after every restart and the collector would never accumulate the S8 signal it exists to test.
+
+## 2026-09-11 — One trace per tab; in-tab navigation updates the trace
+- **Decision:** A tab keeps its `traceId` for its lifetime. When its URL changes, url features/title are refreshed and the digest reset; `openedAt`, `transition` and lineage stay as they were at creation.
+- **Rejected:** Minting a new trace on every top-level navigation.
+- **Why:** The thesis is about tabs opened from one another in a sitting; a tab is the unit the user sees on the strip and the unit Chrome's organiser groups. Per-navigation traces would inflate counts and break the (url, windowId) re-bind.
+
+## 2026-09-11 — `"incognito": "not_allowed"` in the manifest
+- **Decision:** The extension cannot be enabled in incognito at all.
+- **Rejected:** `"spanning"` with runtime `tab.incognito` checks.
+- **Why:** §6.10 says incognito is never touched; making it impossible at the manifest level is stronger than a check that every handler must remember.

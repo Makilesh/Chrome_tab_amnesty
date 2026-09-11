@@ -6,3 +6,4 @@ dist/
 analysis/.venv/
 __pycache__/
 fixtures/*.full.json
+chrome/
