@@ -45,12 +45,12 @@ recovering someone's real projects?
 - [x] Unit tests for all of the above (TS 17 + Python 24; `npm run parity` ties them)
 
 **c. Scoring harness** (Node CLI)
-- [ ] Export from the x-ray page (blob + `<a download>`, no `downloads` permission) to
+- [x] Export from the x-ray page (blob + `<a download>`, no `downloads` permission) to
       `fixtures/<name>.json` with `schemaVersion`, capture window and count in the header
-- [ ] Export modes: `full` and `shareable` (default) — query values stripped, `leadText`
+- [x] Export modes: `full` and `shareable` (default) — query values stripped, `leadText`
       dropped, URLs reduced to host+path; consent summary shown before writing
-- [ ] Hand labels in `fixtures/<name>.labels.json` (traceId → project name)
-- [ ] "Capture Chrome baseline" button reads real tab groups after Organize tabs, then
+- [x] Hand labels in `fixtures/<name>.labels.json` (traceId → project name)
+- [x] "Capture Chrome baseline" button reads real tab groups after Organize tabs, then
       ungroups; handles §5.6 saved-group failure loudly; hand transcription as fallback →
       `fixtures/<name>.chrome.json` `{ method, capturedAt, groups[], ungrouped[] }`
 - [x] `npm run score` prints ARI (primary), pairwise precision/recall/F1, cluster count for both
@@ -58,7 +58,7 @@ recovering someone's real projects?
 - [x] Python bench (`analysis/tabamnesty`) is where signals change; TS port in `src/cluster/`
       ships; `npm run parity` fails on any drift (signals exact, partitions ARI ≥ 0.9)
 - [x] ARI + pairwise P/R/F1 via `sklearn` in `analysis/score.py` (no hand-rolled ARI, no TS metrics)
-- [ ] Ungrouped convention printed in score header + README: each ungrouped / loose-end tab is
+- [x] Ungrouped convention printed in score header + README: each ungrouped / loose-end tab is
       its own singleton cluster, applied identically to both partitions
 - [x] ARI reported on the full tab set AND on the subset both partitions placed
 - [x] `npm run ablate` — TS cluster CLI emits one partition per beta-override config;
@@ -66,7 +66,7 @@ recovering someone's real projects?
 - [x] `npm run score` / `npm run ablate` are thin wrappers; extension builds with zero Python
 
 **d. Minimal UI**
-- [ ] One read-only page from the extension icon showing proposed clusters. Nothing on it changes
+- [x] One read-only page from the extension icon showing proposed clusters. Nothing on it changes
       the browser. Obeys all §6 rules (no tab counts, no forbidden words).
 
 ### Anti-scope (do NOT build)
@@ -79,8 +79,8 @@ ONNX, WASM · settings screen · onboarding · sync · accounts · any network r
 - [x] Integration check *proves* the collector records `openerTraceId` and `transition` for new
       tabs (shown, not asserted)
 - [x] `src/cluster/` has zero `chrome.*` and passes unit tests
-- [ ] `npm run score` runs end-to-end on a real exported fixture
-- [ ] README states the pass condition
+- [~] `npm run score` runs end-to-end on a real exported fixture (runs on the synthetic one; needs a real export)
+- [x] README states the pass condition
 
 ### GATE
 - [ ] ARI beats Chrome's organiser by **≥ 0.15 absolute on 4 of 5** real browsers with 80+ tabs

@@ -124,3 +124,18 @@ Append; never rewrite history.
 - **Decision:** Induced subgraphs for the >15 split are built explicitly in parent-graph node order (`_induced`), never via `g.subgraph(set)`; synthetic trace ids are seeded. A test spawns three interpreters with different hash seeds and requires identical partitions.
 - **Rejected:** Sorting community members alphabetically before Louvain (would still be deterministic but would diverge from the TS side, which uses input order).
 - **Why:** A networkx subgraph view over a small node set iterates the *set*, and Louvain's tie-breaking follows node order; the same fixture produced two different ARIs in two processes before this fix. A benchmark that changes between runs cannot gate anything.
+
+## 2026-09-11 — X-ray group headings are heuristic (shared high-IDF tokens), not names
+- **Decision:** `src/cluster/describe.ts` heads each card with up to three tokens shared by ≥40% of the group ranked by IDF over the whole corpus, falling back to the dominant host; a secondary line gives an event-shaped time ("Tuesday afternoon") and the group's hosts. No input field, nothing editable.
+- **Rejected:** No heading at all; a date as the heading; a "name this" field.
+- **Why:** Phase 0 forbids AI, §6.7 forbids user naming, §6.5 says date is never the primary label. Something recognisable still has to head the card (§6.3). This is also the Phase 1 heuristic fallback in embryo.
+
+## 2026-09-11 — Study controls live on the x-ray page, collapsed, below the groups
+- **Decision:** Export and baseline capture sit in a closed `<details>` under the clusters, with a plain-language line saying what a shareable export includes and leaves out.
+- **Rejected:** A separate dev page for them; putting them above the fold.
+- **Why:** Testers need to reach them from the icon without instructions, but §6.3 says the first thing on screen is what the person recognises, not a control.
+
+## 2026-09-11 — `npm run check` also audits the x-ray page
+- **Decision:** The integration check opens the x-ray page, screenshots it, greps the rendered text for §6.2 words and for "N tabs", and clicks Export to prove the shareable file downloads, loads, and is redacted (url reduced to host+path, query values blank, leadText empty).
+- **Rejected:** Trusting the code review for §6 compliance.
+- **Why:** The brief says each §6 rule has a visible failure you can check for; so check for it.
