@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Amnesty",
+  "version": "0.0.1",
+  "description": "A browser memory. Close it, you'll still have it.",
+  "permissions": ["tabs", "history", "storage", "alarms", "tabGroups"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/collector/background.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/collector/content.ts"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Tab Amnesty"
+  },
+  "incognito": "not_allowed"
+}

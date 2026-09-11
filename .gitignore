@@ -1,2 +1,8 @@
 .venv
 info_docs/*
+node_modules/
+dist/
+.vite/
+analysis/.venv/
+__pycache__/
+fixtures/*.full.json
