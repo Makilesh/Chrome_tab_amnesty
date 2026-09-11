@@ -422,7 +422,21 @@ async function rebindAll(): Promise<void> {
   });
 }
 
-chrome.runtime.onInstalled.addListener(() => void rebindAll());
+/**
+ * On install/update, re-derive timing for traces that were backfilled under an older rule —
+ * the first rule took the latest visit, which after a session restore is always 'reload' at
+ * restart time. Event-time traces are never touched.
+ */
+async function refreshBackfilled(): Promise<void> {
+  for (const t of await getOpenTraces()) {
+    if (!t.backfilled || !/^https?:/.test(t.url)) continue;
+    const visit = await lastVisit(t.url);
+    if (!visit || (visit.visitTime === t.openedAt && visit.transition === t.transition)) continue;
+    await updateTrace(t.traceId, (cur) => ({ ...cur, openedAt: visit.visitTime, transition: visit.transition }));
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfilled));
 chrome.runtime.onStartup.addListener(() => void rebindAll());
 
 // The x-ray page is read-only and reads IndexedDB directly; no messaging surface is needed.

@@ -52,18 +52,19 @@ export async function transitionNear(url: string, openedAt: number): Promise<Tra
 }
 
 /**
- * For tabs we did not see open (install-time adoption, failed re-bind): the most recent visit to
- * that URL, giving a backfilled openedAt and transition.
+ * For tabs we did not see open (install-time adoption, failed re-bind): the visit that best
+ * stands in for "when this tab was opened". Session restore and F5 both write a 'reload' visit,
+ * so the most recent visit is usually the restart, not the opening — prefer the most recent
+ * NON-reload visit and fall back to the most recent of any kind.
  */
 export async function lastVisit(
   url: string,
 ): Promise<{ visitTime: number; transition: Transition } | null> {
-  const visits = await visitsFor(url);
-  let best: chrome.history.VisitItem | undefined;
-  for (const v of visits) {
-    if (v.visitTime === undefined) continue;
-    if (!best || v.visitTime > (best.visitTime ?? 0)) best = v;
-  }
-  if (!best || best.visitTime === undefined) return null;
-  return { visitTime: best.visitTime, transition: asTransition(best.transition) };
+  const visits = (await visitsFor(url)).filter((v) => v.visitTime !== undefined);
+  if (visits.length === 0) return null;
+  const pick = (vs: chrome.history.VisitItem[]) =>
+    vs.reduce((best, v) => (v.visitTime! > best.visitTime! ? v : best));
+  const nonReload = visits.filter((v) => v.transition !== 'reload');
+  const best = pick(nonReload.length ? nonReload : visits);
+  return { visitTime: best.visitTime!, transition: asTransition(best.transition) };
 }
