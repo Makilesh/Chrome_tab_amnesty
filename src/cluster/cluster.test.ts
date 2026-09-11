@@ -95,9 +95,14 @@ describe('signals', () => {
     const ts = [tr('a', { path: ['acme', 'deploy'], queryKeys: { tab: 'files' } }), tr('b', { path: ['acme', 'billing'], queryKeys: { tab: 'files' } })];
     expect(s6PathQuery(new Context(ts), ts[0]!, ts[1]!)).toBeCloseTo(0.5);
   });
-  it('coactive normalised', () => {
-    expect(s8Coactive(tr('a', { activationCount: 4, coActive: { b: 2 } }), tr('b', { activationCount: 10, coActive: { a: 2 } }))).toBeCloseTo(0.5);
-    expect(s8Coactive(tr('a'), tr('b'))).toBe(0);
+  it('coactive relative to strongest partner', () => {
+    const [a, b, c] = [tr('a', { coActive: { b: 2, c: 5 } }), tr('b', { coActive: { a: 2 } }), tr('c', { coActive: { a: 1 } })];
+    const ctx = new Context([a, b, c]);
+    expect(s8Coactive(ctx, a, c)).toBeCloseTo(1);
+    expect(s8Coactive(ctx, a, b)).toBeCloseTo(4 / 6);
+    expect(s8Coactive(ctx, b, c)).toBe(0);
+    const [x, y] = [tr('x'), tr('y')];
+    expect(s8Coactive(new Context([x, y]), x, y)).toBe(0);
   });
   it('vector keys match betas', () => {
     const ts = [tr('a'), tr('b')];

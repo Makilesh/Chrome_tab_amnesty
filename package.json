@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check": "npm run build && tsx tools/integration-check.ts",
+    "check": "npm run build && tsx tools/integration-check.ts && node tools/py.mjs parity",
     "check:setup": "puppeteer-browsers install chrome@stable",
     "cluster": "tsx tools/cluster-cli.ts",
     "score": "node tools/py.mjs cli score",
@@ -18,7 +18,8 @@
     "report": "node tools/py.mjs cli report",
     "parity": "node tools/py.mjs parity",
     "synth": "node tools/py.mjs synth",
-    "pytest": "node tools/py.mjs pytest"
+    "pytest": "node tools/py.mjs pytest",
+    "cluster:python": "node tools/py.mjs cli cluster"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0",
@@ -32,7 +33,6 @@
   },
   "dependencies": {
     "graphology": "^0.25.4",
-    "graphology-communities-louvain": "^2.0.1",
     "idb": "^8.0.0"
   }
 }

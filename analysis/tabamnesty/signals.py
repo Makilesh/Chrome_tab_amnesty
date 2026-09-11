@@ -53,6 +53,7 @@ class Context:
     session: dict[str, int] = field(init=False)
     tfidf: dict[str, dict[str, float]] = field(init=False)
     feats: dict[str, set[str]] = field(init=False)  # S6: path tokens + query key=value
+    strongest: dict[str, int] = field(init=False)   # S8: each tab's heaviest co-activation pair
 
     def __post_init__(self) -> None:
         self.by_id = {t["traceId"]: t for t in self.traces}
@@ -72,6 +73,14 @@ class Context:
             f = set(t.get("pathTokens") or [])
             f.update(f"{k}={v}" for k, v in (t.get("queryKeys") or {}).items())
             self.feats[t["traceId"]] = f
+        self.strongest = {t["traceId"]: 0 for t in self.traces}
+        for t in self.traces:
+            for other, n in (t.get("coActive") or {}).items():
+                # a pair's count is the sum of both sides' records; credit it to both tabs
+                if other in self.by_id:
+                    c = n + (self.by_id[other].get("coActive") or {}).get(t["traceId"], 0)
+                    self.strongest[t["traceId"]] = max(self.strongest[t["traceId"]], c)
+                    self.strongest[other] = max(self.strongest[other], c)
 
     def _resolve(self, tid: str) -> None:
         chain: list[str] = []
@@ -118,14 +127,15 @@ def s2_temporal(a: Trace, b: Trace) -> float:
     return math.exp(-abs(a["openedAt"] - b["openedAt"]) / TEMPORAL_TAU_MS)
 
 
-def s8_coactive(a: Trace, b: Trace) -> float:
-    """Pair count normalised by the smaller activation count: of the times either was
-    foregrounded, how often was the other foregrounded within the window."""
+def s8_coactive(ctx: Context, a: Trace, b: Trace) -> float:
+    """Pair count relative to the heavier tab's strongest partner: 1.0 means "this is the tab
+    you switch to most". Normalising by activation count instead flattens every pair in a
+    well-connected project to ~1/k, which the positive-control fixture showed the clusterer
+    cannot use."""
     n = (a.get("coActive") or {}).get(b["traceId"], 0) + (b.get("coActive") or {}).get(a["traceId"], 0)
     if n == 0:
         return 0.0
-    denom = max(1, min(a.get("activationCount", 0), b.get("activationCount", 0)))
-    return min(1.0, n / (2.0 * denom))  # each foregrounding is recorded on both sides
+    return n / max(ctx.strongest[a["traceId"]], ctx.strongest[b["traceId"]], n)
 
 
 def s3_session(ctx: Context, a: Trace, b: Trace) -> float:
@@ -171,7 +181,7 @@ def signal_vector(ctx: Context, a: Trace, b: Trace) -> dict[str, float]:
     return {
         "S1_lineage": s1,
         "S2_temporal": s2_temporal(a, b),
-        "S8_coactive": s8_coactive(a, b),
+        "S8_coactive": s8_coactive(ctx, a, b),
         "S3_session": s3_session(ctx, a, b),
         "S6_path_query": s6_path_query(ctx, a, b),
         "S4_strip": s4_strip(a, b),

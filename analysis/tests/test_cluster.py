@@ -9,7 +9,7 @@ from tabamnesty.score import assignments, score
 from tabamnesty.segment import segment
 from tabamnesty.signals import (Context, eligible, s1_lineage, s2_temporal, s4_strip, s5_domain,
                                 s6_path_query, s8_coactive, signal_vector)
-from tabamnesty.synth import chrome_like, make
+from tabamnesty.synth import chrome_like, make, make_adversarial
 
 
 def tr(tid, opened=0, opener=None, transition="link", window=1, index=0, host="a.com", etld1=None,
@@ -86,11 +86,15 @@ class TestSignals:
               tr("b", path=("acme", "billing"), queryKeys={"tab": "files"})]
         assert s6_path_query(Context(ts), ts[0], ts[1]) == pytest.approx(2 / 4)
 
-    def test_coactive_normalised(self):
-        a = tr("a", activationCount=4, coActive={"b": 2})
-        b = tr("b", activationCount=10, coActive={"a": 2})
-        assert s8_coactive(a, b) == pytest.approx(0.5)
-        assert s8_coactive(tr("a"), tr("b")) == 0.0
+    def test_coactive_relative_to_strongest_partner(self):
+        a = tr("a", coActive={"b": 2, "c": 5})
+        b = tr("b", coActive={"a": 2})
+        c = tr("c", coActive={"a": 1})
+        ctx = Context([a, b, c])
+        assert s8_coactive(ctx, a, c) == pytest.approx(1.0)      # a's strongest partner
+        assert s8_coactive(ctx, a, b) == pytest.approx(4 / 6)    # 2+2 vs a's strongest 5+1
+        assert s8_coactive(ctx, b, c) == 0.0
+        assert s8_coactive(Context([tr("x"), tr("y")]), tr("x"), tr("y")) == 0.0
 
     def test_vector_keys_match_betas(self):
         ts = [tr("a"), tr("b")]
@@ -180,3 +184,34 @@ class TestDeterminism:
                                     "SYSTEMROOT": __import__('os').environ.get('SYSTEMROOT', '')},
                                cwd=__import__('pathlib').Path(__file__).resolve().parents[1]).stdout for i in (1, 2, 3)}
         assert len(outs) == 1, "partition varies with PYTHONHASHSEED"
+
+
+class TestAblationPositiveControls:
+    """Fixtures where projects are distinguishable by ONE behavioural signal. If zeroing that
+    signal does not drop ARI, the ablation cannot detect anything and a flat real-browser
+    ablation would be uninterpretable. Mechanics only; never counts toward the gate."""
+
+    @staticmethod
+    def _ari(kind: str, betas: dict[str, float]) -> float:
+        traces, labels = make_adversarial(kind)
+        return score(cluster(traces, betas).communities, labels).ari
+
+    def test_lineage_is_detected(self):
+        b = load_betas()
+        full, zero = self._ari("lineage", b), self._ari("lineage", {**b, "S1_lineage": 0.0})
+        assert full - zero >= 0.10, (full, zero)
+
+    def test_coactivation_is_detected(self):
+        b = load_betas()
+        full, zero = self._ari("coactive", b), self._ari("coactive", {**b, "S8_coactive": 0.0})
+        assert full > 0.6 and full - zero >= 0.30, (full, zero)
+
+    def test_temporal_is_detected_only_together_with_session(self):
+        # S3 (same session) is cut from the same timestamps S2 decays over, so the two are
+        # redundant evidence: zeroing S2 alone leaves S3 carrying the boundary. Report this when
+        # reading the gate's "zero S1/S2/S8" condition — S3 still stands in that run.
+        b = load_betas()
+        full = self._ari("temporal", b)
+        zero_s2 = self._ari("temporal", {**b, "S2_temporal": 0.0})
+        zero_both = self._ari("temporal", {**b, "S2_temporal": 0.0, "S3_session": 0.0})
+        assert full > 0.95 and zero_s2 > 0.95 and full - zero_both >= 0.5, (full, zero_s2, zero_both)

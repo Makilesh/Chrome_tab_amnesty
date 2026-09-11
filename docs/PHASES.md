@@ -37,8 +37,8 @@ recovering someone's real projects?
       S3 1.5, S6 1.2, S4 1.0, S7 1.0, S5 0.8, N1 −0.5)
 - [x] Exclusion (not down-weighting) of pinned tabs and ambient hosts (mail, calendar, chat,
       music, search results)
-- [x] Weighted undirected graph, prune edges below `w_min`, Louvain via
-      `graphology-communities-louvain` (not connected components, not single-link)
+- [x] Weighted undirected graph, prune edges below `w_min`, Louvain (own deterministic port on
+      both sides — see DECISIONS 2026-09-12; not connected components, not single-link)
 - [x] `partitionToTarget(graph, lo=3, hi=9)` — binary-search resolution over ~8 iterations
 - [x] Split communities over ~15 tabs by re-running Louvain on the induced subgraph
 - [x] Orphans → `looseEnds` array; never a "Miscellaneous" group
@@ -56,7 +56,11 @@ recovering someone's real projects?
 - [x] `npm run score` prints ARI (primary), pairwise precision/recall/F1, cluster count for both
       partitions against labels
 - [x] Python bench (`analysis/tabamnesty`) is where signals change; TS port in `src/cluster/`
-      ships; `npm run parity` fails on any drift (signals exact, partitions ARI ≥ 0.9)
+      ships; `npm run parity` fails on any drift (signals exact, partitions ARI ≥ 0.98; observed 1.0)
+- [x] **Gate path scores the TS partition**: score/ablate/report run `tools/cluster-cli.ts` and
+      print parity in the header; `--python` is opt-in and labelled as not a gate number
+- [x] Ablation positive controls (`synthetic_lineage` / `_coactive` / `_temporal`) with tests
+      that zeroing the one distinguishing signal drops ARI
 - [x] ARI + pairwise P/R/F1 via `sklearn` in `analysis/score.py` (no hand-rolled ARI, no TS metrics)
 - [x] Ungrouped convention printed in score header + README: each ungrouped / loose-end tab is
       its own singleton cluster, applied identically to both partitions
@@ -86,9 +90,14 @@ ONNX, WASM · settings screen · onboarding · sync · accounts · any network r
 - [ ] ARI beats Chrome's organiser by **≥ 0.15 absolute on 4 of 5** real browsers with 80+ tabs
 - [ ] Zeroing S1/S2/S8 drops ARI by **≥ 0.10**
 
-**Known limit — report, don't hide:** co-activation and dwell only accrue after days of collection,
+**Known limits — report, don't hide:** co-activation and dwell only accrue after days of collection,
 so Phase 0 really tests S1–S7 with history-backfilled timing. Read a marginal pass as more
-encouraging than it looks; a clear fail as fatal.
+encouraging than it looks; a clear fail as fatal. The "zero S1/S2/S8" run leaves S3 standing (same
+timestamps as S2). On interleaved projects S2/S4 can mislead (see README). Duplicate-URL tabs can
+swap identities across a restart.
+
+**Protocol note:** if fewer than five browsers can be collected, the protocol is amended here
+first and the shortfall is stated in the result — the gate is not restated to match what was got.
 
 ---
 

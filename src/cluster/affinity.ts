@@ -42,6 +42,8 @@ export class Context {
   readonly session: Map<string, number>;
   readonly tfidf: Map<string, Vector>;
   readonly feats = new Map<string, Set<string>>();
+  /** S8: each tab's heaviest co-activation pair count (both sides summed). */
+  readonly strongest = new Map<string, number>();
 
   constructor(readonly traces: TabTrace[]) {
     for (const t of traces) {
@@ -56,6 +58,16 @@ export class Context {
       const f = new Set<string>(t.pathTokens ?? []);
       for (const [k, v] of Object.entries(t.queryKeys ?? {})) f.add(`${k}=${v}`);
       this.feats.set(t.traceId, f);
+      this.strongest.set(t.traceId, 0);
+    }
+    for (const t of traces) {
+      for (const [other, n] of Object.entries(t.coActive ?? {})) {
+        const o = this.byId.get(other);
+        if (!o) continue;
+        const c = n + (o.coActive?.[t.traceId] ?? 0);
+        this.strongest.set(t.traceId, Math.max(this.strongest.get(t.traceId)!, c));
+        this.strongest.set(other, Math.max(this.strongest.get(other)!, c));
+      }
     }
   }
 
@@ -114,12 +126,11 @@ export function s2Temporal(a: TabTrace, b: TabTrace): number {
   return Math.exp(-Math.abs(a.openedAt - b.openedAt) / TEMPORAL_TAU_MS);
 }
 
-/** Pair count normalised by the smaller activation count. */
-export function s8Coactive(a: TabTrace, b: TabTrace): number {
+/** Pair count relative to the heavier tab's strongest partner: 1.0 = "the tab you switch to most". */
+export function s8Coactive(ctx: Context, a: TabTrace, b: TabTrace): number {
   const n = (a.coActive?.[b.traceId] ?? 0) + (b.coActive?.[a.traceId] ?? 0);
   if (n === 0) return 0;
-  const denom = Math.max(1, Math.min(a.activationCount ?? 0, b.activationCount ?? 0));
-  return Math.min(1, n / (2 * denom));
+  return n / Math.max(ctx.strongest.get(a.traceId) ?? 0, ctx.strongest.get(b.traceId) ?? 0, n);
 }
 
 export function s3Session(ctx: Context, a: TabTrace, b: TabTrace): number {
@@ -164,7 +175,7 @@ export function signalVector(ctx: Context, a: TabTrace, b: TabTrace): SignalVect
   return {
     S1_lineage: s1,
     S2_temporal: s2Temporal(a, b),
-    S8_coactive: s8Coactive(a, b),
+    S8_coactive: s8Coactive(ctx, a, b),
     S3_session: s3Session(ctx, a, b),
     S6_path_query: s6PathQuery(ctx, a, b),
     S4_strip: s4Strip(a, b),

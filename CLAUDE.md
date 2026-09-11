@@ -79,8 +79,9 @@ clear literal language.
 
 ## Stack and layout
 
-TypeScript · Vite + `@crxjs/vite-plugin` · `idb` · `graphology` + `graphology-communities-louvain` ·
-Vitest · plain DOM (no UI framework unless a page genuinely needs one).
+TypeScript · Vite + `@crxjs/vite-plugin` · `idb` · `graphology` (graph structure; Louvain is our own
+deterministic port in `src/cluster/louvain.ts`) · Vitest · plain DOM (no UI framework unless a page
+genuinely needs one).
 
 ```
 src/collector/   service worker + content script. chrome.* lives here.
@@ -89,15 +90,19 @@ src/archive/     phase 1+. storage, undo, forget.
 src/ui/          xray page (p0), sweep page (p1), newtab (p2)
 src/mcp/         phase 3
 tools/           TS cluster CLI (partition JSON, beta overrides) + thin npm wrappers
-analysis/        Python (own pyproject). score/ablate/report via sklearn. Reads JSON only.
+analysis/        Python research bench (own pyproject): a mirror of the clusterer where signals are
+                 changed first, plus score/ablate/report/parity via sklearn.
 fixtures/        exported traces, hand labels, chrome baselines
 docs/            PROJECT.md, PHASES.md, DECISIONS.md
 ```
 
-The `cluster/` purity rule is absolute — it is what makes the thesis testable in Node.
-Python never reimplements a signal or the clustering; TS is the single source of truth and the
-extension must build and run with zero Python installed. Ungrouped convention for scoring: each
-ungrouped / loose-end tab is its own singleton cluster, applied identically to both partitions.
+The `cluster/` purity rule is absolute — it is what makes the thesis testable in Node. The
+clusterer exists twice on purpose: signals change in Python first, TS follows, and `npm run parity`
+fails on any drift (signals to 1e-9, partitions at ARI ≥ 0.98 — observed 1.0). **The gate is
+measured on the TS partition**: `npm run score|ablate|report` run `tools/cluster-cli.ts` and print
+the parity result in the header; `--python` is for experiments only. The extension must build and
+run with zero Python installed. Ungrouped convention for scoring: each ungrouped / loose-end tab is
+its own singleton cluster, applied identically to both partitions.
 
 ## Working rules (§9)
 
