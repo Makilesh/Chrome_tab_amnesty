@@ -86,11 +86,15 @@ class TestSignals:
               tr("b", path=("acme", "billing"), queryKeys={"tab": "files"})]
         assert s6_path_query(Context(ts), ts[0], ts[1]) == pytest.approx(2 / 4)
 
-    def test_coactive_normalised(self):
-        a = tr("a", activationCount=4, coActive={"b": 2})
-        b = tr("b", activationCount=10, coActive={"a": 2})
-        assert s8_coactive(a, b) == pytest.approx(0.5)
-        assert s8_coactive(tr("a"), tr("b")) == 0.0
+    def test_coactive_relative_to_strongest_partner(self):
+        a = tr("a", coActive={"b": 2, "c": 5})
+        b = tr("b", coActive={"a": 2})
+        c = tr("c", coActive={"a": 1})
+        ctx = Context([a, b, c])
+        assert s8_coactive(ctx, a, c) == pytest.approx(1.0)      # a's strongest partner
+        assert s8_coactive(ctx, a, b) == pytest.approx(4 / 6)    # 2+2 vs a's strongest 5+1
+        assert s8_coactive(ctx, b, c) == 0.0
+        assert s8_coactive(Context([tr("x"), tr("y")]), tr("x"), tr("y")) == 0.0
 
     def test_vector_keys_match_betas(self):
         ts = [tr("a"), tr("b")]
