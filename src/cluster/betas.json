@@ -1,0 +1,12 @@
+{
+  "_comment": "Affinity weights. Read by src/cluster (TS) and analysis/tabamnesty (Python). Refit writes here.",
+  "S1_lineage": 3.0,
+  "S2_temporal": 2.0,
+  "S8_coactive": 1.5,
+  "S3_session": 1.5,
+  "S6_path_query": 1.2,
+  "S4_strip": 1.0,
+  "S7_lexical": 1.0,
+  "S5_domain": 0.8,
+  "N1_cross_window": -0.5
+}
