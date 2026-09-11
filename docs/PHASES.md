@@ -16,19 +16,19 @@ recovering someone's real projects?
 ### Deliverables
 
 **a. Collector** (service worker + content script; records, never touches UI)
-- [ ] `TabTrace` type and `idb` store keyed on `traceId` (UUID minted in `onCreated`, never tabId)
-- [ ] `openerTraceId` captured at event time in `chrome.tabs.onCreated`
-- [ ] `transition` from `chrome.history.getVisits()` (visit nearest `openedAt`; needs `"history"`)
-- [ ] `lastActiveAt`, `activationCount`, `dwellMs` maintained from `chrome.tabs.onActivated`
-- [ ] `coActive` pair counts — tabs foregrounded within 60 s of each other
-- [ ] `host`, `eTLD1`, `pathTokens[]`, `queryKeys{}` derived from URL; eTLD+1 via trimmed
+- [x] `TabTrace` type and `idb` store keyed on `traceId` (UUID minted in `onCreated`, never tabId)
+- [x] `openerTraceId` captured at event time in `chrome.tabs.onCreated`
+- [x] `transition` from `chrome.history.getVisits()` (visit nearest `openedAt`; needs `"history"`)
+- [x] `lastActiveAt`, `activationCount`, `dwellMs` maintained from `chrome.tabs.onActivated`
+- [x] `coActive` pair counts — tabs foregrounded within 60 s of each other
+- [x] `host`, `eTLD1`, `pathTokens[]`, `queryKeys{}` derived from URL; eTLD+1 via trimmed
       suffix data file biased to PSL private section, fallback errs toward splitting
-- [ ] Content-script digest `{ description, headings[], leadText ≤1000 chars }` on
+- [x] Content-script digest `{ description, headings[], leadText ≤1000 chars }` on
       `readyState === 'complete'` and first `visibilitychange` → visible; debounced; never
       re-capture the same URL within 10 min
-- [ ] `pinned`, `discarded`, `digestAt` tracked
-- [ ] Re-bind traces to tabs on startup by (url, windowId)
-- [ ] Incognito never touched
+- [x] `pinned`, `discarded`, `digestAt` tracked
+- [x] Re-bind traces to tabs on startup by (url, windowId)
+- [x] Incognito never touched
 
 **b. Clusterer** (`src/cluster/`, zero `chrome.*` imports, runs in plain Node)
 - [ ] `segment(traces, gapMs = 25*60_000)` — cut on gap > gapMs OR
@@ -73,8 +73,8 @@ capture) · closing or archiving · any AI/LLM call · embeddings, transformers.
 ONNX, WASM · settings screen · onboarding · sync · accounts · any network request whatsoever.
 
 ### Done when
-- [ ] `npm run build` gives a loadable unpacked extension
-- [ ] Integration check *proves* the collector records `openerTraceId` and `transition` for new
+- [x] `npm run build` gives a loadable unpacked extension
+- [x] Integration check *proves* the collector records `openerTraceId` and `transition` for new
       tabs (shown, not asserted)
 - [ ] `src/cluster/` has zero `chrome.*` and passes unit tests
 - [ ] `npm run score` runs end-to-end on a real exported fixture

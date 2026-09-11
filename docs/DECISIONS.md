@@ -64,3 +64,28 @@ Append; never rewrite history.
 - **Decision:** The extension cannot be enabled in incognito at all.
 - **Rejected:** `"spanning"` with runtime `tab.incognito` checks.
 - **Why:** §6.10 says incognito is never touched; making it impossible at the manifest level is stronger than a check that every handler must remember.
+
+## 2026-09-11 — Per-tab serial lanes in the service worker
+- **Decision:** All handlers for a tab run through a per-tab promise chain (`serial(tabId, fn)`); activity handlers that touch shared meta share one lane. The map holds only in-flight work — nothing persistent.
+- **Rejected:** Independent async handlers with idb transactions as the only guard.
+- **Why:** `onUpdated` fires within milliseconds of `onCreated`; the integration check showed it adopting the tab as a backfilled duplicate before the event-time trace was written. §5.5 forbids state in globals, not coordination of work that is in flight while the worker is alive.
+
+## 2026-09-11 — Window-close removals are deferred; only individual tab closes set `closedAt` immediately
+- **Decision:** `onRemoved` with `isWindowClosing` schedules a 1-minute `chrome.alarms` reconcile instead of setting `closedAt`. Reconcile == `rebindAll`: bind live tabs to orphaned traces by url, then close whatever is bound to no live tab. `onStartup` runs the same routine.
+- **Rejected:** Setting `closedAt` on every removal; a `closedByWindow` flag with a grace window at startup.
+- **Why:** A window closing and the browser shutting down are indistinguishable in the event, and the check showed shutdown closing every trace so session restore had nothing to re-bind to (0 of 3 kept). With the deferral, 3 of 3 traces survived a restart on new tab ids.
+
+## 2026-09-11 — Adoption re-binds orphans itself, so re-bind does not depend on event order
+- **Decision:** Any tab with no live trace first looks for an open trace with the same url whose tabId is no longer live (prefer same windowId, then nearest index) and re-binds to it; only then is a fresh backfilled trace minted. `rebindAll` is a loop over this.
+- **Rejected:** A single startup pass that assumes it runs before `onUpdated` for restored tabs.
+- **Why:** Chrome fires `onUpdated` for restored tabs before or during `onStartup`; the first attempt lost the race and duplicated every tab.
+
+## 2026-09-11 — Integration check drives Chrome for Testing with puppeteer-core against a local HTTP server
+- **Decision:** `npm run check` builds, launches Chrome for Testing (`npx @puppeteer/browsers install chrome@stable`, git-ignored `chrome/`) with the unpacked extension, serves test pages from `127.0.0.1`, opens tabs by typed navigation and real link clicks, restarts with session restore, and prints the traces. `puppeteer-core` is a devDependency; nothing is bundled into the extension.
+- **Rejected:** Asking the user to load the extension by hand and read the dev page; using the installed branded Chrome; hitting public sites.
+- **Why:** The brief wants proof shown, not asserted, and repeatable. Branded Chrome ≥137 ignores `--load-extension`. A local server keeps the check hermetic and off the network.
+
+## 2026-09-11 — Raw-trace diagnostics live on a separate unlinked dev page, not the x-ray page
+- **Decision:** `src/ui/dev/` shows raw `TabTrace` rows (counts, ids, dwell) and is reachable only by URL. The x-ray page from the icon is the only user-facing surface and obeys §6.
+- **Rejected:** A "diagnostics" section on the x-ray page.
+- **Why:** §6.1 forbids showing tab counts as a problem anywhere the user is meant to look; a developer table full of counts cannot sit on that page.

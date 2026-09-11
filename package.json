@@ -9,7 +9,9 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "npm run build && tsx tools/integration-check.ts",
+    "check:setup": "puppeteer-browsers install chrome@stable"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0",
