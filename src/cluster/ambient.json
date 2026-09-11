@@ -1,0 +1,19 @@
+{
+  "_comment": "Hosts that belong to every project and therefore to none. Excluded from clustering entirely, never down-weighted. Matched on eTLD+1 or exact host. Read by both TS and Python.",
+  "etld1": [
+    "gmail.com", "outlook.com", "outlook.live.com", "mail.yahoo.com", "protonmail.com", "proton.me", "fastmail.com", "hey.com",
+    "calendar.google.com", "calendly.com",
+    "slack.com", "discord.com", "teams.microsoft.com", "web.whatsapp.com", "messenger.com", "telegram.org", "web.telegram.org",
+    "spotify.com", "open.spotify.com", "music.youtube.com", "music.apple.com", "soundcloud.com", "tidal.com", "deezer.com",
+    "chatgpt.com", "chat.openai.com", "claude.ai", "gemini.google.com", "perplexity.ai",
+    "keep.google.com", "todoist.com", "ticktick.com"
+  ],
+  "hosts": [
+    "mail.google.com", "mail.proton.me", "outlook.office.com", "outlook.office365.com",
+    "www.google.com", "google.com", "duckduckgo.com", "www.bing.com", "bing.com", "search.brave.com", "www.startpage.com",
+    "meet.google.com", "zoom.us", "app.zoom.us"
+  ],
+  "search_paths": [
+    "google.com/search", "bing.com/search", "duckduckgo.com/", "search.brave.com/search"
+  ]
+}
