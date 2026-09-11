@@ -1,10 +1,10 @@
 {
  "schemaVersion": 1,
- "exportedAt": 1789155830514,
+ "exportedAt": 1789156919891,
  "mode": "shareable",
  "traceCount": 22,
  "openedAtMin": 1789155489808.157,
- "openedAtMax": 1789155803478,
+ "openedAtMax": 1789155914056,
  "traces": [
   {
    "traceId": "0c85a302-c216-44a7-aecc-c454ac734e91",
@@ -151,10 +151,13 @@
    "tabId": 1300708778,
    "windowId": 1300708634,
    "index": 0,
-   "lastActiveAt": null,
-   "activationCount": 0,
-   "dwellMs": 0,
-   "coActive": {},
+   "lastActiveAt": 1789155911509,
+   "activationCount": 1,
+   "dwellMs": 2547,
+   "coActive": {
+    "94276545-add0-44d0-a402-ca13d221d0d2": 8,
+    "60606ad5-e00d-4d42-aa8c-fca923ced977": 1
+   },
    "url": "chrome://whats-new/",
    "host": "whats-new",
    "eTLD1": "whats-new",
@@ -295,6 +298,36 @@
    "closedAt": null
   },
   {
+   "traceId": "60606ad5-e00d-4d42-aa8c-fca923ced977",
+   "openerTraceId": "2cbbdb2d-1b52-4e3c-98c7-847134de3e95",
+   "openedAt": 1789155914056,
+   "transition": "unknown",
+   "backfilled": false,
+   "tabId": 1300708800,
+   "windowId": 1300708634,
+   "index": 21,
+   "lastActiveAt": 1789156868607,
+   "activationCount": 2,
+   "dwellMs": 30471,
+   "coActive": {
+    "94276545-add0-44d0-a402-ca13d221d0d2": 9,
+    "2cbbdb2d-1b52-4e3c-98c7-847134de3e95": 1
+   },
+   "url": "chrome://settings/ai",
+   "host": "settings",
+   "eTLD1": "settings",
+   "pathTokens": [
+    "ai"
+   ],
+   "queryKeys": {},
+   "title": "Settings – AI in Chrome",
+   "digest": null,
+   "digestAt": null,
+   "pinned": false,
+   "discarded": false,
+   "closedAt": null
+  },
+  {
    "traceId": "63f34c50-3db3-483b-ab44-ffab020d5992",
    "openerTraceId": null,
    "openedAt": 1789155491950.329,
@@ -334,7 +367,7 @@
    "coActive": {
     "82ad3d09-e479-4d68-846c-5f0eeb373b91": 1,
     "7a44c8b6-08b1-45f5-b897-2517398010f1": 1,
-    "94276545-add0-44d0-a402-ca13d221d0d2": 1
+    "94276545-add0-44d0-a402-ca13d221d0d2": 2
    },
    "url": "chrome-extension://fcoeoabgfenejglbffodgkkbkcdhcgfn/options.html",
    "host": "fcoeoabgfenejglbffodgkkbkcdhcgfn",
@@ -365,7 +398,7 @@
    "coActive": {
     "82ad3d09-e479-4d68-846c-5f0eeb373b91": 1,
     "6f958fa3-60ba-4dc6-ba9c-e375f6000a93": 1,
-    "94276545-add0-44d0-a402-ca13d221d0d2": 1
+    "94276545-add0-44d0-a402-ca13d221d0d2": 2
    },
    "url": "chrome://extensions/",
    "host": "extensions",
@@ -439,35 +472,6 @@
    "closedAt": null
   },
   {
-   "traceId": "82ad3d09-e479-4d68-846c-5f0eeb373b91",
-   "openerTraceId": null,
-   "openedAt": 1789155657194,
-   "transition": "unknown",
-   "backfilled": false,
-   "tabId": 1300708796,
-   "windowId": 1300708634,
-   "index": 20,
-   "lastActiveAt": 1789155789299,
-   "activationCount": 1,
-   "dwellMs": 1090,
-   "coActive": {
-    "6f958fa3-60ba-4dc6-ba9c-e375f6000a93": 1,
-    "7a44c8b6-08b1-45f5-b897-2517398010f1": 1,
-    "94276545-add0-44d0-a402-ca13d221d0d2": 1
-   },
-   "url": "chrome://newtab/",
-   "host": "newtab",
-   "eTLD1": "newtab",
-   "pathTokens": [],
-   "queryKeys": {},
-   "title": "New tab",
-   "digest": null,
-   "digestAt": null,
-   "pinned": false,
-   "discarded": false,
-   "closedAt": null
-  },
-  {
    "traceId": "94276545-add0-44d0-a402-ca13d221d0d2",
    "openerTraceId": "7a44c8b6-08b1-45f5-b897-2517398010f1",
    "openedAt": 1789155803478,
@@ -475,14 +479,16 @@
    "backfilled": false,
    "tabId": 1300708797,
    "windowId": 1300708634,
-   "index": 21,
-   "lastActiveAt": 1789155815509,
-   "activationCount": 1,
-   "dwellMs": 0,
+   "index": 20,
+   "lastActiveAt": 1789156898172,
+   "activationCount": 13,
+   "dwellMs": 924617,
    "coActive": {
-    "82ad3d09-e479-4d68-846c-5f0eeb373b91": 1,
-    "6f958fa3-60ba-4dc6-ba9c-e375f6000a93": 1,
-    "7a44c8b6-08b1-45f5-b897-2517398010f1": 1
+    "82ad3d09-e479-4d68-846c-5f0eeb373b91": 2,
+    "6f958fa3-60ba-4dc6-ba9c-e375f6000a93": 2,
+    "7a44c8b6-08b1-45f5-b897-2517398010f1": 2,
+    "2cbbdb2d-1b52-4e3c-98c7-847134de3e95": 8,
+    "60606ad5-e00d-4d42-aa8c-fca923ced977": 9
    },
    "url": "chrome-extension://nknndnngjadidaobedcikodiidodgflo/src/ui/xray/index.html",
    "host": "nknndnngjadidaobedcikodiidodgflo",

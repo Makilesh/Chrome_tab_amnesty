@@ -184,3 +184,8 @@ Append; never rewrite history.
 - **Decision:** Recorded as a real export but explicitly NOT a gate browser: 12 http tabs (gate wants 80+), all backfilled (no lineage, no co-activation), no digests (content scripts do not reach pre-install tabs). The TS clusterer put all 9 eligible tabs in one community with 13 excluded (chrome://, extension pages, local PDFs, Gmail, Google search).
 - **Rejected:** Counting it toward the five.
 - **Why:** The protocol note in PHASES.md: the gate is not restated to match what was got.
+
+## 2026-09-12 — Chrome's "Organize tabs" is not offered on the first real browser
+- **Decision:** `chrome://settings/ai` shows no Tab organizer toggle on the owner's profile (Chrome 153, Windows 11, India, en). Recorded as a protocol shortfall: a browser without the organiser can contribute to the ablation half of the gate (zero S1/S2/S8 ≥ 0.10 drop) but not to the "beats Chrome by ≥ 0.15" half. No proxy is scored as "Chrome" — the gate is not restated to match what was got.
+- **Rejected:** Substituting an eTLD+1 topic grouping as the Chrome baseline (it is what `synth.chrome_like` does for synthetic data, and it is a caricature, not Chrome).
+- **Why:** Chrome gates the feature by account sign-in, UI language (English US) and region. If it can be enabled it should be; if not, testers must be recruited on profiles that have it, and PHASES.md must say how many of the five had it.
