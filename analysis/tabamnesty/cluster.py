@@ -90,13 +90,23 @@ def partition_to_target(g: nx.Graph, lo: int = TARGET_LO, hi: int = TARGET_HI,
     return best, best_res
 
 
+def _induced(g: nx.Graph, nodes: set[str]) -> nx.Graph:
+    """Induced subgraph with nodes in the parent graph's order. Not g.subgraph(): a subgraph view
+    over a small node set iterates the *set*, so Louvain's tie-breaking — and the partition —
+    would depend on PYTHONHASHSEED."""
+    h = nx.Graph()
+    h.add_nodes_from(n for n in g.nodes if n in nodes)
+    h.add_edges_from((a, b, d) for a, b, d in g.edges(data=True) if a in nodes and b in nodes)
+    return h
+
+
 def split_large(g: nx.Graph, comms: list[set[str]], max_size: int = MAX_COMMUNITY) -> list[set[str]]:
     out: list[set[str]] = []
     for c in comms:
         if len(c) <= max_size:
             out.append(c)
             continue
-        sub = _louvain(g.subgraph(c), 1.0)
+        sub = _louvain(_induced(g, c), 1.0)
         if len(sub) <= 1:  # Louvain will not split it; keep rather than force
             out.append(c)
         else:

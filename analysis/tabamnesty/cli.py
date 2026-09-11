@@ -40,13 +40,20 @@ def cluster_main(argv: list[str] | None = None) -> None:
     ap.add_argument("name")
     ap.add_argument("--betas", type=Path, help="alternative betas.json")
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--edges", type=Path, help="also dump every pair's signal vector + weight (parity, refit)")
     a = ap.parse_args(argv)
     paths = _paths(a.name)
     traces = load_fixture(paths["traces"])
     betas = load_betas(a.betas)
-    part = cluster(traces, betas)
+    kept, _ = eligible(traces)
+    _, vecs = pair_signals(kept)
+    part = cluster(traces, betas, vecs=vecs)
     out = a.out or paths["partition"]
     out.write_text(json.dumps(part.to_json("python", betas), indent=2), encoding="utf-8")
+    if a.edges:
+        from .signals import affinity
+        rows = [{"a": k[0], "b": k[1], "w": affinity(v, betas), **v} for k, v in vecs.items()]
+        a.edges.write_text(json.dumps(rows), encoding="utf-8")
     print(f"{a.name}: {len(part.communities)} communities, {len(part.loose_ends)} loose ends, "
           f"{len(part.excluded)} excluded, resolution {part.resolution:.3f} -> {out}")
 

@@ -11,7 +11,14 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "check": "npm run build && tsx tools/integration-check.ts",
-    "check:setup": "puppeteer-browsers install chrome@stable"
+    "check:setup": "puppeteer-browsers install chrome@stable",
+    "cluster": "tsx tools/cluster-cli.ts",
+    "score": "node tools/py.mjs cli score",
+    "ablate": "node tools/py.mjs cli ablate",
+    "report": "node tools/py.mjs cli report",
+    "parity": "node tools/py.mjs parity",
+    "synth": "node tools/py.mjs synth",
+    "pytest": "node tools/py.mjs pytest"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0",

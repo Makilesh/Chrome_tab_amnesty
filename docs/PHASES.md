@@ -31,18 +31,18 @@ recovering someone's real projects?
 - [x] Incognito never touched
 
 **b. Clusterer** (`src/cluster/`, zero `chrome.*` imports, runs in plain Node)
-- [~] `segment(traces, gapMs = 25*60_000)` — cut on gap > gapMs OR
+- [x] `segment(traces, gapMs = 25*60_000)` — cut on gap > gapMs OR
       `NEW_INTENT.has(transition) && !openerTraceId`, `NEW_INTENT = {typed, generated, auto_bookmark}`
-- [~] `affinity(a, b)` — weighted sum, weights in one exported const (S1 3.0, S2 2.0, S8 1.5,
+- [x] `affinity(a, b)` — weighted sum, weights in one exported const (S1 3.0, S2 2.0, S8 1.5,
       S3 1.5, S6 1.2, S4 1.0, S7 1.0, S5 0.8, N1 −0.5)
-- [~] Exclusion (not down-weighting) of pinned tabs and ambient hosts (mail, calendar, chat,
+- [x] Exclusion (not down-weighting) of pinned tabs and ambient hosts (mail, calendar, chat,
       music, search results)
-- [~] Weighted undirected graph, prune edges below `w_min`, Louvain via
+- [x] Weighted undirected graph, prune edges below `w_min`, Louvain via
       `graphology-communities-louvain` (not connected components, not single-link)
-- [~] `partitionToTarget(graph, lo=3, hi=9)` — binary-search resolution over ~8 iterations
-- [~] Split communities over ~15 tabs by re-running Louvain on the induced subgraph
-- [~] Orphans → `looseEnds` array; never a "Miscellaneous" group
-- [ ] Unit tests for all of the above
+- [x] `partitionToTarget(graph, lo=3, hi=9)` — binary-search resolution over ~8 iterations
+- [x] Split communities over ~15 tabs by re-running Louvain on the induced subgraph
+- [x] Orphans → `looseEnds` array; never a "Miscellaneous" group
+- [x] Unit tests for all of the above (TS 17 + Python 24; `npm run parity` ties them)
 
 **c. Scoring harness** (Node CLI)
 - [ ] Export from the x-ray page (blob + `<a download>`, no `downloads` permission) to
@@ -53,15 +53,17 @@ recovering someone's real projects?
 - [ ] "Capture Chrome baseline" button reads real tab groups after Organize tabs, then
       ungroups; handles §5.6 saved-group failure loudly; hand transcription as fallback →
       `fixtures/<name>.chrome.json` `{ method, capturedAt, groups[], ungrouped[] }`
-- [ ] `npm run score` prints ARI (primary), pairwise precision/recall/F1, cluster count for both
+- [x] `npm run score` prints ARI (primary), pairwise precision/recall/F1, cluster count for both
       partitions against labels
+- [x] Python bench (`analysis/tabamnesty`) is where signals change; TS port in `src/cluster/`
+      ships; `npm run parity` fails on any drift (signals exact, partitions ARI ≥ 0.9)
 - [x] ARI + pairwise P/R/F1 via `sklearn` in `analysis/score.py` (no hand-rolled ARI, no TS metrics)
 - [ ] Ungrouped convention printed in score header + README: each ungrouped / loose-end tab is
       its own singleton cluster, applied identically to both partitions
 - [x] ARI reported on the full tab set AND on the subset both partitions placed
-- [ ] `npm run ablate` — TS cluster CLI emits one partition per beta-override config;
+- [x] `npm run ablate` — TS cluster CLI emits one partition per beta-override config;
       `analysis/ablate.py` scores and tabulates ARI delta per signal
-- [ ] `npm run score` / `npm run ablate` are thin wrappers; extension builds with zero Python
+- [x] `npm run score` / `npm run ablate` are thin wrappers; extension builds with zero Python
 
 **d. Minimal UI**
 - [ ] One read-only page from the extension icon showing proposed clusters. Nothing on it changes
@@ -76,7 +78,7 @@ ONNX, WASM · settings screen · onboarding · sync · accounts · any network r
 - [x] `npm run build` gives a loadable unpacked extension
 - [x] Integration check *proves* the collector records `openerTraceId` and `transition` for new
       tabs (shown, not asserted)
-- [ ] `src/cluster/` has zero `chrome.*` and passes unit tests
+- [x] `src/cluster/` has zero `chrome.*` and passes unit tests
 - [ ] `npm run score` runs end-to-end on a real exported fixture
 - [ ] README states the pass condition
 

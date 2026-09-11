@@ -23,6 +23,11 @@ AMBIENT = [("mail.google.com", "gmail.com", "Inbox"), ("open.spotify.com", "spot
            ("calendar.google.com", "calendar.google.com", "Calendar")]
 
 
+def _uid(rng: random.Random) -> str:
+    """Seeded so the same seed gives the same fixture in every process."""
+    return str(uuid.UUID(int=rng.getrandbits(128), version=4))
+
+
 def _etld1(host: str) -> str:
     parts = host.split(".")
     if parts[-2:] == ["co", "uk"]:
@@ -59,7 +64,7 @@ def make(seed: int = 1, per_project: tuple[int, int] = (8, 16), windows: int = 2
 
     # ambient + pinned
     for host, _, title in AMBIENT:
-        tid = str(uuid.uuid4())
+        tid = _uid(rng)
         traces.append(_trace(tid, host, "", title, t0 - 3_600_000, 1, nxt(1), None, "typed", pinned=(title == "Inbox")))
         labels[tid] = None
 
@@ -69,7 +74,7 @@ def make(seed: int = 1, per_project: tuple[int, int] = (8, 16), windows: int = 2
         clock += rng.randint(40, 180) * 60_000  # a new sitting, well past the 25-min gap
         n = rng.randint(*per_project)
         wl = words.split()
-        root = str(uuid.uuid4())
+        root = _uid(rng)
         traces.append(_trace(root, hosts[0], f"{stem}", f"{wl[0].title()} {wl[1]} overview", clock, w, nxt(w), None, "typed"))
         labels[root] = name
         members = [root]
@@ -77,7 +82,7 @@ def make(seed: int = 1, per_project: tuple[int, int] = (8, 16), windows: int = 2
             clock += rng.randint(20, 240) * 1000
             opener = rng.choice(members[-4:])  # bursts branch off recent tabs
             host = rng.choice(hosts)
-            tid = str(uuid.uuid4())
+            tid = _uid(rng)
             title = f"{rng.choice(wl)} {rng.choice(wl)} {rng.randint(1, 99)}"
             traces.append(_trace(tid, host, f"{stem}/{rng.choice(wl)}/{i}", title, clock, w, nxt(w), opener, "link"))
             labels[tid] = name
@@ -93,7 +98,7 @@ def make(seed: int = 1, per_project: tuple[int, int] = (8, 16), windows: int = 2
     # loose ends: typed one-offs with nothing in common
     for host, title in [("weather.com", "Weather"), ("bbc.co.uk", "News front page"), ("amazon.com", "USB-C cable")]:
         clock += rng.randint(30, 90) * 60_000
-        tid = str(uuid.uuid4())
+        tid = _uid(rng)
         traces.append(_trace(tid, host, title.lower().replace(" ", "-"), title, clock, rng.randint(1, windows), nxt(1), None, "typed"))
         labels[tid] = None
     rng.shuffle(traces)

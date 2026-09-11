@@ -165,3 +165,18 @@ class TestScore:
         labels = {"a": "p", "b": "p", "c": "p", "d": "q"}
         s = score([["a", "b"], ["c", "d"]], labels, list(labels))
         assert s.precision == pytest.approx(0.5) and s.recall == pytest.approx(1 / 3)
+
+
+class TestDeterminism:
+    def test_same_input_same_partition_across_processes(self):
+        # networkx subgraph views iterate node *sets*; a partition must not depend on PYTHONHASHSEED.
+        import json
+        import subprocess
+        import sys
+        code = ("import json,sys;from tabamnesty.cluster import cluster;from tabamnesty.synth import make;"
+                "t,_=make(seed=11,per_project=(14,20));print(json.dumps(cluster(t).communities))")
+        outs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                               env={"PYTHONHASHSEED": str(i), "PATH": __import__('os').environ['PATH'],
+                                    "SYSTEMROOT": __import__('os').environ.get('SYSTEMROOT', '')},
+                               cwd=__import__('pathlib').Path(__file__).resolve().parents[1]).stdout for i in (1, 2, 3)}
+        assert len(outs) == 1, "partition varies with PYTHONHASHSEED"

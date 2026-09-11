@@ -114,3 +114,13 @@ Append; never rewrite history.
 - **Decision:** `analysis/tabamnesty/synth.py` writes `fixtures/synthetic.*` (flagged `_synthetic: true`) for unit tests and the parity check. Its "chrome" baseline is one group per eTLD+1.
 - **Rejected:** Using it as one of the five gate browsers.
 - **Why:** It encodes the thesis it would be testing; on it every signal is redundant (ablation deltas ≈ 0), which says nothing about real browsers.
+
+## 2026-09-11 — Parity contract between the Python bench and the TS clusterer
+- **Decision:** `npm run parity` runs `tools/cluster-cli.ts --edges` and `tabamnesty.parity` on the same fixture and fails if any pair's signal or affinity differs by more than 1e-9, or if the two partitions' mutual ARI is under 0.90. Both sides sum signals in the same order and use the same TF-IDF arithmetic; Louvain implementations may tie-break differently, hence ARI rather than equality for partitions.
+- **Rejected:** Requiring identical communities (networkx and graphology Louvain are different code with different random orders); comparing only ARI against labels (would let a signal bug through as long as the score held).
+- **Why:** This is the mechanism that keeps two implementations from drifting — the original objection to having two.
+
+## 2026-09-11 — Python partitions must not depend on PYTHONHASHSEED
+- **Decision:** Induced subgraphs for the >15 split are built explicitly in parent-graph node order (`_induced`), never via `g.subgraph(set)`; synthetic trace ids are seeded. A test spawns three interpreters with different hash seeds and requires identical partitions.
+- **Rejected:** Sorting community members alphabetically before Louvain (would still be deterministic but would diverge from the TS side, which uses input order).
+- **Why:** A networkx subgraph view over a small node set iterates the *set*, and Louvain's tie-breaking follows node order; the same fixture produced two different ARIs in two processes before this fix. A benchmark that changes between runs cannot gate anything.
