@@ -88,12 +88,16 @@ src/cluster/     pure functions. ZERO chrome.* imports. fully unit-tested.
 src/archive/     phase 1+. storage, undo, forget.
 src/ui/          xray page (p0), sweep page (p1), newtab (p2)
 src/mcp/         phase 3
-tools/           export + score + ablate CLIs
+tools/           TS cluster CLI (partition JSON, beta overrides) + thin npm wrappers
+analysis/        Python (own pyproject). score/ablate/report via sklearn. Reads JSON only.
 fixtures/        exported traces, hand labels, chrome baselines
 docs/            PROJECT.md, PHASES.md, DECISIONS.md
 ```
 
 The `cluster/` purity rule is absolute — it is what makes the thesis testable in Node.
+Python never reimplements a signal or the clustering; TS is the single source of truth and the
+extension must build and run with zero Python installed. Ungrouped convention for scoring: each
+ungrouped / loose-end tab is its own singleton cluster, applied identically to both partitions.
 
 ## Working rules (§9)
 

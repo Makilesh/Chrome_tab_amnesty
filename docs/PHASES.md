@@ -21,7 +21,8 @@ recovering someone's real projects?
 - [ ] `transition` from `chrome.history.getVisits()` (visit nearest `openedAt`; needs `"history"`)
 - [ ] `lastActiveAt`, `activationCount`, `dwellMs` maintained from `chrome.tabs.onActivated`
 - [ ] `coActive` pair counts — tabs foregrounded within 60 s of each other
-- [ ] `host`, `eTLD1`, `pathTokens[]`, `queryKeys{}` derived from URL
+- [ ] `host`, `eTLD1`, `pathTokens[]`, `queryKeys{}` derived from URL; eTLD+1 via trimmed
+      suffix data file biased to PSL private section, fallback errs toward splitting
 - [ ] Content-script digest `{ description, headings[], leadText ≤1000 chars }` on
       `readyState === 'complete'` and first `visibilitychange` → visible; debounced; never
       re-capture the same URL within 10 min
@@ -44,21 +45,31 @@ recovering someone's real projects?
 - [ ] Unit tests for all of the above
 
 **c. Scoring harness** (Node CLI)
-- [ ] `npm run export` dumps `TabTrace[]` to `fixtures/<name>.json`
+- [ ] Export from the x-ray page (blob + `<a download>`, no `downloads` permission) to
+      `fixtures/<name>.json` with `schemaVersion`, capture window and count in the header
+- [ ] Export modes: `full` and `shareable` (default) — query values stripped, `leadText`
+      dropped, URLs reduced to host+path; consent summary shown before writing
 - [ ] Hand labels in `fixtures/<name>.labels.json` (traceId → project name)
-- [ ] Chrome's proposal in `fixtures/<name>.chrome.json`
+- [ ] "Capture Chrome baseline" button reads real tab groups after Organize tabs, then
+      ungroups; handles §5.6 saved-group failure loudly; hand transcription as fallback →
+      `fixtures/<name>.chrome.json` `{ method, capturedAt, groups[], ungrouped[] }`
 - [ ] `npm run score` prints ARI (primary), pairwise precision/recall/F1, cluster count for both
       partitions against labels
-- [ ] ARI implemented properly (contingency table, chance-corrected) and unit-tested against
-      known values
-- [ ] `npm run ablate` re-runs with each beta zeroed and prints ARI delta per signal
+- [ ] ARI + pairwise P/R/F1 via `sklearn` in `analysis/score.py` (no hand-rolled ARI, no TS metrics)
+- [ ] Ungrouped convention printed in score header + README: each ungrouped / loose-end tab is
+      its own singleton cluster, applied identically to both partitions
+- [ ] ARI reported on the full tab set AND on the subset both partitions placed
+- [ ] `npm run ablate` — TS cluster CLI emits one partition per beta-override config;
+      `analysis/ablate.py` scores and tabulates ARI delta per signal
+- [ ] `npm run score` / `npm run ablate` are thin wrappers; extension builds with zero Python
 
 **d. Minimal UI**
 - [ ] One read-only page from the extension icon showing proposed clusters. Nothing on it changes
       the browser. Obeys all §6 rules (no tab counts, no forbidden words).
 
 ### Anti-scope (do NOT build)
-Any `chrome.tabGroups` call · closing or archiving · any AI/LLM call · embeddings, transformers.js,
+Any `chrome.tabGroups` call (sole exception: read + ungroup Chrome's own groups for baseline
+capture) · closing or archiving · any AI/LLM call · embeddings, transformers.js,
 ONNX, WASM · settings screen · onboarding · sync · accounts · any network request whatsoever.
 
 ### Done when
