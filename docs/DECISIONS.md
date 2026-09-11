@@ -89,3 +89,18 @@ Append; never rewrite history.
 - **Decision:** `src/ui/dev/` shows raw `TabTrace` rows (counts, ids, dwell) and is reachable only by URL. The x-ray page from the icon is the only user-facing surface and obeys §6.
 - **Rejected:** A "diagnostics" section on the x-ray page.
 - **Why:** §6.1 forbids showing tab counts as a problem anywhere the user is meant to look; a developer table full of counts cannot sit on that page.
+
+## 2026-09-11 — SUPERSEDES "Python never reimplements the clustering": Python is the research bench, TS ships, parity test between them
+- **Decision:** The clusterer is built first in Python (`analysis/tabamnesty/`: segment, signals, graph, Louvain, partition-to-target, score, ablate, refit) and the Phase 0 gate is run there. The same algorithm is ported to `src/cluster/` in TS for the extension. `npm run parity` feeds both the same fixture and fails if edge weights differ (exact, to 1e-9) or the partitions disagree (ARI between them < 0.9). Signals change in Python first; TS follows.
+- **Rejected:** Python-only (the extension cannot run it, and Phase 0d needs clusters in the browser); TS-only with Python as scorer (the earlier decision — the user wants to iterate on the graph in Python).
+- **Why:** User request. Iterating on signals is faster with networkx/pandas/sklearn, and the gate is a research question. The parity test is what keeps two implementations from drifting, which was the original objection.
+
+## 2026-09-11 — Python scope beyond the clusterer: beta refit, lexical experiments, Phase 3 MCP server
+- **Decision:** `analysis/refit.py` (sklearn logistic regression → `betas.json` read by TS), lexical/TF-IDF experiments in Python (findings ported, nothing ships from there), and the Phase 3 MCP server in Python (mcp SDK, `.mcpb`). Phase 1 group naming stays in the browser — Gemini Nano is a browser API.
+- **Rejected:** Moving Phase 1 naming to Python.
+- **Why:** User request, bounded by what can physically run where.
+
+## 2026-09-11 — networkx's built-in Louvain, one venv at the repo root
+- **Decision:** `networkx.community.louvain_communities` (resolution + seed) rather than a separate louvain package; `analysis/pyproject.toml` installs into the existing root `.venv` via `uv pip install -e analysis`.
+- **Rejected:** `python-louvain`; a second venv under `analysis/`.
+- **Why:** Fewer dependencies; the user already created the root venv.
