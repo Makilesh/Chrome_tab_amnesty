@@ -9,6 +9,7 @@ fixtures/*.full.json
 chrome/
 fixtures/synthetic*.json
 fixtures/*.partition.json
+fixtures/*.python.partition.json
 fixtures/report.png
 
 Claude outputs/*

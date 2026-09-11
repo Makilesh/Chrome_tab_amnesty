@@ -5,8 +5,8 @@
  * two real projects. Louvain optimises modularity and a lone bridge does not survive that.
  */
 import Graph from 'graphology';
-import louvain from 'graphology-communities-louvain';
 import { affinity, Context, eligible, signalVector } from './affinity';
+import { louvain, type Edge } from './louvain';
 import {
   type Betas,
   BETAS,
@@ -22,18 +22,6 @@ import type { Partition, TabTrace } from './types';
 
 export type PairKey = `${string}|${string}`;
 export const pairKey = (a: string, b: string): PairKey => `${a}|${b}`;
-
-/** Deterministic PRNG so Louvain gives the same answer for the same input (mulberry32). */
-function seededRng(seed = 0): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /** Every unordered pair's signal vector, keyed "a|b" in input order. O(n²). */
 export function pairSignals(traces: TabTrace[]): { ctx: Context; vecs: Map<PairKey, SignalVector> } {
@@ -66,16 +54,10 @@ export function buildGraph(
   return g;
 }
 
+/** Our deterministic Louvain (louvain.ts), not graphology's — see that file for why. */
 function runLouvain(g: Graph, resolution: number): string[][] {
-  if (g.size === 0) return g.nodes().map((n) => [n]);
-  const mapping = louvain(g, { resolution, getEdgeWeight: 'weight', rng: seededRng(0) });
-  const byComm = new Map<number, string[]>();
-  for (const n of g.nodes()) {
-    const c = mapping[n]!;
-    if (!byComm.has(c)) byComm.set(c, []);
-    byComm.get(c)!.push(n);
-  }
-  return [...byComm.values()];
+  const edges: Edge[] = g.edges().map((e) => [g.source(e), g.target(e), g.getEdgeAttribute(e, 'weight') as number]);
+  return louvain(g.nodes(), edges, resolution);
 }
 
 /**
@@ -118,13 +100,13 @@ export function splitLarge(g: Graph, comms: string[][], maxSize = MAX_COMMUNITY)
       out.push(c);
       continue;
     }
+    // Induced subgraph with nodes in the parent graph's order (parity with Python's _induced).
+    const members = new Set(c);
     const sub = new Graph({ type: 'undirected' });
-    for (const n of c) sub.addNode(n);
-    for (const n of c) {
-      g.forEachEdge(n, (_e, attrs, s, t) => {
-        if (sub.hasNode(s) && sub.hasNode(t) && !sub.hasEdge(s, t)) sub.addEdge(s, t, attrs);
-      });
-    }
+    for (const n of g.nodes()) if (members.has(n)) sub.addNode(n);
+    g.forEachEdge((_e, attrs, s, t) => {
+      if (members.has(s) && members.has(t)) sub.addEdge(s, t, attrs);
+    });
     const parts = runLouvain(sub, 1);
     if (parts.length <= 1) out.push(c); // Louvain will not split it; keep rather than force
     else out.push(...splitLarge(g, parts, maxSize));
