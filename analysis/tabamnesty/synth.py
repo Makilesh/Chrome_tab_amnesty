@@ -136,3 +136,68 @@ if __name__ == "__main__":
     import sys
     from .config import FIXTURES
     write(sys.argv[1] if len(sys.argv) > 1 else "synthetic", FIXTURES)
+    write_adversarial(FIXTURES)
+
+
+# ---------------------------------------------------------------------------------------------
+# Adversarial fixtures: positive controls for the ablation. Four projects on the SAME host with
+# the SAME vocabulary, INTERLEAVED in time and on the tab strip, distinguishable by exactly one
+# behavioural signal. If zeroing that signal does not crater ARI here, the ablation is broken.
+# Mechanics only — never counts toward the gate.
+# ---------------------------------------------------------------------------------------------
+
+ADVERSARIAL = ("lineage", "coactive", "temporal")
+
+
+def make_adversarial(kind: str, seed: int = 1, projects: int = 4, per_project: int = 10) -> tuple[list[Trace], dict[str, str | None]]:
+    assert kind in ADVERSARIAL
+    rng = random.Random(seed)
+    host, stem = "github.com", "acme/platform"
+    vocab = "deploy pipeline config service module release".split()
+    t0 = 1_757_500_000_000
+    traces: list[Trace] = []
+    labels: dict[str, str | None] = {}
+    members: list[list[str]] = [[] for _ in range(projects)]
+    clock = t0
+    idx = 0
+    # Round-robin openings so every project is active at once (kills S2/S3/S4 as separators),
+    # except 'temporal', where the projects are separated only by gaps in time.
+    order = [p for _ in range(per_project) for p in range(projects)]
+    if kind == "temporal":
+        order = [p for p in range(projects) for _ in range(per_project)]
+    for p in order:
+        if kind == "temporal" and members[p] == [] and p > 0:
+            clock += 40 * 60_000  # a gap longer than GAP_MS; the only thing separating projects
+        clock += rng.randint(15, 45) * 1000
+        idx += 1
+        tid = _uid(rng)
+        opener = rng.choice(members[p][-3:]) if kind == "lineage" and members[p] else None
+        title = f"{rng.choice(vocab)} {rng.choice(vocab)}"
+        traces.append(_trace(tid, host, f"{stem}/{rng.choice(vocab)}", title, clock, 1, idx, opener, "link"))
+        labels[tid] = f"project {p}"
+        members[p].append(tid)
+    if kind == "coactive":
+        by = {t["traceId"]: t for t in traces}
+        for group in members:
+            for a in group:
+                for b in group:
+                    if a < b:
+                        by[a]["coActive"][b] = 1
+                        by[b]["coActive"][a] = 1
+            for a in group:
+                by[a]["activationCount"] = len(group)
+    return traces, labels
+
+
+def write_adversarial(out_dir: Path, seed: int = 1) -> None:
+    for kind in ADVERSARIAL:
+        traces, labels = make_adversarial(kind, seed)
+        lo, hi = min(t["openedAt"] for t in traces), max(t["openedAt"] for t in traces)
+        name = f"synthetic_{kind}"
+        fixture = {"schemaVersion": SCHEMA_VERSION, "exportedAt": hi, "mode": "full", "_synthetic": True,
+                   "traceCount": len(traces), "openedAtMin": lo, "openedAtMax": hi, "traces": traces}
+        (out_dir / f"{name}.json").write_text(json.dumps(fixture, indent=1), encoding="utf-8")
+        (out_dir / f"{name}.labels.json").write_text(
+            json.dumps({"_comment": f"SYNTHETIC positive control for {kind}. Never counts toward the gate.", **labels}, indent=1),
+            encoding="utf-8")
+        (out_dir / f"{name}.chrome.json").write_text(json.dumps(chrome_like(traces), indent=1), encoding="utf-8")

@@ -10,3 +10,5 @@ chrome/
 fixtures/synthetic*.json
 fixtures/*.partition.json
 fixtures/report.png
+
+Claude outputs/*
