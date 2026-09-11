@@ -60,7 +60,7 @@ export function urlFeatures(raw: string): UrlFeatures {
 export function reduceUrl(raw: string): string {
   try {
     const u = new URL(raw);
-    return `${u.protocol}//${u.hostname}${u.pathname}`;
+    return `${u.protocol}//${u.host}${u.pathname}`;
   } catch {
     return '';
   }

@@ -13,7 +13,7 @@
  *   npx @puppeteer/browsers install chrome@stable      (lands in ./chrome/, git-ignored)
  * CHROME_PATH is a fallback for any other Chromium build.
  */
-import { globSync, mkdtempSync } from 'node:fs';
+import { existsSync, globSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -136,6 +136,41 @@ function summarise(traces: TabTrace[]): string {
   );
 }
 
+const FORBIDDEN = /\b(delete|clean ?up|declutter|tidy|messy)\b/i;
+const COUNT_AS_PROBLEM = /\b\d+\s+tabs?\b/i;
+
+async function checkXray(browser: Browser, extId: string, userDataDir: string): Promise<void> {
+  const page = await browser.newPage();
+  const downloads = join(userDataDir, 'downloads');
+  const cdp = await page.createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
+  await page.goto(`chrome-extension://${extId}/src/ui/xray/index.html`);
+  await page.waitForSelector('#groups');
+  await sleep(1500);
+  const shot = join(userDataDir, 'xray.png');
+  await page.screenshot({ path: shot, fullPage: true });
+  const text = await page.evaluate(() => document.body.innerText);
+  const headings = await page.$$eval('.group h2', (hs) => hs.map((h) => h.textContent));
+  console.log(`\nx-ray page: ${headings.length} group heading(s): ${JSON.stringify(headings)}  screenshot: ${shot}`);
+  console.log(`  forbidden words on page: ${FORBIDDEN.test(text) ? 'YES — ' + text.match(FORBIDDEN)![0] : 'none'}`);
+  console.log(`  tab count shown as a number: ${COUNT_AS_PROBLEM.test(text) ? 'YES — ' + text.match(COUNT_AS_PROBLEM)![0] : 'none'}`);
+
+  await page.click('#study summary');
+  await page.type('#name', 'check');
+  await page.click('#export');
+  await sleep(1500);
+  const files = existsSync(downloads) ? readdirSync(downloads).filter((f) => f.endsWith('.json')) : [];
+  if (files.length) {
+    const fx = JSON.parse(readFileSync(join(downloads, files[0]!), 'utf8'));
+    const t = fx.traces.find((x: TabTrace) => x.url.includes('faq'));
+    console.log(`  export: ${files[0]} schemaVersion=${fx.schemaVersion} mode=${fx.mode} traces=${fx.traceCount}`);
+    console.log(`  shareable redaction on the ?plan=team tab: url=${t?.url} queryKeys=${JSON.stringify(t?.queryKeys)} leadText=${JSON.stringify(t?.digest?.leadText)}`);
+  } else {
+    console.log('  export: no file downloaded');
+  }
+  await page.close();
+}
+
 async function main(): Promise<void> {
   const site = await startSite();
   const userDataDir = mkdtempSync(join(tmpdir(), 'tab-amnesty-check-'));
@@ -177,11 +212,14 @@ async function main(): Promise<void> {
     console.log('\nTraces recorded by the collector (open tabs only):');
     show(firstRun);
     console.log(summarise(firstRun));
+
+    // 5. The x-ray page: renders, breaks no §6 rule, and exports a loadable fixture.
+    await checkXray(browser, extId, userDataDir);
   } finally {
     await browser.close();
   }
 
-  // 5. Restart with session restore: tab ids are reassigned, traces must re-bind, not duplicate.
+  // 6. Restart with session restore: tab ids are reassigned, traces must re-bind, not duplicate.
   console.log('\nRestarting Chrome with session restore to check the re-bind (§5.3)...');
   browser = await launch(exe, userDataDir, ['--restore-last-session']);
   try {
