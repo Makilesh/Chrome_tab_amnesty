@@ -84,13 +84,17 @@ npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also
 ## Getting a real fixture
 
 1. Install the unpacked extension and browse normally for a few days.
+
 2. Click the icon → "For the study" → **Export traces** (shareable by default: no full URLs, no
    query values, no page text). Save as `fixtures/<name>.json`.
+
 3. Run Chrome's **Organize tabs**, accept its groups, then **Capture Chrome's grouping**. Save as
    `fixtures/<name>.chrome.json`. The groups are undone afterwards; saved groups may refuse and
    the page says so.
+
 4. Label your own tabs: `fixtures/<name>.labels.json`, `traceId → project name` (`null` = no
    project). See `fixtures/README.md`.
+   
 5. `npm run score <name>` and `npm run ablate <name>`.
 
 ## Rules that do not bend
