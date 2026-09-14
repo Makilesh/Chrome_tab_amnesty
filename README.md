@@ -97,6 +97,7 @@ npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also
    
 5. `npm run score <name>` and `npm run ablate <name>`.
 
+
 ## Rules that do not bend
 
 Six platform non-negotiables and eleven human design rules — see `CLAUDE.md`. In short: never
