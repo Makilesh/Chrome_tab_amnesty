@@ -14,7 +14,12 @@ scoring against the wrong shape. `*.full.json` (unredacted exports) and `*.parti
 
 ## Labelling
 
-Open `<name>.json` next to your browser and, for every trace, write the project it belongs to —
+`npm run labels <name>` writes the template from `<name>.json`: every open trace in tab-strip
+order, each followed by a `_<short id>` comment line (`host  |  title`) that the scorer ignores.
+`""` means not labelled yet. Re-running it after a newer export keeps everything already filled
+in, adds new tabs unfilled, and drops (and lists) tabs that are gone.
+
+Open it next to your browser and, for every trace, write the project it belongs to —
 in your own words, whatever you were actually doing: `"flat hunting"`, `"the deploy incident"`,
 `"pandas bug"`. The name is only used to tell projects apart, so spelling only has to be
 consistent within the file.

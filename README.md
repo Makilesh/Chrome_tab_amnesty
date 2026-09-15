@@ -75,6 +75,7 @@ npm run synth            # synthetic fixtures for mechanics only — never count
                          #   synthetic (easy) + synthetic_{lineage,coactive,temporal} (positive
                          #   controls: projects separable by exactly one behavioural signal)
 npm run cluster <name>   # TS clusterer -> fixtures/<name>.partition.json
+npm run labels <name>    # write/refresh fixtures/<name>.labels.json; keeps labels already filled in
 npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
 npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
 npm run report a b c d e # per-browser chart -> fixtures/report.png
@@ -92,9 +93,10 @@ npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also
    `fixtures/<name>.chrome.json`. The groups are undone afterwards; saved groups may refuse and
    the page says so.
 
-4. Label your own tabs: `fixtures/<name>.labels.json`, `traceId → project name` (`null` = no
-   project). See `fixtures/README.md`.
-   
+4. `npm run labels <name>` writes `fixtures/<name>.labels.json` with one line per open tab in
+   strip order. Fill in `traceId → project name` (`null` = no project). Re-run it after a newer
+   export; filled-in labels are kept. See `fixtures/README.md`.
+
 5. `npm run score <name>` and `npm run ablate <name>`.
 
 
