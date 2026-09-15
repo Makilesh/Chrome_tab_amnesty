@@ -1,11 +1,10 @@
 {
-  "_comment": "Hosts that belong to every project and therefore to none. Excluded from clustering entirely, never down-weighted. Matched on eTLD+1 or exact host. Read by both TS and Python.",
+  "_comment": "Hosts that belong to every project and therefore to none. Excluded from clustering entirely, never down-weighted. Matched on eTLD+1 or exact host. Read by both TS and Python. AI assistants (chatgpt, claude.ai, gemini, perplexity) are deliberately NOT here: a conversation tab has a project-specific title and is opened from, and switched with, the project it serves (DECISIONS 2026-09-15).",
   "etld1": [
     "gmail.com", "outlook.com", "outlook.live.com", "mail.yahoo.com", "protonmail.com", "proton.me", "fastmail.com", "hey.com",
     "calendar.google.com", "calendly.com",
     "slack.com", "discord.com", "teams.microsoft.com", "web.whatsapp.com", "messenger.com", "telegram.org", "web.telegram.org",
     "spotify.com", "open.spotify.com", "music.youtube.com", "music.apple.com", "soundcloud.com", "tidal.com", "deezer.com",
-    "chatgpt.com", "chat.openai.com", "claude.ai", "gemini.google.com", "perplexity.ai",
     "keep.google.com", "todoist.com", "ticktick.com"
   ],
   "hosts": [

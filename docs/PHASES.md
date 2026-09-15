@@ -83,7 +83,7 @@ ONNX, WASM · settings screen · onboarding · sync · accounts · any network r
 - [x] Integration check *proves* the collector records `openerTraceId` and `transition` for new
       tabs (shown, not asserted)
 - [x] `src/cluster/` has zero `chrome.*` and passes unit tests
-- [~] `npm run score` runs end-to-end on a real exported fixture (runs on the synthetic one; needs a real export)
+- [x] `npm run score` runs end-to-end on a real exported fixture (2026-09-15, `makilesh`, draft labels)
 - [x] README states the pass condition
 
 ### GATE
@@ -101,8 +101,20 @@ first and the shortfall is stated in the result — the gate is not restated to 
 Chrome gates "Organize tabs" by sign-in, UI language and region; a browser without it counts for
 the ablation half only, and the result must say how many of the five had it.
 
-**Fixtures so far:** `makilesh` (2026-09-12) — 12 http tabs, all history-backfilled, no Chrome
-organiser on the profile. Pipeline smoke test; does not count toward the five.
+**Fixtures so far:** `makilesh` (re-exported 2026-09-15) — 28 http tabs, 22 event-time with
+lineage / co-activation / digests, no Chrome organiser on the profile. Labels are a DRAFT proposed
+from the traces, not yet confirmed by the owner. Pipeline smoke test; does not count toward the five.
+
+**Finding 2026-09-15 (matters for every tester):** the 9 http tabs that pre-date the install all
+carry `openedAt` within 14 s of each other (the session-restore `reload` visit) and so S2 = 0.99,
+S3 = 1.0 for every pair among them — they form one blob whatever S1/S8 say, and zeroing S2 leaves
+S3 holding it. On an 80+ tab browser most tabs pre-date the install, so if history backfill
+collapses to the restore time the whole browser becomes one community and the gate cannot be
+read. Either `refreshBackfilled` has not run on this profile since the fix (the deployed build
+pre-dates 9cb171e, so it only runs on install/reload) or the history really has no non-reload
+visit for those URLs. Next step: Reload the extension, re-export, and see which. If the latter,
+backfilled-`reload` timestamps must stop counting as evidence of contemporaneity (signal change:
+Python first, then TS, then parity).
 
 ---
 
