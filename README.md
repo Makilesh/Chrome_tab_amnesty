@@ -84,7 +84,14 @@ npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also
 
 ## Getting a real fixture
 
-1. Install the unpacked extension and browse normally for a few days.
+0. Check `chrome://settings/ai` shows a **Tab organizer** toggle *before* you start. Chrome only
+   offers it on some profiles (signed in, English-US UI, certain regions). Without it the browser
+   can still contribute to the ablation half of the gate but not the Chrome comparison — say so
+   when you hand the fixture over.
+
+1. Install the unpacked extension (`npm run build`, then load `dist/` in `chrome://extensions`;
+   click **Reload** there after every rebuild) and browse normally for a few days — lineage and
+   co-activation only accrue for tabs opened and switched between while it is installed.
 
 2. Click the icon → "For the study" → **Export traces** (shareable by default: no full URLs, no
    query values, no page text). Save as `fixtures/<name>.json`.
