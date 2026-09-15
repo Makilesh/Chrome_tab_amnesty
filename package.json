@@ -13,6 +13,7 @@
     "check": "npm run build && tsx tools/integration-check.ts && node tools/py.mjs parity",
     "check:setup": "puppeteer-browsers install chrome@stable",
     "cluster": "tsx tools/cluster-cli.ts",
+    "labels": "tsx tools/labels-template.ts",
     "score": "node tools/py.mjs cli score",
     "ablate": "node tools/py.mjs cli ablate",
     "report": "node tools/py.mjs cli report",
