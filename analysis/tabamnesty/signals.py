@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from .config import STRIP_TAU, TEMPORAL_TAU_MS, load_ambient
 from .lexical import cosine, tfidf_vectors
-from .segment import session_index
+from .segment import session_index, timing_known
 from .traces import Trace
 
 
@@ -124,6 +124,8 @@ def s1_lineage(ctx: Context, a: Trace, b: Trace) -> float:
 
 
 def s2_temporal(a: Trace, b: Trace) -> float:
+    if not (timing_known(a) and timing_known(b)):
+        return 0.0
     return math.exp(-abs(a["openedAt"] - b["openedAt"]) / TEMPORAL_TAU_MS)
 
 

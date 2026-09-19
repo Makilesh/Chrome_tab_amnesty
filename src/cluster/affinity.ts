@@ -4,7 +4,7 @@
  */
 import { cosine, tfidfVectors, type Vector } from './lexical';
 import { AMBIENT, type Betas, SIGNALS, type SignalVector, STRIP_TAU, TEMPORAL_TAU_MS } from './params';
-import { sessionIndex } from './segment';
+import { sessionIndex, timingKnown } from './segment';
 import type { TabTrace } from './types';
 
 // ---------------------------------------------------------------------------------------------
@@ -123,6 +123,7 @@ export function s1Lineage(ctx: Context, a: TabTrace, b: TabTrace): number {
 }
 
 export function s2Temporal(a: TabTrace, b: TabTrace): number {
+  if (!(timingKnown(a) && timingKnown(b))) return 0;
   return Math.exp(-Math.abs(a.openedAt - b.openedAt) / TEMPORAL_TAU_MS);
 }
 

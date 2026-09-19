@@ -101,20 +101,26 @@ first and the shortfall is stated in the result — the gate is not restated to 
 Chrome gates "Organize tabs" by sign-in, UI language and region; a browser without it counts for
 the ablation half only, and the result must say how many of the five had it.
 
-**Fixtures so far:** `makilesh` (re-exported 2026-09-15) — 28 http tabs, 22 event-time with
-lineage / co-activation / digests, no Chrome organiser on the profile. Labels are a DRAFT proposed
-from the traces, not yet confirmed by the owner. Pipeline smoke test; does not count toward the five.
+**Fixtures so far:** `makilesh` (re-exported 2026-09-19) — 28 http tabs, 18 event-time with
+lineage / co-activation / digests, 10 pre-install tabs with restore-time timing only. Labels are a
+DRAFT proposed from the traces, not yet confirmed by the owner. `makilesh.chrome.json` exists but
+is one hand-made group, not the organiser (see DECISIONS 2026-09-19). Does not count toward the
+five: n < 80, no organiser, labels unconfirmed.
 
-**Finding 2026-09-15 (matters for every tester):** the 9 http tabs that pre-date the install all
-carry `openedAt` within 14 s of each other (the session-restore `reload` visit) and so S2 = 0.99,
-S3 = 1.0 for every pair among them — they form one blob whatever S1/S8 say, and zeroing S2 leaves
-S3 holding it. On an 80+ tab browser most tabs pre-date the install, so if history backfill
-collapses to the restore time the whole browser becomes one community and the gate cannot be
-read. Either `refreshBackfilled` has not run on this profile since the fix (the deployed build
-pre-dates 9cb171e, so it only runs on install/reload) or the history really has no non-reload
-visit for those URLs. Next step: Reload the extension, re-export, and see which. If the latter,
-backfilled-`reload` timestamps must stop counting as evidence of contemporaneity (signal change:
-Python first, then TS, then parity).
+**Findings so far (report, don't hide):**
+- *Restore-time backfill (fixed 2026-09-19, DECISIONS):* pre-install tabs whose only history
+  visit is the session-restore `reload` all share one timestamp; they formed one blob under
+  S2/S3 regardless of S1/S8. Now their timing counts as unknown. On an 80+ tab browser most tabs
+  are pre-install, so before the fix no tester fixture could have been read at all.
+- *After the fix, against draft labels:* ARI 0.32; zeroing S1+S2+S8 **raises** ARI by +0.09 —
+  the wrong direction for the gate. The pre-install tabs now attach through real co-activation
+  and lineage to tabs the draft labels call other projects (Buildathon notion ↔ AWS/First Commit
+  switched 6–11×; LinkedIn jobs opened from WeMakeDevs). Either behaviour is right and the topical
+  draft labels are wrong, or the thesis fails on this browser. Only the owner's labels decide it.
+  Nothing was tuned.
+- *With S8 also zeroed, pre-install tabs become loose ends* (19 placed vs 22): with no lineage, no
+  timing and no switching observed, the clusterer has nothing behavioural to go on for them, which
+  is honest — it means testers must browse for days before export, as the protocol already says.
 
 ---
 

@@ -33,6 +33,10 @@ Known limits, reported not hidden:
   tuned on synthetic data; `refit.py` on labelled real pairs is the intended fix.
 - After a browser restart, two tabs on the same URL can swap identities (the re-bind has nothing
   stronger than URL to go on), so some lineage lands on the wrong twin.
+- Tabs that pre-date the install often have no real opening time: Chrome keeps 90 days of
+  history and session restore writes a `reload` visit, so their timestamp is the last restart.
+  Those count as timing-unknown (no S2, no S3) and cluster only by lineage, co-activation, strip
+  position and content — which is why testers must browse for days before exporting.
 
 ## Layout
 
