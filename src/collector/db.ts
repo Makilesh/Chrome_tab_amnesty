@@ -5,10 +5,12 @@
  * Records are keyed on traceId, never tabId (§5.3). tabId is an index for live lookups only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import type { ArchiveCard, SummariseJob } from '../archive/types';
 import type { TabTrace } from '../cluster/types';
 
 export const DB_NAME = 'tab-amnesty';
-export const DB_VERSION = 1;
+/** v2 (Phase 1): archive cards, the summarisation queue and the never-remember list. */
+export const DB_VERSION = 2;
 
 /** Window of foregroundings that count as co-activation (§7 Phase 0a). */
 export const CO_ACTIVE_WINDOW_MS = 60_000;
@@ -24,6 +26,8 @@ interface MetaRecords {
   activeNow: { traceId: string; since: number } | null;
   /** Foregroundings inside the last CO_ACTIVE_WINDOW_MS, newest last. */
   recentActivations: Activation[];
+  /** Registrable domains the person asked us never to remember (§6.10). Lower-case eTLD+1. */
+  neverRemember: string[];
 }
 
 interface TabAmnestyDB extends DBSchema {
@@ -36,6 +40,16 @@ interface TabAmnestyDB extends DBSchema {
     key: keyof MetaRecords;
     value: MetaRecords[keyof MetaRecords];
   };
+  archive: {
+    key: string;
+    value: ArchiveCard;
+    indexes: { byArchivedAt: number };
+  };
+  jobs: {
+    key: string;
+    value: SummariseJob;
+    indexes: { byState: string };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<TabAmnestyDB>> | null = null;
@@ -44,12 +58,18 @@ let dbPromise: Promise<IDBPDatabase<TabAmnestyDB>> | null = null;
 export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
   if (!dbPromise) {
     dbPromise = openDB<TabAmnestyDB>(DB_NAME, DB_VERSION, {
-      upgrade(d) {
-        const traces = d.createObjectStore('traces', { keyPath: 'traceId' });
-        traces.createIndex('byTabId', 'tabId');
-        traces.createIndex('byUrl', 'url');
-        traces.createIndex('byClosedAt', 'closedAt');
-        d.createObjectStore('meta');
+      upgrade(d, oldVersion) {
+        if (oldVersion < 1) {
+          const traces = d.createObjectStore('traces', { keyPath: 'traceId' });
+          traces.createIndex('byTabId', 'tabId');
+          traces.createIndex('byUrl', 'url');
+          traces.createIndex('byClosedAt', 'closedAt');
+          d.createObjectStore('meta');
+        }
+        if (oldVersion < 2) {
+          d.createObjectStore('archive', { keyPath: 'cardId' }).createIndex('byArchivedAt', 'archivedAt');
+          d.createObjectStore('jobs', { keyPath: 'jobId' }).createIndex('byState', 'state');
+        }
       },
     });
   }
@@ -82,6 +102,11 @@ export async function getOpenTraces(): Promise<TabTrace[]> {
 
 export async function getAllTraces(): Promise<TabTrace[]> {
   return (await db()).getAll('traces');
+}
+
+/** The one legitimate deletion: the person said "forget this" (§6.10). */
+export async function deleteTrace(traceId: string): Promise<void> {
+  await (await db()).delete('traces', traceId);
 }
 
 /**

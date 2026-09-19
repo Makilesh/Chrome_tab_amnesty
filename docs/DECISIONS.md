@@ -209,3 +209,8 @@ Append; never rewrite history.
 - **Decision:** `fixtures/makilesh.chrome.json` (captured 2026-09-19: one group of one tab, "✅Job search automation command center", 31 ungrouped) is kept on disk and the score command reports it, but it is recorded as *not* an Organize-tabs baseline until the owner confirms how it was produced. Chrome's organiser does not make one-tab groups and the profile has no Tab organizer toggle.
 - **Rejected:** Treating the +0.32 "delta vs chrome" the score prints as a gate reading.
 - **Why:** A baseline of one hand-made group scores 0.0 by construction; beating it says nothing about Chrome. The gate is not restated to match what was got.
+
+## 2026-09-19 — Phase 1 started on the owner's instruction with the Phase 0 gate UNMEASURED
+- **Decision:** Branch `amnesty` off `xray_fixes` and build Phase 1. The Phase 0 gate has not passed: one real browser (28 http tabs, gate wants 80+), draft labels the owner has not confirmed, no organiser baseline, and against the draft labels the S1+S2+S8 ablation reads +0.09 (wrong direction). PHASES.md keeps the Phase 0 gate unticked; nothing here is a pass.
+- **Rejected:** Refusing until five fixtures exist (raised; the owner said "let's resolve this later").
+- **Why:** Owner's call after the concern was stated. Phase 1's own gate (testers press Archive & close of their own accord; tab count still lower a week later) does not depend on the clustering beating Chrome, and the sweep page will use whatever partition the clusterer gives. The X-ray gate still has to be read before any store submission.
