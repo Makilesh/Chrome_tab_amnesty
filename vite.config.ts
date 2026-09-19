@@ -13,6 +13,8 @@ export default defineConfig({
       input: {
         xray: 'src/ui/xray/index.html',
         dev: 'src/ui/dev/index.html',
+        sweep: 'src/ui/sweep/index.html',
+        offscreen: 'src/offscreen/index.html',
       },
     },
   },

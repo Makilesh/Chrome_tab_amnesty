@@ -47,7 +47,7 @@ export function buildCard(
   when: string,
   hosts: string[],
   now = Date.now(),
-  id = crypto.randomUUID(),
+  id: string = crypto.randomUUID(),
 ): ArchiveCard {
   const tabs: ArchivedTab[] = inStripOrder(members).map((t, order) => ({
     traceId: t.traceId,

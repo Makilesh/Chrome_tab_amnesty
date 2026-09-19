@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tab Amnesty</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fbfaf7;
+        --fg: #23211d;
+        --muted: #7a756b;
+        --card: #ffffff;
+        --line: #e8e4db;
+        --accent: #4a6fa5;
+        --accent-fg: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #1b1a18; --fg: #ebe8e1; --muted: #9a958a; --card: #242320; --line: #37352f; --accent: #8fb0e0; --accent-fg: #14181f; }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+      h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+      p.lede { color: var(--muted); margin: 0 0 20px; }
+      .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+      button { font: inherit; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); cursor: pointer; }
+      button:hover { border-color: var(--accent); }
+      button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+      button.quiet { border-color: transparent; color: var(--muted); padding: 2px 6px; }
+      button.quiet:hover { color: var(--fg); border-color: var(--line); }
+      .group { background: var(--card); border: 1px solid var(--line); border-left-width: 5px; border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+      .group header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+      .group h2 { font-size: 16px; font-weight: 600; margin: 0; }
+      .group .when { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+      .group ul { list-style: none; margin: 0; padding: 0; }
+      .group li { padding: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 8px; align-items: baseline; }
+      .group li .t { overflow: hidden; text-overflow: ellipsis; }
+      .group li .host { color: var(--muted); font-size: 12px; flex: none; }
+      .group li .sum { color: var(--muted); font-size: 13px; white-space: normal; }
+      .group .note { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+      .group .done { color: var(--muted); }
+      .c-grey { border-left-color: #9aa0a6; } .c-blue { border-left-color: #4a6fa5; } .c-red { border-left-color: #d9534f; }
+      .c-yellow { border-left-color: #e0b02a; } .c-green { border-left-color: #4f9d69; } .c-pink { border-left-color: #d66fa8; }
+      .c-purple { border-left-color: #8e6fd6; } .c-cyan { border-left-color: #3aa6b9; } .c-orange { border-left-color: #e08a3a; }
+      .more { margin: 4px 0 24px; }
+      section.later { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px; }
+      section.later h2 { font-size: 14px; color: var(--muted); font-weight: 500; margin: 0 0 10px; }
+      .loose li { color: var(--muted); }
+      details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+      .never { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; }
+      .never .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+      .never input { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); }
+      .never ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
+      .never li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px; }
+      .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+      .toast button { background: transparent; color: inherit; border-color: currentColor; }
+      .empty { color: var(--muted); }
+      .study { margin-top: 24px; font-size: 13px; color: var(--muted); }
+      .study a { color: inherit; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>What you have open, by what you were doing</h1>
+      <p class="lede">Put a whole thing away in one go. Everything is kept and can come back any time.</p>
+      <div class="toolbar">
+        <button id="strip">Show these groups on my tab strip</button>
+        <span id="strip-status"></span>
+      </div>
+      <div id="groups"></div>
+      <div class="more" id="more" hidden><button class="quiet" id="more-btn">More below</button></div>
+
+      <section class="later loose" id="loose" hidden>
+        <h2>On their own</h2>
+        <ul id="loose-list"></ul>
+      </section>
+
+      <section class="later" id="archive" hidden>
+        <h2>Put away</h2>
+        <div id="cards"></div>
+      </section>
+
+      <section class="never">
+        <details>
+          <summary>Sites never remembered</summary>
+          <p>Tabs on these sites are still grouped, but nothing about them is kept — no titles, no page text, nothing after they close.</p>
+          <div class="row">
+            <input type="text" id="never-input" placeholder="e.g. reddit.com" size="20" />
+            <button id="never-add">Never remember this site</button>
+          </div>
+          <ul id="never-list"></ul>
+        </details>
+        <p class="study">For the study: <a href="../xray/index.html">export and baseline</a>.</p>
+      </section>
+    </main>
+    <script type="module" src="./sweep.ts"></script>
+  </body>
+</html>
