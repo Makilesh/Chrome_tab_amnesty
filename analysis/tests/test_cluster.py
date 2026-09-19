@@ -6,7 +6,7 @@ from tabamnesty.cluster import ablation_betas, build_graph, cluster, partition_t
 from tabamnesty.config import load_ambient, load_betas
 from tabamnesty.lexical import cosine, tfidf_vectors, tokens
 from tabamnesty.score import assignments, score
-from tabamnesty.segment import segment
+from tabamnesty.segment import segment, timing_known
 from tabamnesty.signals import (Context, eligible, s1_lineage, s2_temporal, s4_strip, s5_domain,
                                 s6_path_query, s8_coactive, signal_vector)
 from tabamnesty.synth import chrome_like, make, make_adversarial
@@ -44,6 +44,20 @@ class TestSegment:
     def test_unknown_is_not_a_boundary(self):
         s = segment([tr("a", 0), tr("b", 1 * MIN, transition="unknown")])
         assert len(s) == 1
+
+    def test_restore_time_traces_are_singleton_sessions(self):
+        # three pre-install tabs adopted within seconds of a restore + one real burst
+        bf = lambda i, at: tr(i, at, transition="reload", backfilled=True)  # noqa: E731
+        s = segment([bf("x", 0), bf("y", 1000), bf("z", 2000), tr("a", 3000), tr("b", 3000 + MIN)])
+        assert [[t["traceId"] for t in sess] for sess in s] == [["a", "b"], ["x"], ["y"], ["z"]]
+        assert not timing_known(bf("x", 0))
+        assert timing_known(tr("a", 0, transition="reload", backfilled=False))
+        assert timing_known(tr("a", 0, transition="link", backfilled=True))
+
+    def test_s2_is_zero_when_either_timing_is_fake(self):
+        a, b = tr("a", 0, transition="reload", backfilled=True), tr("b", 0)
+        assert s2_temporal(a, b) == 0.0
+        assert s2_temporal(tr("a", 0), tr("b", 0)) == 1.0
 
 
 class TestSignals:

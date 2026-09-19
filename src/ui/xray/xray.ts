@@ -42,7 +42,7 @@ async function render(): Promise<TabTrace[]> {
     const d = describe(c, byId, traces);
     const card = el('section', 'group');
     card.append(el('h2', undefined, d.heading));
-    card.append(el('p', 'when', `${d.when} · ${d.hosts.slice(0, 3).join(', ')}`));
+    card.append(el('p', 'when', [d.when, d.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ')));
     const ul = el('ul');
     for (const id of c.traceIds) {
       const t = byId.get(id);

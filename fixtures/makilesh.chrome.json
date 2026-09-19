@@ -1,0 +1,46 @@
+{
+ "method": "captured",
+ "capturedAt": 1789801753860,
+ "groups": [
+  {
+   "name": "✅Job search automation command center",
+   "color": "blue",
+   "traceIds": [
+    "6075f8e9-bc1a-479e-b66f-a819f3a5a1fc"
+   ]
+  }
+ ],
+ "ungrouped": [
+  "00406693-4774-4bf7-89dd-f2012af8b158",
+  "09ea12c9-54e1-4808-b8bd-3b84cc3b0cf7",
+  "0dc0f6be-9e96-4750-9ad1-cb0fb9948515",
+  "17581a3b-36e2-4a50-b8f0-24e7060d56f1",
+  "1a8c5608-9df7-452c-8494-5bd495c005cb",
+  "1bf1fb8a-c307-4ef9-82b9-e2867ef6a9bc",
+  "1e084880-3e70-424d-9d47-cddef3468941",
+  "249d1f1c-5e60-4624-bbde-fe5246ea7f95",
+  "24e15a9e-1505-4506-a870-091dcbe807e8",
+  "2d5c9b8d-c6a9-4f49-96da-33f35e17cca1",
+  "468097a7-2127-4185-af28-784dfc571907",
+  "5607dae2-4703-4a8d-91ba-54226397b27d",
+  "583515ea-20a4-4eb4-8f78-e45caa43c1ba",
+  "63f34c50-3db3-483b-ab44-ffab020d5992",
+  "7a665602-87f4-4b19-a7cf-e235a01f39e7",
+  "8ea25d67-64d1-4dc4-8de4-192278f02a6b",
+  "95d6f1d6-d808-4111-a42e-f92efafd4fe4",
+  "a4039f41-d474-4547-9d9d-50c5c155ceae",
+  "a730437e-6ee1-4b55-8c39-511a975a62c6",
+  "a927e28e-0866-49f3-966f-12cd1a4de216",
+  "ad052c38-5064-4759-a7e0-74d01a49b46d",
+  "b038107d-29a3-4129-b556-a277c5efb019",
+  "c28c7f1e-e607-4d9e-b450-30e68af5776b",
+  "ca64acb9-ab05-457c-a7a1-29506722391a",
+  "d23b165f-b081-4e2b-b011-1eb4c0f26b29",
+  "d6427bd2-9577-472b-990b-d215874e2f5b",
+  "df7ad87f-352d-4d55-a727-918ff7909e6d",
+  "ea995d2b-7860-4d9a-8fd1-ed91db1f4f15",
+  "ed2ba61c-fb6d-4a65-976a-4f2842ef65e8",
+  "fd2b44ca-f44c-40de-8a13-1a279a5e0d84",
+  "ff5f4138-347e-48a1-a91d-8a0e96e4f642"
+ ]
+}

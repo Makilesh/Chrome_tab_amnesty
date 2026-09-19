@@ -14,7 +14,7 @@ import {
 import { ablationBetas, buildGraph, cluster, partitionToTarget } from './cluster';
 import { cosine, tfidfVectors, tokens } from './lexical';
 import { BETAS, SIGNALS } from './params';
-import { segment } from './segment';
+import { segment, timingKnown } from './segment';
 import type { TabTrace, Transition } from './types';
 
 const MIN = 60_000;
@@ -62,6 +62,15 @@ describe('segment', () => {
   });
   it('unknown is not a boundary', () => {
     expect(segment([tr('a'), tr('b', { openedAt: MIN, transition: 'unknown' })])).toHaveLength(1);
+  });
+  it('backfilled restore-time traces are each their own session and never join a gap', () => {
+    // three pre-install tabs adopted within seconds of a restore + one real burst
+    const bf = (id: string, at: number) => tr(id, { openedAt: at, transition: 'reload', backfilled: true });
+    const s = segment([bf('x', 0), bf('y', 1000), bf('z', 2000), tr('a', { openedAt: 3000 }), tr('b', { openedAt: 3000 + MIN })]);
+    expect(ids(s)).toEqual([['a', 'b'], ['x'], ['y'], ['z']]);
+    expect(timingKnown(bf('x', 0))).toBe(false);
+    expect(timingKnown(tr('a', { transition: 'reload', backfilled: false }))).toBe(true);
+    expect(timingKnown(tr('a', { transition: 'link', backfilled: true }))).toBe(true);
   });
 });
 

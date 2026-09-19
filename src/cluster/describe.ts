@@ -4,6 +4,7 @@
  * anything (§6.7); date is secondary metadata (§6.5). No counts of anything (§6.1).
  */
 import { tokens } from './lexical';
+import { timingKnown } from './segment';
 import type { Community, TabTrace } from './types';
 
 export interface Description {
@@ -52,6 +53,8 @@ export function describe(community: Community, byId: Map<string, TabTrace>, corp
     .map(([w]) => w);
 
   const heading = ranked.length ? ranked.join(' · ') : (hosts[0] ?? '');
-  const started = Math.min(...members.map((t) => t.openedAt));
-  return { heading, hosts, when: whenLabel(started) };
+  // §6.5: label by event. A restore-time timestamp is not an event, so it never labels a group.
+  const timed = members.filter(timingKnown);
+  const when = timed.length ? whenLabel(Math.min(...timed.map((t) => t.openedAt))) : '';
+  return { heading, hosts, when };
 }
