@@ -1,5 +1,6 @@
 /**
  * Collector service worker. Records, never touches UI, never closes or groups anything.
+ * (Phase 1 adds one passive duty: driving the summarisation queue's alarm — see summarise.ts.)
  *
  * Every handler reads and writes IndexedDB directly: MV3 kills this worker after 30 s idle, so
  * nothing of consequence may live in a module-level variable (§5.5). Lineage (§5.1) and
@@ -8,6 +9,7 @@
 import type { Digest, TabTrace } from '../cluster/types';
 import {
   CO_ACTIVE_WINDOW_MS,
+  deleteTrace,
   getMeta,
   getOpenTraces,
   getTraceByTabId,
@@ -16,7 +18,10 @@ import {
   updateTrace,
   updateTraceByTabId,
 } from './db';
+import { isNeverRemembered } from '../archive/forget';
+import { getNeverRemember } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
+import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
 import { urlFeatures } from './url';
 
 /** Never re-capture a digest for the same URL inside this window. */
@@ -201,6 +206,7 @@ async function onUpdated(
   }
   const urlChanged = changeInfo.url !== undefined && changeInfo.url !== existing.url;
   const now = Date.now();
+  const never = await getNeverRemember();
   const updated = await updateTrace(existing.traceId, (t) => {
     let next: TabTrace = {
       ...t,
@@ -216,6 +222,7 @@ async function onUpdated(
       // keeps openedAt / transition / lineage as they were at creation.
       next = { ...next, url: changeInfo.url, ...urlFeatures(changeInfo.url), digest: null, digestAt: null };
     }
+    if (isNeverRemembered(next, never)) next = { ...next, title: '', digest: null, digestAt: null };
     return next;
   });
   if (!updated) return;
@@ -250,6 +257,8 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (!trace) return;
     if (removeInfo.isWindowClosing) {
       await chrome.alarms.create(RECONCILE_ALARM, { delayInMinutes: 1 });
+    } else if (isNeverRemembered(trace, await getNeverRemember())) {
+      await deleteTrace(trace.traceId); // §6.10: nothing kept once the tab is gone
     } else {
       await putTrace({ ...trace, closedAt: now });
     }
@@ -265,6 +274,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RECONCILE_ALARM) void rebindAll();
+  if (alarm.name === SUMMARISE_ALARM) void runSummariser();
 });
 
 chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
@@ -366,7 +376,11 @@ function isThin(d: Digest | null): boolean {
 
 async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
   const now = Date.now();
+  const never = await getNeverRemember();
   await updateTraceByTabId(tabId, (t) => {
+    // §6.10: a never-remember site keeps only what grouping needs (url, timing, lineage) —
+    // no title, no page content — and its record goes when the tab does.
+    if (isNeverRemembered(t, never)) return t.title || t.digest ? { ...t, title: '', digest: null, digestAt: null } : null;
     const sameUrl = t.url === msg.url;
     // 10-minute rule — except that a first-visible capture may replace a thin one, because pages
     // that render lazily while hidden produce an empty digest at readyState=complete.
@@ -382,6 +396,10 @@ async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
 
 chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   const m = msg as Partial<DigestMessage> | undefined;
+  if ((m as { type?: string } | undefined)?.type === 'summarise-kick') {
+    void kickSummariser();
+    return false;
+  }
   if (m?.type === 'digest' && sender.tab?.id !== undefined && m.digest && m.url) {
     const tabId = sender.tab.id;
     serial(tabId, () => handleDigest(tabId, m as DigestMessage)).then(
@@ -441,7 +459,9 @@ chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfi
 void refreshBackfilled();
 chrome.runtime.onStartup.addListener(() => void rebindAll());
 
-// The x-ray page is read-only and reads IndexedDB directly; no messaging surface is needed.
+// Phase 1: the icon opens the sweep page. The x-ray page stays reachable by URL for the study.
 chrome.action.onClicked.addListener(() => {
-  void chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/xray/index.html') });
+  void chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/sweep/index.html') });
 });
+// Anything left in the queue from before the worker died gets picked up on start.
+void runSummariser();

@@ -8,7 +8,8 @@
     "history",
     "storage",
     "alarms",
-    "tabGroups"
+    "tabGroups",
+    "offscreen"
   ],
   "background": {
     "service_worker": "src/collector/background.ts",
