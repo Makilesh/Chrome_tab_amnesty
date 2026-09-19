@@ -18,6 +18,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import type { ArchiveCard } from '../src/archive/types';
 import type { TabTrace } from '../src/cluster/types';
 
 const DIST = resolve('dist');
@@ -171,6 +172,82 @@ async function checkXray(browser: Browser, extId: string, userDataDir: string): 
   await page.close();
 }
 
+
+async function readCards(browser: Browser, extId: string): Promise<ArchiveCard[]> {
+  const page = await browser.newPage();
+  await page.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  await page.waitForFunction(() => typeof (window as any).__tabAmnestyCards === 'function');
+  const cards = (await page.evaluate(() => (window as any).__tabAmnestyCards())) as ArchiveCard[];
+  await page.close();
+  return cards;
+}
+
+const httpTabs = async (browser: Browser) => (await browser.pages()).map((p) => p.url()).filter((u) => /^https?:/.test(u));
+
+/** Phase 1: the sweep page obeys §6, and Archive & close writes the card BEFORE the tabs go. */
+async function checkSweepArchive(browser: Browser, extId: string, userDataDir: string): Promise<ArchiveCard | undefined> {
+  const openBefore = await httpTabs(browser);
+  const page = await browser.newPage();
+  await page.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
+  await page.waitForSelector('#groups');
+  await sleep(2000); // naming (heuristic here; Nano is not on Chrome for Testing)
+  const shot = join(userDataDir, 'sweep.png');
+  await page.screenshot({ path: shot, fullPage: true });
+  const text = await page.evaluate(() => document.body.innerText);
+  const names = await page.$$eval('#groups .group h2', (hs) => hs.map((h) => h.textContent));
+  const buttons = await page.$$eval('#groups button.primary', (bs) => bs.length);
+  console.log(`\nsweep page: ${names.length} group(s) ${JSON.stringify(names)}, ${buttons} primary action(s) visible (must be <= 5)  screenshot: ${shot}`);
+  console.log(`  forbidden words on page: ${FORBIDDEN.test(text) ? 'YES — ' + text.match(FORBIDDEN)![0] : 'none'}`);
+  console.log(`  tab count shown as a number: ${COUNT_AS_PROBLEM.test(text) ? 'YES — ' + text.match(COUNT_AS_PROBLEM)![0] : 'none'}`);
+  console.log(`  input fields for naming: ${await page.$$eval('#groups input', (i) => i.length)} (must be 0)`);
+  if (names.length === 0) {
+    console.log('  no group to archive; skipping the archive/undo check');
+    await page.close();
+    return undefined;
+  }
+  // Real grouping on the strip first (chrome.tabGroups write), then Archive & close.
+  await page.click('#strip');
+  await sleep(1500);
+  console.log(`  show on strip: ${await page.$eval('#strip-status', (e) => e.textContent)}`);
+  await page.click('#groups button.primary');
+  await sleep(2500);
+  const cards = await readCards(browser, extId);
+  const card = cards[0];
+  const openAfter = await httpTabs(browser);
+  console.log(
+    `  Archive & close: card "${card?.name}" with ${card?.tabs.length} tab line(s) ` +
+      `[${card?.tabs.map((t) => t.url.replace(/^https?:\/\/[^/]+/, '')).join(', ')}]; ` +
+      `open http tabs ${openBefore.length} -> ${openAfter.length}; undo until ${card ? new Date(card.undoUntil).toISOString() : '-'}`,
+  );
+  await page.close();
+  return card;
+}
+
+/** Phase 1: after a restart, Bring back recreates every tab of the card in order (§6.8). */
+async function checkBringBack(browser: Browser, extId: string, card: ArchiveCard): Promise<void> {
+  const page = await browser.newPage();
+  await page.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
+  await page.waitForSelector('#cards .group', { timeout: 10_000 });
+  const before = await httpTabs(browser);
+  const clicked = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#cards .group button')].find((x) => x.textContent === 'Bring back') as HTMLButtonElement | undefined;
+    b?.click();
+    return !!b;
+  });
+  await sleep(3000);
+  const after = await httpTabs(browser);
+  const restored = after.filter((u) => !before.includes(u));
+  const expected = [...card.tabs].sort((a, b) => a.order - b.order).map((t) => t.url);
+  const inOrder = JSON.stringify(restored) === JSON.stringify(expected);
+  const cards = await readCards(browser, extId);
+  console.log(
+    `\nbring back after restart: button ${clicked ? 'found' : 'MISSING'}; ${restored.length} of ${expected.length} tabs came back, ` +
+      `order ${inOrder ? 'matches' : 'DIFFERS: ' + JSON.stringify(restored)}; card kept: ${cards.some((c) => c.cardId === card.cardId)}, ` +
+      `restoredAt set: ${!!cards.find((c) => c.cardId === card.cardId)?.restoredAt}`,
+  );
+  await page.close();
+}
+
 async function main(): Promise<void> {
   const site = await startSite();
   const userDataDir = mkdtempSync(join(tmpdir(), 'tab-amnesty-check-'));
@@ -179,6 +256,7 @@ async function main(): Promise<void> {
 
   let browser = await launch(exe, userDataDir);
   let firstRun: TabTrace[] = [];
+  let card: ArchiveCard | undefined;
   try {
     const extId = await extensionId(browser);
     console.log(`extension loaded: ${extId}`);
@@ -240,10 +318,26 @@ async function main(): Promise<void> {
         `(${tabIdsChanged} of them on a new tabId), ${fresh.length} adopted fresh, ` +
         `${second.length} records total vs ${firstRun.length} before (nothing deleted)`,
     );
+
+    // 7. Phase 1: sweep page, Archive & close on the first group.
+    card = await checkSweepArchive(browser, extId, userDataDir);
   } finally {
     await browser.close();
-    site.close();
   }
+
+  // 8. Phase 1: restart again; Bring back must work from the stored card alone (§6.8).
+  if (card) {
+    console.log('\nRestarting Chrome again to check Bring back survives a restart (§6.8)...');
+    browser = await launch(exe, userDataDir, ['--restore-last-session']);
+    try {
+      const extId = await extensionId(browser);
+      await sleep(2500);
+      await checkBringBack(browser, extId, card);
+    } finally {
+      await browser.close();
+    }
+  }
+  site.close();
 }
 
 main().catch((err) => {

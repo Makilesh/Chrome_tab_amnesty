@@ -38,12 +38,24 @@ Known limits, reported not hidden:
   Those count as timing-unknown (no S2, no S3) and cluster only by lineage, co-activation, strip
   position and content — which is why testers must browse for days before exporting.
 
+## Phase 1 — Amnesty (in progress)
+
+The icon now opens the **sweep page**: groups named on-device (Gemini Nano when Chrome offers it,
+otherwise a heuristic), one button per group — **Archive & close** — which writes an archive card
+to IndexedDB *before* closing anything. Below: everything put away, with **Bring back** for 24 h
+(survives a restart) and **Forget this** on every card and every tab. "Sites never remembered" is
+the only setting. `npm run check` now also groups the strip, archives a group, restarts Chrome,
+and brings it back. The Phase 0 gate is still open — see `docs/PHASES.md`.
+
 ## Layout
 
 ```
 src/collector/   service worker + content script (records; never closes or groups anything)
 src/cluster/     the shipped clusterer — pure TS, zero chrome.*, runs in Node
-src/ui/xray/     the read-only page from the extension icon
+src/archive/     Phase 1: archive cards, naming, the sweep's actions
+src/ui/sweep/    the page from the extension icon (Phase 1)
+src/ui/xray/     the read-only x-ray page (Phase 0 study; linked from the sweep page)
+src/offscreen/   summarisation queue (Summarizer API), driven by chrome.alarms
 analysis/        Python research bench (networkx, sklearn, pandas) — where signals get changed
 tools/           cluster CLI, integration check, thin npm wrappers around Python
 fixtures/        exported traces, hand labels, Chrome baselines (see fixtures/README.md)

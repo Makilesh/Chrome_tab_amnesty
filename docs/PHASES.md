@@ -8,7 +8,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done.
 
 ---
 
-## Phase 0 — The X-ray · ~1 weekend · **CURRENT**
+## Phase 0 — The X-ray · ~1 weekend · **GATE OPEN — unmeasured** (Phase 1 started on the owner's instruction, DECISIONS 2026-09-19)
 
 **Question:** Does clustering by behavioural signals beat Chrome's built-in "Organize tabs" at
 recovering someone's real projects?
@@ -124,33 +124,37 @@ five: n < 80, no organiser, labels unconfirmed.
 
 ---
 
-## Phase 1 — Amnesty · ~2–3 weeks
+## Phase 1 — Amnesty · ~2–3 weeks · **CURRENT**
 
 **Question:** Will people actually press "Archive & close" — and does their tab count stay down a
 week later?
 
 ### Deliverables
-- [ ] Real grouping: write Phase 0 clusters to `chrome.tabGroups`; handle "Saved groups are not
-      editable" gracefully; colour by stable hash of dominant host
-- [ ] Group naming: one `LanguageModel.prompt()` per community, structured output via
+- [x] Real grouping: write Phase 0 clusters to `chrome.tabGroups`; handle "Saved groups are not
+      editable" gracefully; colour by stable hash of dominant host (`src/archive/sweep.ts`, `card.ts`)
+- [x] Group naming: one `LanguageModel.prompt()` per community, structured output via
       `responseConstraint` `{ name: string(≤24), color: enum of nine }`; feed the model the
-      *evidence* for the grouping, not just titles
-- [ ] Three tiers from day one: on-device Gemini Nano (Prompt + Summarizer APIs) default;
+      *evidence* for the grouping, not just titles (`src/archive/naming.ts`; colour from the hash, DECISIONS)
+- [~] Three tiers from day one: on-device Gemini Nano (Prompt + Summarizer APIs) default;
       heuristic fallback (highest-IDF shared token or dominant domain) when `availability()` is
-      unavailable; optional BYO-key cloud tier never on by default
-- [ ] Archive & close: one action per group; archive card (name, event label, per-tab line, full
+      unavailable; optional BYO-key cloud tier never on by default — **two tiers built; cloud tier
+      not built, it is a network call (ask first, DECISIONS 2026-09-19)**
+- [x] Archive & close: one action per group; archive card (name, event label, per-tab line, full
       digest, restore URLs) to IndexedDB, then close. Never deletes. Never auto-runs.
-- [ ] Undo: persisted, survives restart, reachable 24 h, restores whole group incl. order
-- [ ] Forget: per-record control, per-domain never-remember list, incognito untouched
-- [ ] Summarisation queue chunked across `chrome.alarms` + offscreen document
+- [x] Undo: persisted, survives restart, reachable 24 h, restores whole group incl. order
+      (shown by `npm run check`: 3 of 3 back in order after a restart)
+- [x] Forget: per-record control, per-domain never-remember list, incognito untouched
+- [x] Summarisation queue chunked across `chrome.alarms` + offscreen document (`src/offscreen/`,
+      `src/collector/summarise.ts`; not exercised by the check — Chrome for Testing has no Summarizer)
 
 ### Anti-scope
 Search · any MCP · any cloud default · any auto-close · settings beyond the never-remember list.
 
 ### Done when
-- [ ] A real 100+ tab browser can be swept, grouped, named, archived group-by-group
-- [ ] Undo restores correctly after a browser restart
-- [ ] Heuristic tier works with the AI APIs disabled
+- [ ] A real 100+ tab browser can be swept, grouped, named, archived group-by-group (needs the owner's
+      browser; the check does it on a 3-tab one)
+- [x] Undo restores correctly after a browser restart (`npm run check`)
+- [x] Heuristic tier works with the AI APIs disabled (the check runs on Chrome for Testing, which has none)
 
 ### GATE
 - [ ] Testers press Archive & close of their own accord

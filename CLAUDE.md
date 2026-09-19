@@ -7,14 +7,18 @@ If the repo docs and the original brief disagree, the repo docs win.
 
 ## Current phase
 
-**Phase 0 — The X-ray.** Question: does clustering by behavioural signals (opener lineage, timing,
-co-activation) beat Chrome's built-in "Organize tabs" at recovering someone's real projects?
-Gate: ARI beats Chrome by ≥ 0.15 absolute on 4 of 5 real 80+ tab browsers, AND zeroing S1/S2/S8
-drops ARI by ≥ 0.10. Do not start Phase 1 until the user confirms the gate passed.
+**Phase 1 — Amnesty**, started 2026-09-19 on the owner's instruction with **the Phase 0 gate still
+open and unmeasured** (one 28-tab browser, draft labels, no organiser baseline; DECISIONS
+2026-09-19). Phase 0's gate — ARI beats Chrome by ≥ 0.15 on 4 of 5 real 80+ tab browsers AND
+zeroing S1/S2/S8 drops ARI ≥ 0.10 — must still be read before any store submission; keep
+`npm run score|ablate|report` honest and never restate it.
 
-Phase 0 anti-scope (building any of these is a failure, not initiative): `chrome.tabGroups` calls,
-closing or archiving, any AI/LLM call, embeddings / transformers.js / ONNX / WASM, settings screen,
-onboarding, sync, accounts, any network request whatsoever.
+Phase 1 question: will people press "Archive & close" of their own accord, and is their tab count
+still lower a week later? Build is in `src/archive/` (cards, naming, sweep actions), `src/ui/sweep/`
+(the page the icon opens), `src/offscreen/` (summarisation). Phase 1 anti-scope (building any is a
+failure, not initiative): search, any MCP, any cloud default, any auto-close, any settings beyond
+the never-remember list. Still no network request without asking — the BYO-key cloud naming tier
+is deliberately unbuilt. Do not start Phase 2 until the user confirms the Phase 1 gate.
 
 ## Thesis
 
@@ -86,8 +90,9 @@ genuinely needs one).
 ```
 src/collector/   service worker + content script. chrome.* lives here.
 src/cluster/     pure functions. ZERO chrome.* imports. fully unit-tested.
-src/archive/     phase 1+. storage, undo, forget.
-src/ui/          xray page (p0), sweep page (p1), newtab (p2)
+src/archive/     phase 1. cards, store, naming tiers, sweep actions (the only file that closes tabs)
+src/ui/          xray page (p0, study), sweep page (p1, the icon), newtab (p2)
+src/offscreen/   summarisation queue drain (Summarizer API), driven by a chrome.alarm
 src/mcp/         phase 3
 tools/           TS cluster CLI (partition JSON, beta overrides) + thin npm wrappers
 analysis/        Python research bench (own pyproject): a mirror of the clusterer where signals are
