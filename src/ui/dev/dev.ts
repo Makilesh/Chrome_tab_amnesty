@@ -2,15 +2,19 @@
  * Developer diagnostics: raw TabTrace rows straight from IndexedDB. Read-only.
  * Exposes `window.__tabAmnestyTraces()` so the integration check can pull the same data.
  */
+import { getCards } from '../../archive/store';
+import type { ArchiveCard } from '../../archive/types';
 import type { TabTrace } from '../../cluster/types';
 import { getAllTraces } from '../../collector/db';
 
 declare global {
   interface Window {
     __tabAmnestyTraces: () => Promise<TabTrace[]>;
+    __tabAmnestyCards: () => Promise<ArchiveCard[]>;
   }
 }
 window.__tabAmnestyTraces = getAllTraces;
+window.__tabAmnestyCards = getCards;
 
 function cell(content: string | number, cls?: string): HTMLTableCellElement {
   const td = document.createElement('td');

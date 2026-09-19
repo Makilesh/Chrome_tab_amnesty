@@ -214,3 +214,33 @@ Append; never rewrite history.
 - **Decision:** Branch `amnesty` off `xray_fixes` and build Phase 1. The Phase 0 gate has not passed: one real browser (28 http tabs, gate wants 80+), draft labels the owner has not confirmed, no organiser baseline, and against the draft labels the S1+S2+S8 ablation reads +0.09 (wrong direction). PHASES.md keeps the Phase 0 gate unticked; nothing here is a pass.
 - **Rejected:** Refusing until five fixtures exist (raised; the owner said "let's resolve this later").
 - **Why:** Owner's call after the concern was stated. Phase 1's own gate (testers press Archive & close of their own accord; tab count still lower a week later) does not depend on the clustering beating Chrome, and the sweep page will use whatever partition the clusterer gives. The X-ray gate still has to be read before any store submission.
+
+## 2026-09-19 — Group colour always comes from the stable hash; the model's colour is ignored
+- **Decision:** `colorFor()` hashes the dominant registrable domain into the eight non-grey colours. Nano is still asked for `{name, color}` under the schema the brief specifies, but only `name` is used.
+- **Rejected:** Letting the model pick (it would change colour between sweeps); dropping `color` from the schema (the brief names it).
+- **Why:** The brief asks for both "stable hash" and "model picks colour"; they conflict, and the brief's own reason for the hash — a project keeps its colour across sweeps, recognisability beats aesthetics — is the one that serves §6.3.
+
+## 2026-09-19 — Never-remember sites are still grouped, but nothing about them is kept
+- **Decision:** A trace on a listed site keeps only url, timing, lineage and activity (what grouping needs) — title blanked, no digest. When the tab closes the record is deleted instead of getting `closedAt`. Archive & close closes such tabs but leaves them off the card. Matching is on the host or any parent domain, normalised from whatever the person typed.
+- **Rejected:** Not recording them at all (they would vanish from groups and the sweep would leave them stranded on the strip); keeping the record with `closedAt` (that is remembering).
+- **Why:** §6.10 says forgetting is first-class; "never remember" has to mean nothing survives the tab, while the person still gets the one-action sweep for the group it sat in.
+
+## 2026-09-19 — One "show on my tab strip" action for the whole sweep, not one per group
+- **Decision:** Writing clusters to `chrome.tabGroups` is a single button above the groups; per group there is exactly one button, Archive & close. Saved-group refusals (§5.6) are counted and reported in the status line; the clustering and the card are unaffected.
+- **Rejected:** A second button per group.
+- **Why:** §6.4 — at most five decisions visible, one button per group. Grouping the strip is reversible and closes nothing, so one decision for all of it is proportionate.
+
+## 2026-09-19 — Restore mints fresh traces; archived traces stay closed behind the card
+- **Decision:** Bring back calls `chrome.tabs.create` per URL in card order and groups the new tabs; the collector records them as new tabs. The card is kept and marked `restoredAt`.
+- **Rejected:** Re-binding the old traceIds to the new tabIds (two open traces per tab for a moment, racing the collector's onCreated).
+- **Why:** The card is the memory; the live trace is a binding. Lineage from before the archive lives on the card, and the return path (Phase 2) reads cards, not traces.
+
+## 2026-09-19 — BYO-key cloud naming tier not built
+- **Decision:** Phase 1 ships two tiers, on-device Nano and heuristic. The optional cloud tier the brief lists is left out.
+- **Rejected:** Adding it off by default.
+- **Why:** It is a network call, and CLAUDE.md says do not add one without asking. Ask the owner; if wanted it is a third `NamingTier` behind the same `nameGroup()`.
+
+## 2026-09-19 — Summarisation runs in an offscreen document with reason WORKERS
+- **Decision:** The worker's alarm opens `src/offscreen/index.html`, which drains the `jobs` store with the Summarizer API (`tl;dr`, short, plain text) four at a time, writing each summary into its card as it lands, and marks every pending job `unavailable` when the API is not on this machine. The alarm is cleared when the queue is empty and re-armed by the next sweep.
+- **Rejected:** Running the Summarizer inside the service worker (§5.5: 30 s idle kill, 5 min cap); an offscreen reason of DOM_PARSER.
+- **Why:** The brief says alarms plus an offscreen document. WORKERS is the closest honest reason Chrome offers for "long-running on-device compute".
