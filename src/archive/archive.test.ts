@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { TabTrace, Transition } from '../cluster/types';
 import { buildCard, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
-import { clampName, evidence, heuristicName } from './naming';
+import { clampName, evidence, heuristicName, sharedTitleName } from './naming';
+import { appendSnapshot, readGate, studySummary } from './study';
 import { GROUP_COLORS, UNDO_WINDOW_MS } from './types';
 
 const MIN = 60_000;
@@ -85,14 +86,25 @@ describe('naming', () => {
     expect(clampName('The deploy incident that ate Tuesday afternoon')).toBe('The deploy incident');
   });
 
-  it('heuristic name comes from shared tokens, else the dominant domain; colour from the hash', () => {
-    const members = [tr('1', { host: 'acme.com' }), tr('2', { host: 'acme.com' })];
-    const fromTokens = heuristicName(members, { heading: 'deploy · rollout', hosts: ['acme.com'], when: '' });
-    expect(fromTokens.name).toBe('Deploy Rollout');
-    expect(fromTokens.tier).toBe('heuristic');
-    expect(fromTokens.color).toBe(colorFor(members));
-    const fromHost = heuristicName(members, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '' });
-    expect(fromHost.name).toBe('acme.com');
+  it('heuristic name is the word the titles share, in the casing the person saw', () => {
+    const corpus = [
+      tr('1', { host: 'a.com', title: 'AWS Builder Center' }),
+      tr('2', { host: 'b.com', title: 'Amazon Web Services (AWS)' }),
+      tr('3', { host: 'c.com', title: 'QA role | Acceleration Center | LinkedIn' }),
+      tr('4', { host: 'd.com', title: 'Something else entirely' }),
+    ];
+    const group = corpus.slice(0, 3);
+    expect(sharedTitleName(group, corpus)).toBe('AWS');
+    const n = heuristicName(group, { heading: 'builder · center', hosts: ['a.com'], when: '' }, corpus);
+    expect(n).toEqual({ name: 'AWS', color: colorFor(group), tier: 'heuristic' });
+  });
+
+  it('never names a group after a platform; falls back to the heading word, then the site', () => {
+    const members = [tr('1', { host: 'github.com', title: 'acme/x | GitHub' }), tr('2', { host: 'github.com', title: 'acme/y | GitHub' })];
+    expect(sharedTitleName(members, members)).toBe('acme');
+    const bare = [tr('1', { host: 'www.acme.com' }), tr('2', { host: 'www.acme.com' })];
+    expect(heuristicName(bare, { heading: 'deploy · rollout', hosts: ['www.acme.com'], when: '' }).name).toBe('Deploy');
+    expect(heuristicName(bare, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '' }).name).toBe('acme.com');
   });
 
   it('evidence leads with timing, lineage and switching, never with a judgement', () => {
@@ -107,5 +119,39 @@ describe('naming', () => {
     expect(e).toContain('switched back and forth');
     expect(e).toContain('- ACME-1 deploy failing');
     expect(e).not.toMatch(/hours on|wasted|messy/i);
+  });
+});
+
+describe('phase 1 study', () => {
+  const H = 3_600_000;
+  const D = 24 * H;
+  const card = (at: number, restoredAt: number | null = null) =>
+    ({ ...buildCard({ id: 0, traceIds: ['a'] }, [tr('a')], { name: 'X', color: 'blue', tier: 'heuristic' }, '', [], at, 'c' + at), restoredAt });
+  const snaps = (from: number, to: number, open: (t: number) => number) => {
+    const out = [];
+    for (let t = from; t <= to; t += 6 * H) out.push({ at: t, open: open(t) });
+    return out;
+  };
+
+  it('exports times and counts only — no names, no URLs', () => {
+    const s = studySummary([{ at: 1, open: 40 }], [card(5 * D)], 99);
+    expect(JSON.stringify(s)).not.toMatch(/https?:|"X"/);
+    expect(s.archives).toEqual([{ archivedAt: 5 * D, tabs: 1, tier: 'heuristic', restoredAt: null }]);
+    expect(appendSnapshot(Array.from({ length: 300 }, (_, i) => ({ at: i, open: 1 })), { at: 999, open: 2 }).length).toBe(240);
+  });
+
+  it('reads the gate: lower at day 7, not yet readable, or never pressed', () => {
+    const first = 10 * D;
+    const lower = readGate(studySummary(snaps(first - 3 * D, first + 9 * D, (t) => (t < first ? 120 : 70)), [card(first), card(first + 2 * D, first + 2 * D + H)]));
+    expect(lower).toMatchObject({ presses: 2, pressDays: 2, broughtBack: 1, before: 120, day7: 70, lowerAtDay7: true });
+
+    const early = readGate(studySummary(snaps(first - 3 * D, first + 3 * D, () => 100), [card(first)]));
+    expect(early.lowerAtDay7).toBeNull();
+    expect(early.readableFrom).toBe(first + 8 * D);
+
+    const bounced = readGate(studySummary(snaps(first - 3 * D, first + 9 * D, () => 100), [card(first)]));
+    expect(bounced.lowerAtDay7).toBe(false);
+
+    expect(readGate(studySummary(snaps(0, 9 * D, () => 100), [])).pressed).toBe(false);
   });
 });

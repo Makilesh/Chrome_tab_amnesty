@@ -47,6 +47,11 @@ to IndexedDB *before* closing anything. Below: everything put away, with **Bring
 the only setting. `npm run check` now also groups the strip, archives a group, restarts Chrome,
 and brings it back. The Phase 0 gate is still open — see `docs/PHASES.md`.
 
+Phase 1 gate, per tester: install, browse normally, nobody prompts them to press anything. Eight
+or more days after their first Archive & close, icon → "For the study: export and baseline" →
+**Export study summary** (times and numbers only), saved as `fixtures/<name>.study.json`, then
+`npm run phase1 <name…>`. Ask them separately whether any press was prompted.
+
 ## Layout
 
 ```
@@ -92,6 +97,7 @@ npm run synth            # synthetic fixtures for mechanics only — never count
                          #   controls: projects separable by exactly one behavioural signal)
 npm run cluster <name>   # TS clusterer -> fixtures/<name>.partition.json
 npm run labels <name>    # write/refresh fixtures/<name>.labels.json; keeps labels already filled in
+npm run phase1 <name...> # Phase 1 gate from fixtures/<name>.study.json: presses, open count before vs day 7
 npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
 npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
 npm run report a b c d e # per-browser chart -> fixtures/report.png

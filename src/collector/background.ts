@@ -21,6 +21,7 @@ import {
 import { isNeverRemembered } from '../archive/forget';
 import { getNeverRemember } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
+import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
 import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
 import { urlFeatures } from './url';
 
@@ -275,6 +276,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RECONCILE_ALARM) void rebindAll();
   if (alarm.name === SUMMARISE_ALARM) void runSummariser();
+  if (alarm.name === STUDY_ALARM) void takeSnapshot();
 });
 
 chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
@@ -454,7 +456,7 @@ async function refreshBackfilled(): Promise<void> {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfilled));
+chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfilled).then(takeSnapshot));
 // Also on every worker start: idempotent, cheap, and independent of whether onInstalled fired.
 void refreshBackfilled();
 chrome.runtime.onStartup.addListener(() => void rebindAll());
@@ -465,3 +467,4 @@ chrome.action.onClicked.addListener(() => {
 });
 // Anything left in the queue from before the worker died gets picked up on start.
 void runSummariser();
+void ensureStudyAlarm();

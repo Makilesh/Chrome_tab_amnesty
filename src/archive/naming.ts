@@ -12,6 +12,7 @@
 import { colorFor } from './card';
 import { GROUP_COLORS, type GroupColor, type GroupName, MAX_NAME_CHARS } from './types';
 import { describe, type Description } from '../cluster/describe';
+import { STOP } from '../cluster/lexical';
 import { timingKnown } from '../cluster/segment';
 import type { Community, TabTrace } from '../cluster/types';
 
@@ -69,10 +70,57 @@ export function clampName(s: string): string {
   return (sp > 8 ? cut.slice(0, sp) : cut).trim();
 }
 
-/** Heuristic name from the x-ray description: shared tokens, else the dominant domain. */
-export function heuristicName(members: TabTrace[], d: Description): GroupName {
-  const fromTokens = d.heading.includes(' · ') || !d.heading.includes('.') ? d.heading.split(' · ').map(titleCase).join(' ') : '';
-  const name = clampName(fromTokens || d.hosts[0]?.replace(/^www\./, '') || 'Untitled') || 'Untitled';
+/** Platforms whose name says where, not what. A group is never named after them. */
+const PLATFORM = new Set([
+  'github', 'gitlab', 'google', 'gmail', 'docs', 'drive', 'notion', 'linkedin', 'luma', 'youtube',
+  'reddit', 'wikipedia', 'stackoverflow', 'stack', 'overflow', 'medium', 'twitter', 'facebook',
+  'instagram', 'chatgpt', 'claude', 'gemini', 'perplexity', 'amazon', 'search', 'results', 'login',
+  'sign', 'account', 'create', 'untitled', 'new', 'tab', 'home', 'page', 'welcome', 'dashboard',
+]);
+const TITLE_WORD = /[\p{L}\p{N}]{3,}/gu;
+
+/** Distinct words of a title, lower-cased key -> the casing the person saw. */
+function titleWords(title: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const w of title.match(TITLE_WORD) ?? []) {
+    const k = w.toLowerCase();
+    if (STOP.has(k) || PLATFORM.has(k) || /^\d+$/.test(k) || out.has(k)) continue;
+    out.set(k, w);
+  }
+  return out;
+}
+
+/**
+ * The word the group's titles share that the rest of the browser does not: count in the group
+ * times IDF over all open titles, in the casing the person saw. One word — pairing a second one
+ * picks up coincidences ("AWS · Center"). Returns '' when no word is shared by two tabs.
+ */
+export function sharedTitleName(members: TabTrace[], corpus: TabTrace[]): string {
+  const df = new Map<string, number>();
+  for (const t of corpus) for (const k of titleWords(t.title).keys()) df.set(k, (df.get(k) ?? 0) + 1);
+  const inGroup = new Map<string, { n: number; form: string }>();
+  for (const t of members) {
+    for (const [k, form] of titleWords(t.title)) {
+      const cur = inGroup.get(k);
+      inGroup.set(k, { n: (cur?.n ?? 0) + 1, form: cur?.form ?? form });
+    }
+  }
+  const n = corpus.length;
+  const ranked = [...inGroup.entries()]
+    .filter(([, v]) => v.n >= 2)
+    .map(([k, v]) => ({ ...v, score: v.n * (Math.log((n + 1) / ((df.get(k) ?? 0) + 1)) + 1) }))
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.form ?? '';
+}
+
+/**
+ * Heuristic tier: the word the tabs' titles share, else the first word the x-ray heading found,
+ * else the dominant site. Everything here runs with the AI APIs absent.
+ */
+export function heuristicName(members: TabTrace[], d: Description, corpus: TabTrace[] = members): GroupName {
+  const fromTitles = sharedTitleName(members, corpus);
+  const firstHeading = d.heading.includes(' · ') || !d.heading.includes('.') ? titleCase(d.heading.split(' · ')[0] ?? '') : '';
+  const name = clampName(fromTitles || firstHeading || d.hosts[0]?.replace(/^www\./, '') || 'Untitled') || 'Untitled';
   return { name, color: colorFor(members), tier: 'heuristic' };
 }
 
@@ -121,13 +169,27 @@ export async function nanoName(members: TabTrace[], byId: Map<string, TabTrace>,
   }
 }
 
-/** The name for a community: Nano if it can, the heuristic otherwise. Always returns something. */
-export async function nameGroup(community: Community, byId: Map<string, TabTrace>, corpus: TabTrace[]): Promise<GroupName & { description: Description }> {
+export type NamedGroup = GroupName & { description: Description };
+
+/** Instant name for a community: the heuristic tier, no model call. Shown first (§6.3). */
+export function quickName(community: Community, byId: Map<string, TabTrace>, corpus: TabTrace[]): NamedGroup {
   const members = community.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
   const description = describe(community, byId, corpus);
-  const heuristic = heuristicName(members, description);
-  const nano = await nanoName(members, byId, heuristic.color);
-  // Colour always comes from the stable hash so a project keeps it across sweeps; the model only
-  // gets a say when the hash colour is unavailable.
-  return { ...(nano ?? heuristic), color: heuristic.color, description };
+  return { ...heuristicName(members, description, corpus), description };
+}
+
+/**
+ * The on-device upgrade of a quick name, or null to keep it. Colour always stays the stable-hash
+ * one so a project keeps it across sweeps (DECISIONS 2026-09-19).
+ */
+export async function betterName(community: Community, byId: Map<string, TabTrace>, quick: NamedGroup): Promise<NamedGroup | null> {
+  const members = community.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
+  const nano = await nanoName(members, byId, quick.color);
+  return nano ? { ...nano, color: quick.color, description: quick.description } : null;
+}
+
+/** The name for a community: Nano if it can, the heuristic otherwise. Always returns something. */
+export async function nameGroup(community: Community, byId: Map<string, TabTrace>, corpus: TabTrace[]): Promise<NamedGroup> {
+  const quick = quickName(community, byId, corpus);
+  return (await betterName(community, byId, quick)) ?? quick;
 }

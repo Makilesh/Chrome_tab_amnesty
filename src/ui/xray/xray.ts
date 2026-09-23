@@ -9,7 +9,9 @@
 import { cluster } from '../../cluster/cluster';
 import { describe } from '../../cluster/describe';
 import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../../cluster/types';
-import { getOpenTraces } from '../../collector/db';
+import { studySummary } from '../../archive/study';
+import { getCards } from '../../archive/store';
+import { getMeta, getOpenTraces } from '../../collector/db';
 import { reduceUrl } from '../../collector/url';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -165,6 +167,12 @@ async function main(): Promise<void> {
     const m = mode();
     download(`${nameOr('browser')}${m === 'full' ? '.full' : ''}.json`, fixture(traces, m));
     $('status').textContent = `Exported (${m}).`;
+  });
+
+  $('study-export').addEventListener('click', async () => {
+    const summary = studySummary((await getMeta('openSnapshots')) ?? [], await getCards());
+    download(`${nameOr('browser')}.study.json`, summary);
+    $('status').textContent = 'Exported the study summary.';
   });
 
   $('baseline').addEventListener('click', async () => {

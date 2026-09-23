@@ -5,6 +5,7 @@
  * Records are keyed on traceId, never tabId (§5.3). tabId is an index for live lookups only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import type { OpenSnapshot } from '../archive/study';
 import type { ArchiveCard, SummariseJob } from '../archive/types';
 import type { TabTrace } from '../cluster/types';
 
@@ -28,6 +29,8 @@ interface MetaRecords {
   recentActivations: Activation[];
   /** Registrable domains the person asked us never to remember (§6.10). Lower-case eTLD+1. */
   neverRemember: string[];
+  /** Phase 1 study only: open-tab count every few hours. Never shown in the product (§6.1). */
+  openSnapshots: OpenSnapshot[];
 }
 
 interface TabAmnestyDB extends DBSchema {

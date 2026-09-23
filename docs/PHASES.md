@@ -156,9 +156,20 @@ Search · any MCP · any cloud default · any auto-close · settings beyond the 
 - [x] Undo restores correctly after a browser restart (`npm run check`)
 - [x] Heuristic tier works with the AI APIs disabled (the check runs on Chrome for Testing, which has none)
 
+- [x] Gate instrumentation: open-tab snapshots every 6 h (never shown), "Export study summary"
+      on the x-ray page, `npm run phase1 <names…>` (DECISIONS 2026-09-23)
+
 ### GATE
 - [ ] Testers press Archive & close of their own accord
 - [ ] Their open-tab count is still lower seven days later
+
+**Protocol (Phase 1):** install, browse normally, do not prompt the tester to press anything.
+After at least eight days past their first press, they export the study summary to
+`fixtures/<name>.study.json`; `npm run phase1 <names…>` reads it. Ask each tester, separately,
+whether any press was prompted — the data cannot tell. A tester who never presses is a result,
+not a dropout. The open count is compared as the median over the 48 h before the first press vs
+days 6–8 after; a browser with no snapshot before its first press cannot be read and is reported
+as such, not dropped silently.
 
 ---
 

@@ -9,12 +9,11 @@
  * restart because the card is in IndexedDB (§6.8); Forget is on every card and every tab (§6.10).
  */
 import { undoable } from '../../archive/card';
-import { nameGroup } from '../../archive/naming';
+import { betterName, type NamedGroup, quickName } from '../../archive/naming';
 import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, removeNeverRemember } from '../../archive/store';
 import { archiveAndClose, bringBack, groupOnStrip, openOne } from '../../archive/sweep';
-import type { ArchiveCard, GroupName } from '../../archive/types';
+import type { ArchiveCard } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
-import type { Description } from '../../cluster/describe';
 import type { Community, TabTrace } from '../../cluster/types';
 import { getOpenTraces } from '../../collector/db';
 
@@ -41,7 +40,9 @@ function line(title: string, host: string, url: string, summary?: string | null)
 interface Group {
   community: Community;
   members: TabTrace[];
-  name: GroupName & { description: Description };
+  name: NamedGroup;
+  /** The card element currently showing this group, so a better name can land in place. */
+  el?: HTMLElement;
 }
 
 let groups: Group[] = [];
@@ -56,12 +57,15 @@ async function load(): Promise<void> {
   const traces = await getOpenTraces();
   const byId = new Map(traces.map((t) => [t.traceId, t]));
   const result = cluster(traces);
-  groups = [];
-  for (const c of result.communities) {
-    const members = c.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
-    groups.push({ community: c, members, name: await nameGroup(c, byId, traces) });
-  }
+  // Heuristic names first so something recognisable is on screen at once (§6.3); on-device
+  // names replace them one by one as the model answers.
+  groups = result.communities.map((c) => ({
+    community: c,
+    members: c.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t),
+    name: quickName(c, byId, traces),
+  }));
   renderGroups();
+  void upgradeNames(byId);
 
   const looseTraces = result.looseEnds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
   const loose = $('loose');
@@ -71,8 +75,22 @@ async function load(): Promise<void> {
   for (const t of looseTraces) list.append(line(t.title, t.host, t.url));
 }
 
+async function upgradeNames(byId: Map<string, TabTrace>): Promise<void> {
+  for (const g of [...groups]) {
+    const better = await betterName(g.community, byId, g.name);
+    if (!better || !groups.includes(g)) continue;
+    g.name = better;
+    const h = g.el?.querySelector('h2');
+    if (h) {
+      h.textContent = better.name;
+      h.title = 'Named on this device';
+    }
+  }
+}
+
 function groupCard(g: Group): HTMLElement {
   const card = el('section', `group c-${g.name.color}`);
+  g.el = card;
   const header = el('header');
   const h = el('h2', undefined, g.name.name);
   h.title = g.name.tier === 'nano' ? 'Named on this device' : 'Named from what the tabs share';
