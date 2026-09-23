@@ -248,6 +248,32 @@ async function checkBringBack(browser: Browser, extId: string, card: ArchiveCard
   await page.close();
 }
 
+/** Phase 1 study: the summary export carries times and counts only, and sees the archive. */
+async function checkStudyExport(browser: Browser, extId: string, userDataDir: string): Promise<void> {
+  const page = await browser.newPage();
+  const downloads = join(userDataDir, 'study-downloads');
+  const cdp = await page.createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
+  await page.goto(`chrome-extension://${extId}/src/ui/xray/index.html`);
+  await page.waitForSelector('#study');
+  await page.click('#study summary');
+  await page.click('#study-export');
+  await sleep(1500);
+  const file = existsSync(downloads) ? readdirSync(downloads).find((f) => f.endsWith('.study.json')) : undefined;
+  if (!file) {
+    console.log('\nstudy summary: no file downloaded');
+  } else {
+    const raw = readFileSync(join(downloads, file), 'utf8');
+    const s = JSON.parse(raw);
+    console.log(
+      `\nstudy summary: ${file} kind=${s.kind} snapshots=${s.snapshots.length} (open counts ${JSON.stringify(s.snapshots.map((x: { open: number }) => x.open))}) ` +
+        `archives=${s.archives.length} restored=${s.archives.filter((a: { restoredAt: number | null }) => a.restoredAt).length}; ` +
+        `contains a URL or title: ${/https?:|Pricing|Deploy/.test(raw) ? 'YES' : 'no'}`,
+    );
+  }
+  await page.close();
+}
+
 async function main(): Promise<void> {
   const site = await startSite();
   const userDataDir = mkdtempSync(join(tmpdir(), 'tab-amnesty-check-'));
@@ -333,6 +359,7 @@ async function main(): Promise<void> {
       const extId = await extensionId(browser);
       await sleep(2500);
       await checkBringBack(browser, extId, card);
+      await checkStudyExport(browser, extId, userDataDir);
     } finally {
       await browser.close();
     }

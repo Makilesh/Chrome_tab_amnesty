@@ -5,7 +5,8 @@
 import type { TabTrace } from './types';
 
 const TOKEN = /[a-z0-9]{2,}/g;
-const STOP = new Set(
+/** Exported for the Phase 1 heuristic namer; the S7 arithmetic is unchanged. */
+export const STOP = new Set(
   (
     'a an and are as at be by for from has have in is it its of on or that the this to was ' +
     'were will with you your we our not no but if then than so can how what when where who why ' +

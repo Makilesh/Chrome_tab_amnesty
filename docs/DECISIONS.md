@@ -244,3 +244,18 @@ Append; never rewrite history.
 - **Decision:** The worker's alarm opens `src/offscreen/index.html`, which drains the `jobs` store with the Summarizer API (`tl;dr`, short, plain text) four at a time, writing each summary into its card as it lands, and marks every pending job `unavailable` when the API is not on this machine. The alarm is cleared when the queue is empty and re-armed by the next sweep.
 - **Rejected:** Running the Summarizer inside the service worker (§5.5: 30 s idle kill, 5 min cap); an offscreen reason of DOM_PARSER.
 - **Why:** The brief says alarms plus an offscreen document. WORKERS is the closest honest reason Chrome offers for "long-running on-device compute".
+
+## 2026-09-23 — Heuristic names come from one word the titles share, in the casing the person saw
+- **Decision:** `sharedTitleName()`: words of 3+ letters from tab *titles* only, minus stop words and platform names (GitHub, Notion, LinkedIn, Luma, Google…), ranked by (tabs in the group containing it) × IDF over all open titles, needing at least two tabs; one word, original casing. Fallbacks: the first word of the x-ray heading, then the dominant site.
+- **Rejected:** The first version — the top three x-ray heading tokens title-cased and joined — which on the owner's browser gave "Builder Product First", "Makilesh Ideas Open", "Phinite Platform Every"; pairing a second title word, which picked up a coincidental "Center" from an unrelated PwC listing ("AWS · Center").
+- **Why:** The brief says expect many users on the fallback and make it genuinely good. Titles are what the person sees on the strip, digest headings are page furniture. Same browser now reads "AWS", "Makilesh", "Phinite". `lexical.STOP` is exported for this; S7 arithmetic is unchanged (parity 1.0).
+
+## 2026-09-23 — Sweep page shows heuristic names at once and upgrades them to on-device names in place
+- **Decision:** `quickName()` (no model call) renders every group immediately; `betterName()` then asks Nano one group at a time and swaps the heading text when it answers. Colour never changes.
+- **Rejected:** Awaiting every Nano prompt before rendering anything (the first version).
+- **Why:** §6.3 — the first thing on screen is something the person recognises. Eight sequential prompts on a 100+ tab browser would have been several seconds of blank page.
+
+## 2026-09-23 — The Phase 1 gate is measured from a local open-tab count and the archive cards, exported as times and numbers only
+- **Decision:** The collector records `{at, open}` (http(s) tabs open) every 6 h, at install and on alarm, in `meta.openSnapshots` (capped at 60 days). The x-ray study section gains "Export study summary" → `<name>.study.json` with those snapshots and, per card, `{archivedAt, tabs, tier, restoredAt}` — no names, no URLs. `npm run phase1 <names…>` reads them: presses and press-days, brought back, median open count over the 48 h before the first press vs days 6–8 after, and "not readable until <date>" when there is not yet a day 7. It says in its header that "of their own accord" is the tester's report.
+- **Rejected:** Deriving open counts from exported traces (closed traces are not exported, forgotten ones are gone, and it would mean shipping every URL for a number); asking testers to count their tabs (that is the §6.1 wall-of-awful move); showing any of this in the product.
+- **Why:** Without it the Phase 1 gate could only be answered by anecdote. §6.1 forbids showing the tab count as a problem *to the person*; it does not forbid measuring whether the product works. The number exists only in a file the tester chooses to export and a CLI on the owner's machine, and the page that exports it says in plain words what is in the file.

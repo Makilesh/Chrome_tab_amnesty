@@ -7,6 +7,7 @@ One real browser = three files, named after the person (or a nickname):
 | `<name>.json` | x-ray page → Export traces | `TabTrace[]` with a header: `schemaVersion`, `mode`, `traceCount`, `openedAtMin/Max` |
 | `<name>.chrome.json` | x-ray page → Capture Chrome's grouping | `{ method: "captured" \| "transcribed", capturedAt, groups: [{ name, color, traceIds }], ungrouped: [] }` |
 | `<name>.labels.json` | the browser's owner, by hand | `{ "<traceId>": "project name" \| null, ... }` |
+| `<name>.study.json` | x-ray page → Export study summary (Phase 1) | `{ kind, snapshots: [{at, open}], archives: [{archivedAt, tabs, tier, restoredAt}] }` — times and counts only |
 
 `schemaVersion` must match `src/cluster/types.ts`; an old fixture fails loudly rather than
 scoring against the wrong shape. `*.full.json` (unredacted exports) and `*.partition.json`
