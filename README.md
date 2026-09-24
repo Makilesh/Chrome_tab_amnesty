@@ -45,7 +45,8 @@ src/ui/xray/     the read-only page from the extension icon
 analysis/        Python research bench (networkx, sklearn, pandas) — where signals get changed
 tools/           cluster CLI, integration check, thin npm wrappers around Python
 fixtures/        exported traces, hand labels, Chrome baselines (see fixtures/README.md)
-docs/            PROJECT.md (brief), PHASES.md (checklist), DECISIONS.md (judgement calls)
+docs/            PROJECT.md (brief), PHASES.md (checklist), DECISIONS.md (judgement calls),
+                 research-jev-laya.md (why no Jev/Laya, and refit instead)
 ```
 
 The clusterer exists twice on purpose: Python is where signals are iterated; TS is what ships,
