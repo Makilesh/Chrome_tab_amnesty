@@ -18,6 +18,8 @@
     "report": "node tools/py.mjs cli report",
     "parity": "node tools/py.mjs parity",
     "refit": "node tools/py.mjs refit",
+    "judge-sim": "node tools/py.mjs judge_sim",
+    "laya-probe": "node tools/py.mjs laya_probe",
     "synth": "node tools/py.mjs synth",
     "pytest": "node tools/py.mjs pytest",
     "cluster:python": "node tools/py.mjs cli cluster"

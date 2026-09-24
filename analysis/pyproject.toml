@@ -14,6 +14,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# Research only (laya_probe): the content-judge measurement. Never needed by the extension.
+laya = ["laya>=0.3.20"]
 
 [project.scripts]
 ta-cluster = "tabamnesty.cli:cluster_main"
