@@ -128,6 +128,19 @@ describe('lexical', () => {
   it('tokens drop stop words and numbers', () => {
     expect(tokens(tr('a', { title: 'The Deploy Runbook 42', path: ['acme', 'deploy'] }))).toEqual(['deploy', 'runbook', 'acme', 'deploy']);
   });
+  // Same inputs and expectations as TestLexical in analysis/tests/test_cluster.py.
+  it('tokens keep non-Latin scripts whole', () => {
+    expect(tokens(tr('a', { title: 'मार्च का बिजली बिल · தமிழ்நாடு அரசு · Café Müller Gebühren १२३' }))).toEqual([
+      'मार्च', 'का', 'बिजली', 'बिल', 'தமிழ்நாடு', 'அரசு', 'café', 'müller', 'gebühren',
+    ]);
+  });
+  it('tokens bigram scripts written without spaces', () => {
+    expect(tokens(tr('a', { title: '東京の天気 iPhone15' }))).toEqual(['東京', '京の', 'の天', '天気', 'iphone15']);
+  });
+  it('path tokens are percent-decoded; malformed escapes stay as they were', () => {
+    const t = tr('a', { path: ['wiki', '%e6%9d%b1%e4%ba%ac', 'caf%c3%a9', '%zz', '%ed%a0%80'] });
+    expect(tokens(t)).toEqual(['wiki', '東京', 'café', 'zz', 'ed', 'a0']);
+  });
   it('cosine bounds', () => {
     const v = tfidfVectors([tr('a', { title: 'pandas groupby error' }), tr('b', { title: 'pandas groupby dtype' }), tr('c', { title: 'lisbon hotel' })]);
     expect(cosine(v.get('a')!, v.get('a')!)).toBeCloseTo(1);

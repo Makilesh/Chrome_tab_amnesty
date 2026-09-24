@@ -13,3 +13,4 @@ fixtures/*.python.partition.json
 fixtures/report.png
 
 Claude outputs/*
+*.egg-info/

@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from tabamnesty.cluster import ablation_betas, build_graph, cluster, partition_to_target
+from tabamnesty.cluster import ablation_betas, build_graph, cluster, pair_signals, partition_to_target
 from tabamnesty.config import load_ambient, load_betas
 from tabamnesty.lexical import cosine, tfidf_vectors, tokens
 from tabamnesty.score import assignments, score
@@ -115,6 +115,18 @@ class TestLexical:
         t = tr("a", title="The Deploy Runbook 42", path=("acme", "deploy"))
         assert tokens(t) == ["deploy", "runbook", "acme", "deploy"]
 
+    # Same inputs and expectations as the 'lexical' block in src/cluster/cluster.test.ts.
+    def test_tokens_keep_non_latin_scripts_whole(self):
+        t = tr("a", title="मार्च का बिजली बिल · தமிழ்நாடு அரசு · Café Müller Gebühren १२३")
+        assert tokens(t) == ["मार्च", "का", "बिजली", "बिल", "தமிழ்நாடு", "அரசு", "café", "müller", "gebühren"]
+
+    def test_tokens_bigram_scripts_without_spaces(self):
+        assert tokens(tr("a", title="東京の天気 iPhone15")) == ["東京", "京の", "の天", "天気", "iphone15"]
+
+    def test_path_tokens_are_percent_decoded(self):
+        t = tr("a", path=("wiki", "%e6%9d%b1%e4%ba%ac", "caf%c3%a9", "%zz", "%ed%a0%80"))
+        assert tokens(t) == ["wiki", "東京", "café", "zz", "ed", "a0"]  # malformed escapes stay as they were
+
     def test_cosine_bounds(self):
         ts = [tr("a", title="pandas groupby error"), tr("b", title="pandas groupby dtype"), tr("c", title="lisbon hotel")]
         v = tfidf_vectors(ts)
@@ -205,6 +217,16 @@ class TestAblationPositiveControls:
         b = load_betas()
         full, zero = self._ari("coactive", b), self._ari("coactive", {**b, "S8_coactive": 0.0})
         assert full > 0.6 and full - zero >= 0.30, (full, zero)
+
+    def test_multilingual_text_separates_in_s7(self):
+        # Hindi / Tamil / Japanese / German projects on one host and one (percent-encoded) path.
+        # Before Unicode tokens, within- and across-project S7 were 0.84 / 0.70 (encoded path
+        # bytes were the shared "words"); only a real content signal gets them this far apart.
+        traces, labels = make_adversarial("multilingual")
+        _, vecs = pair_signals(traces)
+        same = [v["S7_lexical"] for (a, b), v in vecs.items() if labels[a] == labels[b]]
+        other = [v["S7_lexical"] for (a, b), v in vecs.items() if labels[a] != labels[b]]
+        assert min(same) > 0 and sum(same) / len(same) > 0.3 and sum(other) / len(other) < 0.15
 
     def test_temporal_is_detected_only_together_with_session(self):
         # S3 (same session) is cut from the same timestamps S2 decays over, so the two are
