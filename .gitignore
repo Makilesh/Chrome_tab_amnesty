@@ -15,3 +15,4 @@ fixtures/refit.betas.json
 
 Claude outputs/*
 *.egg-info/
+%SystemDrive%/
