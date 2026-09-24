@@ -30,7 +30,9 @@ Known limits, reported not hidden:
   timestamps S2 decays over — so that run under-states how much timing contributes.
 - On projects that interleave in time, the contemporaneity signals (S2, S4) can actively mislead:
   on the lineage positive control, zeroing S2 *raises* ARI from 0.27 to 1.0. Weights were not
-  tuned on synthetic data; `refit.py` on labelled real pairs is the intended fix.
+  tuned on synthetic data; `npm run refit` on labelled real pairs is the intended fix, and only
+  its leave-one-browser-out column counts (weights fit on the gate browsers and scored on them
+  would be a harness tuned to pass).
 - After a browser restart, two tabs on the same URL can swap identities (the re-bind has nothing
   stronger than URL to go on), so some lineage lands on the wrong twin.
 
@@ -73,11 +75,14 @@ uv pip install --python .venv/Scripts/python.exe -e "analysis[dev]"     # or: pi
 npm run pytest
 npm run synth            # synthetic fixtures for mechanics only — never count toward the gate:
                          #   synthetic (easy) + synthetic_{lineage,coactive,temporal} (positive
-                         #   controls: projects separable by exactly one behavioural signal)
+                         #   controls: projects separable by exactly one behavioural signal) +
+                         #   synthetic_multilingual (four scripts; only page text separates them)
 npm run cluster <name>   # TS clusterer -> fixtures/<name>.partition.json
 npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
 npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
 npm run report a b c d e # per-browser chart -> fixtures/report.png
+npm run refit a b c d e  # learn P(same project) from the signals, each browser held out in turn
+                         #   -> fixtures/refit.betas.json (a candidate; src/cluster/betas.json is never written)
 npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also part of npm run check
 ```
 
