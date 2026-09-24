@@ -46,7 +46,7 @@ analysis/        Python research bench (networkx, sklearn, pandas) — where sig
 tools/           cluster CLI, integration check, thin npm wrappers around Python
 fixtures/        exported traces, hand labels, Chrome baselines (see fixtures/README.md)
 docs/            PROJECT.md (brief), PHASES.md (checklist), DECISIONS.md (judgement calls),
-                 research-jev-laya.md (why no Jev/Laya, and refit instead)
+                 research-jev-laya.md (Jev/Laya impact study and staged plan)
 ```
 
 The clusterer exists twice on purpose: Python is where signals are iterated; TS is what ships,
@@ -84,6 +84,10 @@ npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 toge
 npm run report a b c d e # per-browser chart -> fixtures/report.png
 npm run refit a b c d e  # learn P(same project) from the signals, each browser held out in turn
                          #   -> fixtures/refit.betas.json (a candidate; src/cluster/betas.json is never written)
+npm run judge-sim        # what a content model (Laya/Jev) could add: simulated judge x 5 designs,
+                         #   warm vs install-day browsers (docs/research-jev-laya.md §3)
+npm run laya-probe <name> # measure real Laya on a labelled fixture (opt-in: pip install -e "analysis[laya]",
+                         #   needs huggingface.co for the first ~1.7 GB download)
 npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also part of npm run check
 ```
 
