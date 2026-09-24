@@ -1,177 +1,220 @@
-# Jev and Laya for Tab Amnesty — research note
+# Jev / Laya: impact study and plan
 
-*2026-09-24. Question asked: how could Jev / Laya help here, how would they be used, is their size
-a plus or a minus for our users, and how good could they be. Decision logged in DECISIONS.md.*
+*v2, 2026-09-24. Supersedes v1 of this note (in git history), which ruled both models out from
+the project rules before measuring anything. This version starts from what users would get, and
+measures it.*
 
-## Verdict
+## Bottom line
 
-**Take the idea, not the weights.** Jev and Laya answer one fixed question with a calibrated
-probability. That is exactly the shape of our affinity function, which asks "are these two tabs
-the same project?" and answers from nine behavioural signals. The measurements below say the
-bottleneck today is the *weights* on those signals, not the quality of any one signal. So the
-useful move is `npm run refit`: a ten-number logistic regression trained on labelled pairs and
-judged leave-one-browser-out. A 322–421M-parameter model is not the useful move.
+- **A content model is worth adding as a background second opinion, not as the grouper.** It
+  pays on three surfaces behaviour cannot reach:
+  1. Joining up a project that was resumed on another day.
+  2. Naming groups by what the person was doing, on machines without Gemini Nano.
+  3. Spotting sensitive tabs (health, legal, money, job search) so resurfacing never shows them.
 
-Neither model goes into the extension now:
+  It does not pay as a replacement for behavioural grouping, as a tenth signal over every pair of
+  tabs, or for silently moving tabs between groups.
+- **Laya is the candidate; Jev only as an opt-in.** Laya runs on the device. Jev would send every
+  tab title to a third party, which is the one thing this product promises never to do.
+- **The size is acceptable only off the critical path.** It means 524 MB downloaded on demand and
+  about a minute and a half of background work on install day. It must never run on the sweep.
+- **One number decides it, and one command measures it.** The number is Laya's accuracy on the
+  *hard* pairs: same project on a different day, versus a different project on the same site. Our
+  free signals score AUC 0.58 there on install day and 0.67 after days of use. `npm run
+  laya-probe <name>` measures Laya's score once huggingface.co is reachable and real labelled
+  browsers exist.
 
-- **Jev** is a hosted API. Every call would send tab titles and page digests to TypeSafe. That
-  breaks the on-device rule (CLAUDE.md §5 policy), and it cannot fill the one slot where the brief
-  allows an opt-in cloud tier, because that slot is for *naming* and Jev never generates text.
-- **Laya** could run on-device, but Phase 0 bans models, ONNX and WASM. After Phase 0 its size
-  lands on the one resource our users do not have spare, memory. Zero-shot, it scores below the
-  majority-class baseline on typed decisions. Its strength is topic classification, which the
-  thesis says is not what a project is.
+## 1. The multilingual fix from earlier, in one paragraph
 
-The research did find a real bug of the kind Laya is built to avoid. Our lexical signal (S7) threw
-away every Hindi, Tamil, Japanese and Chinese title, and cut "Müller" to "ller". That is fixed on
-both sides, with a new parity fixture.
+That was a bug in *our* keyword signal (S7), not a Laya feature. It only recognised `a–z` and
+`0–9`, so "Überweisung Gebühren" became "berweisung geb hren" and a Japanese title became nothing.
+It also affects English sites: a URL path like `/my%20notes` became the tokens `my` and `20notes`,
+and encoded characters became junk tokens shared across a whole site. You are right that most
+tabs are English or European; the fix matters there too (accents, encoded URLs). And you are right
+that language is not a blocker for Laya: it has a 100+ language checkpoint and a router that picks
+by script. The plan below starts English-only and measures the non-English share first.
 
-## 1. What they are
+## 2. Where users would feel it
 
-Both are "System One" decision models. The input is a *state* (text or JSON) plus typed questions:
-`choice` (pick an option), `score` (a position on a rubric) or `noul` (P(true)). One forward pass
-returns a probability distribution per question. There is no text generation, so nothing needs
-parsing and nothing can be hallucinated, but nothing can be *written* either: no names, no
-summaries.
+137 tabs is the brief's reference browser, with about 8 groups. Latency uses Laya's in-browser
+int8 build: 122 ms + 4.5 ms per token on an M-series Mac with 8 threads (§4).
 
-| | Jev (TypeSafe) | Laya (ConvAI Innovations) |
-|---|---|---|
-| Access | Hosted API only, early access (`POST /v1/systemone`) | Apache 2.0 weights, `pip install laya`; community ONNX builds for the browser |
-| Size | Undisclosed | `laya` 421M (ModernBERT-large + 2-layer head); `laya-multilingual` 322M (mmBERT-base) |
-| Context | ~32k tokens (state + longest question) | 512 tokens on `laya`, ~320 of them left for the state; 1,024 on multilingual |
-| Latency | ~100 ms claimed, 236–276 ms p50 measured by third parties | 33–40 ms on a T4 GPU; 193–464 ms on CPU (Python); ~340 ms per question in-browser (WASM), ~2.4 s at 512 tokens |
-| Price | $0.042 per 1M input tokens, output free | $0 self-hosted |
-| Typed-decisions benchmark | 0.727 | 0.362 zero-shot (majority class 0.461, random 0.318); 0.766 after fine-tuning on that benchmark |
-| Where it is strong | High-cardinality choices (up to 255 options) | Topic and NLI tasks (AG News 0.947, XNLI-en 0.860); calibrated *after* temperature fitting |
-| Known weak spots | Closed; per Laya's benchmarks, zero probability on the true label for 16% of DAIR Emotion examples | >20 options (Banking77 0.425); `noul` can follow its option labels instead of the input (#156); English checkpoint collapses on non-Latin scripts (Khmer 0.000 at 0.952 confidence) |
+| # | Use | What the user sees | Calls, 137 tabs | Laya time | Quality needed | If it is wrong | Verdict |
+|---|---|---|---|---|---|---|---|
+| 1 | **Join a resumed project** | "This continues Tuesday's pricing work" as a suggestion on the card; one tap keeps them together | ~5–15 candidate group pairs | 12–36 s, background | High precision on hard pairs; the user confirms | One ignored suggestion | **Measure (stage 1)** |
+| 2 | **Event labels without Nano** | "The afternoon you were planning a trip" instead of "lisbon · hotel · booking" (§6.5) | ~8 groups × one 10-way choice | ~11 s per re-cluster | Intent-classification level (Laya scores 0.78 on MASSIVE, a 20-intent English benchmark) | A mislabelled card; the user corrects it (§6.7) | **Measure (stage 1)** |
+| 3 | **Sensitive-tab guard** | The new-tab page never volunteers a medical or legal tab; "forget" is offered first (§6.10) | 1 question per tab, once, when captured | ~70 s once at install, then ~0.5 s per new tab | High recall | A miss is today's behaviour; a false alarm means one tab is not resurfaced | **Measure (stage 1)** |
+| 4 | "Looks finished" ordering | The first project offered for archive is the one with "order confirmed" or "application sent" | ~8 | ~11 s | Moderate; ordering only | A different card goes first | Phase 1–2 |
+| 5 | Tool detection beyond `ambient.json` | Internal dashboards stop gluing projects together | 1 per tab, once | as #3 | Needs real misses first | — | After real fixtures |
+| 6 | Tenth signal over all pairs | — | 9,316 | ~82 min | ≥ 0.95 AUC for +0.02–0.05 ARI | — | No |
+| 7 | Move or eject tabs per tab | Tabs silently change group | 137 | ~70 s | Hurts below AUC 0.98 | Trust damage | No |
+| 8 | Group by the model alone (Chrome's approach) | — | 9,316 | ~82 min | ARI 0.48 at AUC 0.9; still under behaviour at 0.98 | — | No |
 
-## 2. How they would be used here
+Rows 1–3 share a pattern. Each question is small, answered once in the background, and stored
+alongside the tab's other records, so the sweep still reads stored records and stays instant.
+Each one either gives the user something they otherwise do not get at all (2, 3), or is a
+suggestion the user confirms (1), so a wrong answer costs a tap and never a lost tab.
 
-Only three question shapes map onto Tab Amnesty. Costs are for the brief's reference browser of
-137 tabs (9,316 pairs). "In-browser Laya" means the community int8 WASM build, multi-threaded, on a
-page's main thread. The same build single-threaded, which is what an MV3 offscreen document gets
-unless it is made cross-origin isolated, measured about 6× slower.
+## 3. Measurements
 
-| Question | Calls per sweep | In-browser Laya | Jev | What leaves the machine |
+Reproduce with `npm run judge-sim` (and `-- --rho 0` / `-- --resumed 0.2`).
+`analysis/tabamnesty/judge_sim.py` generates realistic browsers:
+
+- 9 projects of 3–20 tabs each; half of them are resumed on another day.
+- Sittings that start close together interleave two projects.
+- Topic twins: two trips, two backend incidents, on the same sites with shared vocabulary.
+- 12% one-off tabs.
+- Titles carry the project's words only some of the time.
+
+Every browser is scored twice. **Warm** is after days of collection: opener lineage, switching
+history and page digests. **Cold** is install day: no lineage, no switching history, titles only,
+and 30% of open times replaced by a later revisit, which is what history backfill really gives.
+A content judge is then **simulated** at a chosen pairwise AUC. Half of its error is systematic
+per pair of projects, the way a topic model confuses two trips everywhere at once. The judge is
+plugged into five designs. Every weight is a leave-one-browser-out refit over 12 browsers, so a
+gain belongs to the judge, not to the refit.
+
+**Where the clusterer is wrong** (share of wrongly grouped pairs):
+
+| | split: same project, different sitting | merged: one-off absorbed | merged: topic twins | other |
 |---|---|---|---|---|
-| `choice` per group: pick the best heading among heuristic candidates (lineage-root title, top digest heading, top IDF tokens, dominant host) | ~8 | ~3 s (≈15–20 s in a worker) | ~1–2 s | Jev: every title in every group |
-| `noul` per tab: "is this a tool used across every project?" (a learned version of `ambient.json`) | 137 | ~2–5 min | seconds in parallel, ~$0.002 | Jev: every title + digest |
-| `noul` per pair: "are these the same piece of work?" (a new signal S9) | 9,316 | ~6 h | ≥ 7.8 min at the 1,200 req/min limit, ~$0.23 | Jev: every pair of tabs |
-| *For comparison: the shipped clusterer, all pairs, all nine signals* | — | **52 ms for 144 tabs, no model** | — | nothing |
+| warm | **71%** | 10% | 8% | 11% |
+| cold | **60%** | 16% | 10% | 14% |
 
-The brief's load-bearing rule is **collect passively, act instantly**: the sweep reads stored
-records and returns in under a second. The per-tab question could only fit that rule if it were
-answered once, when the digest is captured, in the `chrome.alarms` + offscreen queue that §5.5
-already requires, and stored on the trace like the digest itself. The per-pair question cannot be
-made to fit. The per-group question only fits as background precompute, because group membership
-changes with every sweep.
+**How well the free signals already answer "same project?"** (pairwise AUC):
 
-## 3. Size: plus or minus for *our* user?
-
-**A plus against LLMs, a minus against the job.**
-
-Plus:
-- 322–421M is small for a model, and Laya needs no GPU. That is a lower hardware bar than Gemini
-  Nano, the Phase 1 default, which needs 22 GB free disk and 16 GB RAM or more than 4 GB VRAM.
-  Laya would reach users Nano cannot.
-- It runs offline, it is Apache 2.0 so it could ship, and a typed answer cannot come back malformed.
-
-Minus (these decide it):
-- **Memory is the scarce resource for exactly this user.** Tab Amnesty is for people with 80–137+
-  tabs, whose browser is already discarding background tabs to save memory (§5.4 exists because of
-  that). Loading at least 440 MB of int8 weights (290 MB int4, which traded away accuracy: max
-  Δp 0.347), plus the runtime, into that browser costs the one thing it lacks.
-- **Payload.** The whole built extension today is ~110 KB (525 KB with source maps). Bundling
-  Laya makes it ~4,000× larger. Downloading it on first use instead is a network request
-  (banned in Phase 0, needs asking after), and the first sweep would wait on it.
-- **Cold start vs "act instantly".** Load-run-unload keeps memory transient, but every load is a
-  multi-second cold start (Laya's own CPU reload median is 7.4 s in Python). That is fine for a
-  background queue and never acceptable on the sweep path.
-- **Store review surface.** WASM inference needs `wasm-unsafe-eval` in the extension CSP and an
-  offscreen document. That adds scrutiny to the profile the 1 Aug 2026 Chrome Web Store rules
-  already treat as highest-risk: an extension that reads every page.
-
-The job itself is ranking and grouping ~100 records that already carry nine behavioural signals.
-That takes 52 ms and ten numbers. Size would only be worth paying for if it bought accuracy the
-signals cannot reach, and §4 shows it does not today.
-
-## 4. How good could it be? The ceiling, measured
-
-The best Laya could ever do as a pairwise judge is a perfect one. We can simulate that: replace S7
-with an **oracle** that is 1 when two tabs share a hand label and 0 otherwise, then cluster with the
-shipped code. The fixtures are the synthetic positive controls, where projects interleave in time
-the way real work does. These are mechanics only, not evidence about real browsers.
-
-| Fixture | Shipped | S7 zeroed | **Oracle S7, weight 1.0** | Oracle S7, weight 3.0 | Refit weights (in-sample) |
-|---|---|---|---|---|---|
-| `synthetic_multilingual` (4 scripts, one host, interleaved) | 0.196 | 0.160 | **0.270** | 1.000 | 1.000 |
-| `synthetic_lineage` (projects differ only by opener tree) | 0.273 | 0.113 | **0.530** | 1.000 | — |
-| `synthetic` (easy: separate sittings) | 0.880 | 0.880 | **0.880** | 0.880 | — |
-
-(ARI against labels. "Refit" is `npm run refit synthetic_multilingual`, which gives S7 weight 2.41
-without being told which signal matters.)
-
-Read it this way. At the brief's weight, a perfect content judge adds +0.07 ARI on interleaved
-multilingual work, because timing signals (S2 + S3 + S4 ≈ 4.5 combined) outvote anything weighted
-1.0. Once the weight is learned, the same fixture goes to 1.0 without any model. Real zero-shot
-Laya would sit well below the oracle: it scores 0.36 on typed decisions against a 0.46 majority
-baseline. It is strongest at *topic* classification, and topic similarity is what TF-IDF S7
-already approximates at zero cost. The thesis is that a project is not a topic.
-
-Fine-tuning is where Laya's accuracy comes from (0.36 → 0.77). It needs thousands of labelled
-decisions from many people. Our labelled data is the five gate browsers, and those cannot be both
-training set and test set.
-
-## 5. Fit, phase by phase
-
-| Phase | Where it could plug in | Verdict |
+| | all pairs | **hard pairs** (same project/different sitting vs different project/same site) |
 |---|---|---|
-| 0 — X-ray | Nowhere: models, ONNX, WASM and network are anti-scope | No |
-| 1 — Amnesty | Naming: Jev/Laya cannot write a name, only choose among heuristic candidates. Ambient detection: per-tab `noul` computed passively | Naming: no (Nano or the heuristic tier). Ambient: maybe, only if real fixtures show `ambient.json` missing tools |
-| 2 — Return path | Search: Laya is not a retrieval model; if lexical search fails, a small bi-encoder is the right tool (the brief says measure first). Resurfacing: rules on behaviour ("three tabs reopened") come first | No |
-| 3 — MCP bridge | Laya ships an MCP server, but Claude is the client there and makes its own judgements | No |
+| warm | 0.93 | **0.67** |
+| cold | 0.91 | **0.58** |
 
-## 6. What was done instead (this change)
+**What a judge of a given quality adds** (ARI, mean of 12 browsers). Behaviour alone scores 0.72
+cold and 0.78 warm with refit weights, 0.69 and 0.72 with the shipped ones. Adjacent rows differ
+by up to ±0.03 from sampling noise.
 
-1. **S7 tokens are Unicode-aware** (Python first, TS to match, parity 0/780 mismatches). Before:
-   `[a-z0-9]{2,}` dropped Devanagari, Tamil, CJK and Thai titles entirely and cut accented Latin
-   words apart. Percent-encoded paths such as `/wiki/%E6%9D%B1…` became byte tokens (`e6`, `9d`)
-   shared by every non-ASCII URL on a site. That is the same failure Laya's router exists to catch
-   in its English checkpoint. On the new `synthetic_multilingual` control, within/across-project
-   S7 moved from 0.84/0.70 (noise) to 0.39/0.11.
-2. **`npm run refit`**: logistic regression over the nine signals from the shipped clusterer.
-   Betas are scaled so affinity ≥ W_MIN exactly where P(same project) ≥ 0.5. The only number that
-   counts is the leave-one-browser-out column. On the synthetic controls it averages −0.15 ARI
-   held out, because each control hinges on a different signal. Transfer between real browsers
-   must be measured, not assumed. It writes a candidate file and never touches
-   `src/cluster/betas.json`.
+| Judge AUC | tenth signal, all pairs | tenth signal, top-8 partners | merge groups (confident only) | move tabs | model alone |
+|---|---|---|---|---|---|
+| 0.80 | +0.02 cold / −0.00 warm | +0.02 / −0.00 | −0.02 / +0.01 | −0.10 / −0.11 | 0.22 |
+| 0.90 | +0.01 / +0.02 | +0.02 / +0.02 | +0.01 / −0.00 | −0.04 / −0.07 | 0.48 |
+| 0.95 | +0.05 / +0.02 | +0.03 / −0.01 | +0.02 / +0.06 | −0.02 / −0.04 | 0.63 |
+| 0.98 | +0.05 / +0.03 | +0.05 / +0.05 | +0.06 / +0.04 | +0.01 / −0.00 | 0.70 |
+| 1.00 | +0.26 / +0.19 | +0.11 / +0.07 | +0.08 / +0.13 | +0.27 / +0.21 | 1.00 |
+| calls, ~90 tabs | ~4,050 | ~430 | ~60–75 | ~90 | ~4,050 |
 
-## 7. When to look again, and how
+What this says:
 
-Revisit only if all three hold:
+1. **The upside is concentrated.** Most mistakes are one project split across sittings, and
+   install day is where behaviour is weakest (hard-pair AUC 0.58). That is where a content model
+   earns its keep, and it is also the user's first impression (§6.3).
+2. **Quality is everything.** At judge AUC ≤ 0.8 every grouping design is flat or worse. At
+   0.95–0.98 it adds +0.02 to +0.06 ARI. A perfect judge adds +0.08 to +0.27.
+3. **Cheap designs keep most of the value.** Merging groups (~60–75 calls) or top-8 partners
+   (~430) gets close to all pairs (~4,050) at realistic quality.
+4. **Chained merges and per-tab moves are traps.** Without a confidence gate, merging chains the
+   browser into one blob (ARI 0.77 → 0.22 at AUC 0.9 in the first run). Moving tabs costs up to
+   −0.19.
+5. **The thesis holds in the simulation.** Grouping by the model alone stays below behaviour
+   even at AUC 0.98.
+6. **The same conclusions hold** with independent judge errors (`--rho 0`) and with fewer resumed
+   projects (`--resumed 0.2`).
 
-1. The gate has passed on the shipped weights.
-2. Refit has run leave-one-browser-out on the real fixtures and plateaued.
-3. The remaining held-out errors are mostly "same project, no behavioural evidence": work resumed
-   in a later sitting with no opener chain, where the titles plainly relate.
+Caveats. The generator is ours, so real browsers decide. The simulated judge errs independently
+of our keyword signal; a real content model errs where keyword similarity errs (twins), so real
+gains are likely at or below these. What is robust is the *shape*: which errors exist, which
+designs survive, and where the break-even sits.
 
-Then run the experiment in `analysis/` (Python, `pip install laya`), never in the extension. Score
-every labelled pair with a `noul` or neutral-label `choice` (see Laya #156), add it as a tenth
-column, and compare refit held-out ARI with and without it. Write down the margin that would
-justify ~440 MB before running it. Only if it clears that margin does an in-extension build come
-up, and that needs asking first (CSP change, offscreen document, model download).
+## 4. Cost and size, for this user
+
+Measured by the `nvkudva/laya-web` port (ORT-web 1.30, WebAssembly):
+
+| | |
+|---|---|
+| Weights, int8 | **524 MB** (1,688 MB fp32), 100% argmax agreement, max Δp 0.016 |
+| Latency, one question | 333 ms at 43 tokens, 974 ms at 195, 2,437 ms at 512 (M-series, 8 threads) |
+| Threading | Threaded wasm runs only on a page's main thread; a single-threaded worker is ~6× slower (3 questions: 836 ms vs 5,056 ms) |
+| WebGPU | Needs 4-bit, which drops agreement to 84.6%; not usable for calibrated answers |
+| Memory while running | Not published; at least the 524 MB of weights. Measure in stage 3 |
+
+For a 137-tab browser, rows 1–3 of §2 cost **about 1.7 minutes of background work on install
+day** (M-series), then about 1 s per new tab and about 30 s per re-cluster. The offscreen document
+that §5.5 already requires is the right host: blocking its main thread blocks nothing the user
+sees. Typical Windows laptops are unmeasured; assume 1.5–3× slower until stage 3 says otherwise.
+
+**Size: a plus against the alternatives, a minus against our users' memory.**
+- *Plus:* Gemini Nano needs 22 GB free disk and 16 GB RAM or more than 4 GB VRAM. Laya runs on
+  any CPU, so it reaches exactly the users the brief expects to fall back to heuristics.
+- *Minus:* these users' browsers are already discarding tabs to save memory (§5.4). So the model
+  must be downloaded on demand, loaded for a batch, then unloaded. It must never be resident and
+  never on the sweep path. Bundling it would make the extension ~4,000× larger (~110 KB today).
+
+**Engineering it needs, all to verify in stage 3:**
+- The offscreen document, which §5.5 already requires.
+- Cross-origin isolation for threaded wasm (manifest COOP/COEP keys).
+- `wasm-unsafe-eval` in the extension CSP.
+- Storage for 524 MB (Cache API with `unlimitedStorage`).
+- A one-time weights download. That is a network request with no user data in it, and it still
+  needs your OK under the §5 policy.
+
+## 5. Jev vs Laya
+
+| | Jev (TypeSafe) | Laya (ConvAI) |
+|---|---|---|
+| Where it runs | TypeSafe's servers; every title and URL leaves the machine | On the device |
+| Zero-shot quality (typed-decisions benchmark) | 0.727 | 0.362, below the 0.461 majority baseline; 0.766 fine-tuned |
+| Context per question | ~32k tokens: a whole group fits | 512 (~320 for the state): a pair, or a group's titles |
+| Latency | ~100 ms claimed, 236–276 ms measured by third parties | 0.3–2.4 s in-browser (§4) |
+| Cost | $0.042 per 1M input tokens: ~$0.001 per install-day pass | $0; 524 MB of disk and memory while running |
+| Availability | Early access, launched 15 Sep 2026 | Apache 2.0, public weights |
+| Fine-tuning | No | Yes: full RLCD notebook (2×T4, 4–5 h), or a small head on the frozen encoder from labelled rows |
+
+**Laya is the default candidate.** Privacy is the product's promise and its store-approval
+strategy, and Laya keeps it. Jev has two legitimate roles:
+
+- An **opt-in** cloud tier for users who choose it. The brief already allows a BYO-key cloud tier
+  that is never on by default.
+- A **research teacher** that labels pairs on *consented study exports*, to fine-tune Laya if its
+  zero-shot score falls short.
+
+## 6. Languages
+
+Start with the English checkpoint for Latin-script tabs. Skip the model on tabs in other scripts;
+they keep the behavioural grouping, which is language-blind. Measure the non-English share on the
+real fixtures. If it matters, add Laya's multilingual checkpoint (322M parameters, 100+ languages,
+a second download) behind the same script check Laya's router uses. European languages in Latin
+script go to whichever checkpoint scores better on them in stage 1.
+
+## 7. The plan
+
+Each stage has a gate. Write the numbers down before running it.
+
+| Stage | What | Needs | Gate |
+|---|---|---|---|
+| **0 — free fixes first** (now) | `npm run refit` (done). Next: **URL project keys** as a signal (GitHub owner/repo, Figma file, Google Doc id, Jira project key, Notion page). These target the 60–71% "split across sittings" class at zero cost | Nothing | Held-out ARI up on the real fixtures |
+| **1 — measure Laya offline** | `npm run laya-probe <name>` on each labelled browser: hard-pair AUC next to the free signals, combined AUC, event labels per group, ms per question | huggingface.co reachable; the real labelled fixtures | Laya's hard-pair AUC beats the free signals' by ≥ 0.15, and combined beats free by ≥ 0.10, on ≥ 3 of 5 browsers; owners judge ≥ 70% of event labels right |
+| **2 — offline integration** | Feed Laya's real answers into the merge and top-8 designs; leave-one-browser-out ARI | Stage 1 passed | ≥ +0.05 ARI on install day without losing it warm |
+| **3 — in-browser feasibility** | Offscreen document + ORT-web threaded wasm + the laya-web int8 port, on three real laptops (8 GB Windows, 16 GB Windows, M-series) with Memory Saver on | Stage 2 passed; your OK for the CSP and download | Install-day backlog ≤ 3 min; peak memory measured and accepted; no UI jank |
+| **4 — ship as optional** | Download on demand; background only; heuristics stay the fallback | Phase 1 gate passed | Phase 1–2 gates, with and without the model |
+| *Fine-tuning track* | If stage 1 falls short: a head on the frozen encoder from consented study pairs, or the RLCD notebook | Consented study exports; optionally Jev as teacher | Stage 1's gate, held out |
+
+## 8. Decisions that are yours
+
+1. Laya enters research tooling now (`laya-probe` is opt-in, analysis-only) and the extension
+   only after stage 3. Phase 0 stays model-free.
+2. Allow `huggingface.co` in this cloud environment so stage 1 can run here (environment settings
+   → Network access), or run `npm run laya-probe` locally.
+3. Accept a one-time 524 MB weights download (no user data) and the CSP/isolation changes, or not.
+4. Offer Jev as an opt-in cloud tier, or keep everything on-device.
 
 ## Sources
 
-- Laya package README and source, v0.3.20 (PyPI `laya`): architecture, checkpoints, benchmarks,
-  honest limits, ONNX runtime. https://pypi.org/project/laya/
-- Laya model card: https://huggingface.co/convaiinnovations/laya
-- Browser ports: https://github.com/nvkudva/laya-web (q8e8 ~440 MB / q4e8 ~290 MB, WASM latency,
-  WebGPU accuracy loss), https://github.com/vishalmysore/layaForWeb
-- Jev: https://typesafe.ai/blog/introducing-system-one-models-and-jev,
-  https://flaviocopes.com/jev/ (limits, pricing, rate limits),
+- Laya README and source v0.3.20 (PyPI `laya`): checkpoints, benchmarks, limits, answer format.
+  https://pypi.org/project/laya/ · https://huggingface.co/convaiinnovations/laya
+- In-browser measurements: https://github.com/nvkudva/laya-web (README and PLAN.md: 524 MB int8,
+  latency by length, threading, WebGPU)
+- Jev: https://typesafe.ai/blog/introducing-system-one-models-and-jev ·
+  https://flaviocopes.com/jev/ (limits, pricing, rate limits) ·
   https://www.marktechpost.com/2026/09/19/typesafe-ai-releases-jev/
-- Comparisons: https://www.orcarouter.ai/blog/jev-vs-laya,
+- Comparisons: https://www.orcarouter.ai/blog/jev-vs-laya ·
   https://flowtivity.ai/blog/laya-open-source-jev-alternative/
-- Internal measurements: `npm run refit`, the oracle run described in §4, and `cluster()` timing
-  on a 144-tab synthetic browser (Node 22, this repo at the commit that adds this note).
+- Internal: `npm run judge-sim` (numbers in §3), `npm run laya-probe` (stage 1),
+  `npm run refit`.
