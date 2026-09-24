@@ -11,6 +11,7 @@ fixtures/synthetic*.json
 fixtures/*.partition.json
 fixtures/*.python.partition.json
 fixtures/report.png
+fixtures/refit.betas.json
 
 Claude outputs/*
 *.egg-info/
