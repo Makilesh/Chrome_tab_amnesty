@@ -1,15 +1,15 @@
 {
  "_scripted": "ground truth by construction (tools/walkthrough.ts)",
- "1e671adf-b6f5-4efe-a2ea-93ef129258b3": "asyncio",
- "1f95b0ef-46f0-4f93-892b-428e1310dd85": "lisbon",
- "42c11a53-0ffe-4936-9e84-e34513539852": "asyncio",
- "46eebd62-8247-4e4a-be4b-c159707cd7a2": "asyncio",
- "4ce852a5-32bc-4bdc-951e-0dda9b4ca79d": "lisbon",
- "65145ed9-851c-40b0-a3c3-2c6a9598f644": "asyncio",
- "7b16912f-c7c9-436d-b9d9-8f2287b0125d": null,
- "a81dd20f-fe38-479b-ade7-05eb9b52687a": "asyncio",
- "baa94e20-bf98-4b84-803d-a361b9b6ba40": "lisbon",
- "d6442237-429d-44c2-89aa-06a7f7cfe06f": null,
- "d6ada7f9-e7da-4516-9359-19f861448570": "lisbon",
- "f5b66d30-bdac-4332-a2ec-dbe898e4f672": "lisbon"
+ "0692e4d0-a6ff-4901-874b-313d368fdfe4": null,
+ "0d34e0cc-77f6-4eb6-99a1-367167c1ab05": "lisbon",
+ "4d85ca98-1843-41cb-8ad1-8932bdcd7269": "asyncio",
+ "5b38fc81-46d5-4a2a-878b-d443f79ab99b": null,
+ "69a51694-3e22-4cef-ae82-742e9f5328ee": "asyncio",
+ "7651ecf5-1e81-41c5-a31b-f62d941c0a1b": "lisbon",
+ "9e4e9856-1578-46f9-8141-6da10087948b": "lisbon",
+ "b016bc12-563b-4ffd-bd16-74106c8deefb": "asyncio",
+ "b8884264-9e1d-4549-be4e-99a09e978bb5": "lisbon",
+ "be7f493c-bff2-4b6e-b84b-0615a8d19cd2": "asyncio",
+ "e249d54b-f39f-4430-aef6-aa190716c0eb": "asyncio",
+ "ebe01fc3-09e0-48f2-8f77-f28c4299c3a8": "lisbon"
 }
