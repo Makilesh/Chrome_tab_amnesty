@@ -118,6 +118,12 @@ five: n < 80, no organiser, labels unconfirmed.
   switched 6–11×; LinkedIn jobs opened from WeMakeDevs). Either behaviour is right and the topical
   draft labels are wrong, or the thesis fails on this browser. Only the owner's labels decide it.
   Nothing was tuned.
+- *Ctrl+T openers (fixed 2026-10-04, DECISIONS):* Chrome reports the tab you were on as the
+  opener of a tab opened with Ctrl+T and typed into — 13 of 13 typed and 5 of 5 searched visits on
+  the owner's exports. S1 chained unrelated projects and the typed-visit session cut never fired.
+  A NEW_INTENT visit now roots a new tree and always cuts. Draft-label ARI 0.322 → 0.368; the
+  S1+S2+S8 ablation +0.086 → +0.040, still the wrong direction. The 2026-09-19 "LinkedIn opened from
+  WeMakeDevs" example was this artifact.
 - *With S8 also zeroed, pre-install tabs become loose ends* (19 placed vs 22): with no lineage, no
   timing and no switching observed, the clusterer has nothing behavioural to go on for them, which
   is honest — it means testers must browse for days before export, as the protocol already says.

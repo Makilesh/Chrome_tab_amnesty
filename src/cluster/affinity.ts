@@ -4,7 +4,7 @@
  */
 import { cosine, tfidfVectors, type Vector } from './lexical';
 import { AMBIENT, type Betas, SIGNALS, type SignalVector, STRIP_TAU, TEMPORAL_TAU_MS } from './params';
-import { sessionIndex, timingKnown } from './segment';
+import { lineageParent, sessionIndex, timingKnown } from './segment';
 import type { TabTrace } from './types';
 
 // ---------------------------------------------------------------------------------------------
@@ -48,8 +48,7 @@ export class Context {
   constructor(readonly traces: TabTrace[]) {
     for (const t of traces) {
       this.byId.set(t.traceId, t);
-      const p = t.openerTraceId;
-      this.parent.set(t.traceId, p && p !== t.traceId ? p : null);
+      this.parent.set(t.traceId, lineageParent(t));
     }
     for (const tid of [...this.parent.keys()]) this.resolve(tid);
     this.session = sessionIndex(traces);

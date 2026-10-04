@@ -14,7 +14,7 @@ import {
 import { ablationBetas, buildGraph, cluster, partitionToTarget } from './cluster';
 import { cosine, tfidfVectors, tokens } from './lexical';
 import { BETAS, SIGNALS } from './params';
-import { segment, timingKnown } from './segment';
+import { lineageParent, segment, timingKnown } from './segment';
 import type { TabTrace, Transition } from './types';
 
 const MIN = 60_000;
@@ -58,7 +58,10 @@ describe('segment', () => {
   });
   it('cuts on new intent without opener, not with one', () => {
     expect(ids(segment([tr('a'), tr('b', { openedAt: MIN, transition: 'typed' }), tr('c', { openedAt: 2 * MIN, openerTraceId: 'b' })]))).toEqual([['a'], ['b', 'c']]);
-    expect(segment([tr('a'), tr('b', { openedAt: MIN, openerTraceId: 'a', transition: 'typed' })])).toHaveLength(1);
+    // Chrome reports the tab you were on as the opener of a Ctrl+T + typed tab; still a new start.
+    expect(segment([tr('a'), tr('b', { openedAt: MIN, openerTraceId: 'a', transition: 'typed' })])).toHaveLength(2);
+    expect(lineageParent(tr('b', { openerTraceId: 'a', transition: 'typed' }))).toBeNull();
+    expect(lineageParent(tr('c', { openerTraceId: 'b', transition: 'link' }))).toBe('b');
   });
   it('unknown is not a boundary', () => {
     expect(segment([tr('a'), tr('b', { openedAt: MIN, transition: 'unknown' })])).toHaveLength(1);

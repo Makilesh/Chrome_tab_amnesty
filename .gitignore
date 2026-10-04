@@ -13,3 +13,5 @@ fixtures/*.python.partition.json
 fixtures/report.png
 
 Claude outputs/*
+.walkthrough/
+.walkthrough.log

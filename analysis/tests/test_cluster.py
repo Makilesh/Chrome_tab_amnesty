@@ -37,9 +37,19 @@ class TestSegment:
         s = segment([tr("a", 0), tr("b", 1 * MIN, transition="typed"), tr("c", 2 * MIN, opener="b")])
         assert [[t["traceId"] for t in x] for x in s] == [["a"], ["b", "c"]]
 
-    def test_new_intent_with_opener_does_not_cut(self):
+    def test_new_intent_cuts_even_with_an_opener(self):
+        # Chrome reports the tab you were on as the opener of a Ctrl+T + typed tab; on the first
+        # real exports every typed/generated visit had one. It is still a deliberate new start.
         s = segment([tr("a", 0), tr("b", 1 * MIN, opener="a", transition="typed")])
-        assert len(s) == 1
+        assert len(s) == 2
+
+    def test_new_intent_roots_a_new_lineage_tree(self):
+        a = tr("a", 0)
+        b = tr("b", MIN, opener="a", transition="typed")
+        c = tr("c", 2 * MIN, opener="b")
+        ctx = Context([a, b, c])
+        assert s1_lineage(ctx, a, b) == 0.0
+        assert s1_lineage(ctx, b, c) == 0.5
 
     def test_unknown_is_not_a_boundary(self):
         s = segment([tr("a", 0), tr("b", 1 * MIN, transition="unknown")])
