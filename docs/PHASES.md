@@ -124,6 +124,14 @@ five: n < 80, no organiser, labels unconfirmed.
   A NEW_INTENT visit now roots a new tree and always cuts. Draft-label ARI 0.322 → 0.368; the
   S1+S2+S8 ablation +0.086 → +0.040, still the wrong direction. The 2026-09-19 "LinkedIn opened from
   WeMakeDevs" example was this artifact.
+- *Walkthrough (2026-10-04, scripted, mechanics only):* two interleaved projects on real sites,
+  both touching Wikipedia. ARI 0.68 against labels known by construction; zeroing S1, S8 or S3
+  alone merges everything (−0.34 each), but zeroing **S1+S2+S8 together changes nothing (0.00)**,
+  because S2 was the signal gluing the projects together. The gate's combined run can therefore
+  read zero on a browser where lineage and co-activation each carry the whole result — report the
+  single-signal rows next to it. The one miss: *Async/await – Wikipedia*, opened by link from the
+  asyncio docs after the Lisbon session had started, went with Lisbon (same session S3 + same
+  site S5 + timing outvote S1 0.5 and S8 0.75) — the documented interleaving weakness.
 - *With S8 also zeroed, pre-install tabs become loose ends* (19 placed vs 22): with no lineage, no
   timing and no switching observed, the clusterer has nothing behavioural to go on for them, which
   is honest — it means testers must browse for days before export, as the protocol already says.
