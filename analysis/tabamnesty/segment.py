@@ -6,6 +6,17 @@ from .traces import Trace
 
 NEW_INTENT = frozenset({"typed", "generated", "auto_bookmark"})
 
+
+def lineage_parent(t: Trace) -> str | None:
+    """The opener that counts as lineage. Chrome reports an openerTabId for a tab opened with
+    Ctrl+T and then typed into (or searched, or a bookmark) — the tab you happened to be on. On
+    the first real exports every typed and generated visit had one. A deliberate new start is not
+    a continuation, so it roots a new tree; its own children still hang off it."""
+    p = t.get("openerTraceId")
+    if not p or p == t["traceId"] or t["transition"] in NEW_INTENT:
+        return None
+    return p
+
 # A backfilled trace's openedAt comes from history. When the best visit history had was a
 # 'reload' (session restore, F5) or nothing at all ('unknown' -> adoption time), that timestamp
 # is when the browser restarted, not when the tab was opened: every pre-install tab shares it to
@@ -18,14 +29,15 @@ def timing_known(t: Trace) -> bool:
 
 
 def segment(traces: list[Trace], gap_ms: int = GAP_MS) -> list[list[Trace]]:
-    """Sort by openedAt; cut on a gap > gap_ms OR on a deliberate new start with no opener.
+    """Sort by openedAt; cut on a gap > gap_ms OR on a deliberate new start (typed, searched,
+    bookmark) — whatever opener Chrome reports for it, see lineage_parent().
     Traces with unknown timing take no part in the gaps and each become their own session,
     appended after the real ones."""
     key = lambda t: (t["openedAt"], t["traceId"])  # noqa: E731
     ordered = sorted((t for t in traces if timing_known(t)), key=key)
     sessions: list[list[Trace]] = []
     for t in ordered:
-        new_start = t["transition"] in NEW_INTENT and not t.get("openerTraceId")
+        new_start = t["transition"] in NEW_INTENT
         if not sessions or new_start or t["openedAt"] - sessions[-1][-1]["openedAt"] > gap_ms:
             sessions.append([t])
         else:

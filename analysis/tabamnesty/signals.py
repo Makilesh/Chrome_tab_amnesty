@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from .config import STRIP_TAU, TEMPORAL_TAU_MS, load_ambient
 from .lexical import cosine, tfidf_vectors
-from .segment import session_index, timing_known
+from .segment import lineage_parent, session_index, timing_known
 from .traces import Trace
 
 
@@ -61,8 +61,7 @@ class Context:
         # tree is still walked through that id so siblings via an excluded parent stay related.
         self.parent = {}
         for t in self.traces:
-            p = t.get("openerTraceId")
-            self.parent[t["traceId"]] = p if p and p != t["traceId"] else None
+            self.parent[t["traceId"]] = lineage_parent(t)
         self.depth, self.root = {}, {}
         for tid in list(self.parent):
             self._resolve(tid)
