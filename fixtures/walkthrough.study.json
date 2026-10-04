@@ -1,0 +1,27 @@
+{
+ "kind": "tab-amnesty-phase1-study",
+ "schemaVersion": 1,
+ "exportedAt": 1791124977892,
+ "snapshots": [
+  {
+   "at": 1791124683728,
+   "open": 0
+  },
+  {
+   "at": 1791124743765,
+   "open": 4
+  },
+  {
+   "at": 1791124950540,
+   "open": 4
+  }
+ ],
+ "archives": [
+  {
+   "archivedAt": 1791124944799,
+   "tabs": 6,
+   "tier": "heuristic",
+   "restoredAt": 1791124953653
+  }
+ ]
+}

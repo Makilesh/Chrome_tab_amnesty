@@ -240,8 +240,11 @@ async function checkBringBack(browser: Browser, extId: string, card: ArchiveCard
   const expected = [...card.tabs].sort((a, b) => a.order - b.order).map((t) => t.url);
   const inOrder = JSON.stringify(restored) === JSON.stringify(expected);
   const cards = await readCards(browser, extId);
+  const live = (await readTraces(browser, extId)).filter((t) => t.closedAt === null);
+  const sameIdentity = card.tabs.filter((t) => live.some((l) => l.traceId === t.traceId && l.url === t.url)).length;
   console.log(
-    `\nbring back after restart: button ${clicked ? 'found' : 'MISSING'}; ${restored.length} of ${expected.length} tabs came back, ` +
+    `\nbring back after restart: button ${clicked ? 'found' : 'MISSING'}; ${restored.length} of ${expected.length} tabs came back ` +
+      `(${sameIdentity} on their original trace), ` +
       `order ${inOrder ? 'matches' : 'DIFFERS: ' + JSON.stringify(restored)}; card kept: ${cards.some((c) => c.cardId === card.cardId)}, ` +
       `restoredAt set: ${!!cards.find((c) => c.cardId === card.cardId)?.restoredAt}`,
   );

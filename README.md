@@ -98,6 +98,7 @@ npm run synth            # synthetic fixtures for mechanics only — never count
 npm run cluster <name>   # TS clusterer -> fixtures/<name>.partition.json
 npm run labels <name>    # write/refresh fixtures/<name>.labels.json; keeps labels already filled in
 npm run phase1 <name...> # Phase 1 gate from fixtures/<name>.study.json: presses, open count before vs day 7
+npm run walkthrough      # the whole product on real sites in a visible Chrome for Testing (~6 min, scripted)
 npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
 npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
 npm run report a b c d e # per-browser chart -> fixtures/report.png

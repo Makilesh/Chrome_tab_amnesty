@@ -5,7 +5,7 @@
  * so a crash between the two leaves the person with an extra card, never a lost tab.
  */
 import type { Community, TabTrace } from '../cluster/types';
-import { deleteTrace } from '../collector/db';
+import { deleteTrace, updateTrace } from '../collector/db';
 import { buildCard, inStripOrder, restoreOrder, undoable } from './card';
 import { isNeverRemembered } from './forget';
 import { enqueue, getCard, getNeverRemember, putCard, updateCard } from './store';
@@ -79,14 +79,19 @@ export async function archiveAndClose(
 /**
  * Bring a whole card back: every tab, original order, as a named group, in the current window.
  * Works after a restart because the card is in IndexedDB (§6.8). The card is kept and marked.
- * The collector mints fresh traces for the new tabs as it would for any tab; the archived
- * traces stay closed behind the card, so nothing is re-bound and nothing can race.
+ *
+ * The archived traces are reopened BEFORE the tabs are created. Their old tabIds are dead, so
+ * they are orphans, and the collector's onCreated re-binds each new tab to its own trace by url —
+ * the same path session restore takes (§5.3). The tabs come back with their lineage, timing and
+ * co-activation, so they cluster as the same project again instead of fusing with whatever is
+ * open now. A trace that was forgotten is simply absent and its tab gets a fresh one.
  */
 export async function bringBack(cardId: string): Promise<{ ok: boolean; reason?: string }> {
   const card = await getCard(cardId);
   if (!card) return { ok: false, reason: 'That one is gone.' };
   if (!undoable(card)) return { ok: false, reason: card.restoredAt ? 'Already brought back.' : 'That one is older than a day; open its tabs from the card instead.' };
 
+  for (const t of card.tabs) await updateTrace(t.traceId, (tr) => (tr.closedAt === null ? null : { ...tr, closedAt: null }));
   const current = await chrome.windows.getCurrent();
   const created: number[] = [];
   for (const t of restoreOrder(card)) {
