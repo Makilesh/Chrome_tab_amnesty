@@ -4,7 +4,15 @@
  */
 import type { TabTrace } from './types';
 
-const TOKEN = /[a-z0-9]{2,}/g;
+/**
+ * A token is a maximal run of letters, combining marks and digits (L*, M*, N*), at least two code
+ * points long. Marks matter: Devanagari, Tamil, Kannada... spell vowels with them, and the old
+ * ASCII-only /[a-z0-9]{2,}/ gave non-English pages no lexical signal at all. Mirrors
+ * analysis/tabamnesty/lexical.py (`_runs`, `_is_number`); `npm run parity` holds them together.
+ */
+const TOKEN = /[\p{L}\p{M}\p{N}]+/gu;
+/** Digits/numerals in any script — the same set as Python's unicodedata category N*. */
+const NUMBER = /^\p{N}+$/u;
 /** Exported for the Phase 1 heuristic namer; the S7 arithmetic is unchanged. */
 export const STOP = new Set(
   (
@@ -23,7 +31,7 @@ export function tokens(t: TabTrace): string[] {
   }
   parts.push(...(t.pathTokens ?? []));
   const text = parts.join(' ').toLowerCase();
-  return (text.match(TOKEN) ?? []).filter((w) => !STOP.has(w) && !/^\d+$/.test(w));
+  return (text.match(TOKEN) ?? []).filter((w) => [...w].length >= 2 && !STOP.has(w) && !NUMBER.test(w));
 }
 
 /** traceId -> L2-normalised {term: weight}. tf = 1 + ln(count); idf = ln((N+1)/(df+1)) + 1. */

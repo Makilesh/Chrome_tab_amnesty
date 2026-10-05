@@ -198,3 +198,10 @@ describe('cluster', () => {
     for (const s of SIGNALS) expect(runs[`no_${s}`]![s]).toBe(0);
   });
 });
+
+describe('lexical tokens', () => {
+  it('reads every script: whole Indic words with their vowel signs, accents, CJK; numbers in any script dropped', () => {
+    const t = tr('x', { title: 'हिन्दी समाचार - Belém Tower 東京タワー 2026 २०२६ a1 Ünïcode', pathTokens: ['p', 'bel%c3%a9m'] });
+    expect(tokens(t)).toEqual(['हिन्दी', 'समाचार', 'belém', 'tower', '東京タワー', 'a1', 'ünïcode', 'bel', 'c3', 'a9m']);
+  });
+});

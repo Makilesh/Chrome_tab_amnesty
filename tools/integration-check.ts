@@ -25,12 +25,13 @@ import type { TabTrace } from '../src/cluster/types';
 const DIST = resolve('.check-build');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** CHROME_PATH (any Chromium browser: Edge, Brave, ...) wins over the local Chrome for Testing. */
 function findChrome(): string {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   const local = [...globSync('chrome/*/chrome-*/chrome.exe'), ...globSync('chrome/*/chrome-*/chrome')]
     .sort()
     .at(-1);
   if (local) return resolve(local);
-  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   throw new Error('Chrome for Testing not found. Run: npx @puppeteer/browsers install chrome@stable');
 }
 
@@ -67,6 +68,8 @@ async function launch(exe: string, userDataDir: string, extraArgs: string[] = []
       '--no-first-run',
       '--no-default-browser-check',
       '--window-size=1000,700',
+      // Branded Chromium builds ignore --load-extension since 137 unless this is switched back off.
+      '--disable-features=DisableLoadExtensionCommandLineSwitch',
       ...extraArgs,
     ],
     defaultViewport: null,
