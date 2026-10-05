@@ -218,3 +218,65 @@ Each stage has a gate. Write the numbers down before running it.
   https://flowtivity.ai/blog/laya-open-source-jev-alternative/
 - Internal: `npm run judge-sim` (numbers in §3), `npm run laya-probe` (stage 1),
   `npm run refit`.
+
+## 9. Measured, 2026-10-05: Laya and Gemini Nano on the same questions
+
+Run on the owner's machine (Windows, Chrome 154; Laya 0.3.27 on torch CPU; Gemini Nano in a
+separate Chrome profile). Everything downloaded went to `D:\Installations\tab-amnesty-models`
+(Laya ~1.6 GB for two checkpoints; Gemini Nano 4.1 GB — Chrome stages ~4 GB on the system drive
+while downloading and moves it after). Reproduce:
+
+```
+npm run compare -- items makilesh makilesh-now walkthrough --generated 2 --pairs 40
+HF_HOME=<dir> npm run compare -- laya [--checkpoint typed-decisions]
+NANO_PROFILE=<dir> npm run nano -- download      # once; needs a click-equivalent, done by the tool
+NANO_PROFILE=<dir> npm run nano -- answer
+npm run compare -- report
+```
+
+Both judges got identical items: tab pairs ("same task or project?", title + host/path only — what
+install day has) and the shipped groups ("what was the person doing?" from the same ten
+activities; Nano also wrote the name the extension would show, from the extension's own prompt).
+
+**"Same project?" — pairwise AUC (HARD = same project on another day vs a different project on the
+same site).** `makilesh` uses DRAFT labels, so its row is indicative only; `walkthrough` is tiny
+(7 hard pairs).
+
+| browser | free signals | Laya english | Laya typed-decisions | Gemini Nano | Nano + free |
+|---|---|---|---|---|---|
+| makilesh (draft) | 0.82 / 0.55 | 0.61 / **0.27** | 0.65 / 0.35 | 0.74 / 0.44 | 0.81 / 0.32 |
+| walkthrough | 0.97 / 0.25 | 0.94 / 0.75 | 0.92 / 0.33 | **1.00 / 1.00** | 1.00 / 1.00 |
+| generated-0 | 0.87 / 0.52 | 0.55 / 0.36 | 0.54 / 0.35 | 0.69 / 0.49 | 0.86 / 0.35 |
+| generated-1 | 0.84 / 0.50 | 0.57 / 0.42 | 0.59 / 0.47 | **0.84 / 0.77** | **0.90 / 0.74** |
+
+Time per question: Laya 100–150 ms (torch CPU), Nano ~500–600 ms (fresh session per question).
+
+**Names, on the owner's current browser** (heuristic | Laya activity | Nano name):
+
+| tabs | heuristic | Laya | Gemini Nano |
+|---|---|---|---|
+| 11 — hackathons, Luma, AWS Builder | AWS | planning or managing work | **AWS Buildathon 2026** |
+| 10 — GitHub repos, gitfut | VoidAlgo | building or fixing software | Agent Development |
+| 8 — Claude in Chrome setup + one job application | session | entertainment ✗ | Academy Engineer Prep ✗ (named after the one stray tab) |
+| 8 — GPU/CUDA/PC setup + Cloud billing | Billing | building or fixing software | **GPU Setup & Billing** |
+| 3 — Phinite | Phinite | studying or learning ✗ | AI Agent Workflow |
+| 2 — PayPal, PwC | Job | looking for a job | **Job Applications** |
+
+On the simulated browsers Nano's names read like a person's ("Pricing Redesign", "Flat Hunting",
+"Pandas Debugging", "Outage Investigation", "Lisbon Trip Planning", "Attention Benchmarking");
+the heuristic's read like word picks ("Landing", "story", "does", "Untitled"), and Laya's ten
+activities are too coarse to name a group and often wrong ("entertainment" for news and shopping).
+Two Nano failure modes seen: a mixed group named after its outlier, and the same name given to
+several similar groups ("Lisbon Trip Planning" three times in one browser).
+
+**What this says.**
+1. **Naming: Gemini Nano, clearly.** The extension's Nano tier already exists; it never runs on
+   machines where the model is only `downloadable`, which is most of them, including the owner's.
+2. **"Same project?": neither changes grouping yet.** Laya zero-shot is near a coin flip overall
+   and below it on hard pairs, on both checkpoints — matching its own 0.362 zero-shot benchmark.
+   Nano is much better but inconsistent: it helps one simulated browser and the walkthrough and adds
+   nothing on the other simulated browser or the owner's (draft-labelled) one. Neither passes the
+   stage-1 bar in §7. Grouping stays behavioural.
+3. **Laya is parked, not dropped.** Its case was reaching machines Nano cannot (any CPU, 524 MB
+   in-browser); zero-shot it does not earn that. The way back is the fine-tuning track in §7, with
+   consented labelled pairs from the five tester browsers.

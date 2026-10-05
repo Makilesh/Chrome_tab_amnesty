@@ -101,7 +101,7 @@ def _fmt(v) -> str:
     return "   -  " if v is None or (isinstance(v, float) and math.isnan(v)) else f"{v:6.3f}"
 
 
-def report(items: dict, laya: dict | None, nano: dict | None) -> None:
+def report(items: dict, laya: dict | None, nano: dict | None, extra: dict | None = None) -> None:
     print("Laya vs Gemini Nano — same items. AUC: 0.5 = coin flip, 1.0 = perfect. HARD = same project on")
     print("another day vs a different project on the same site (where behaviour alone is weakest).\n")
     for b in items["browsers"]:
@@ -117,7 +117,11 @@ def report(items: dict, laya: dict | None, nano: dict | None) -> None:
             hard = np.array([p["stratum"] in HARD for p in b["pairs"]])
             rows = [("free signals (shipped)", free)]
             if "pairs" in L:
-                rows.append(("Laya", np.array(L["pairs"])))
+                rows.append(("Laya (english)", np.array(L["pairs"])))
+            for ck, data in (extra or {}).items():
+                X = (data or {}).get("browsers", {}).get(name, {})
+                if "pairs" in X:
+                    rows.append((f"Laya ({ck})", np.array(X["pairs"])))
             if "pairs" in N:
                 rows.append(("Gemini Nano", np.array(N["pairs"])))
             print(f"   {len(y)} pairs ({int(y.sum())} same-project), {int(hard.sum())} hard   " +
@@ -163,12 +167,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"-> {OUT / 'items.json'}")
     elif a.cmd == "laya":
         items = json.loads((OUT / "items.json").read_text(encoding="utf-8"))
-        (OUT / "laya.json").write_text(json.dumps(run_laya(items, a.checkpoint)), encoding="utf-8")
-        print(f"-> {OUT / 'laya.json'}")
+        dest = OUT / ("laya.json" if a.checkpoint == "english" else f"laya-{a.checkpoint}.json")
+        dest.write_text(json.dumps(run_laya(items, a.checkpoint)), encoding="utf-8")
+        print(f"-> {dest}")
     else:
         items = json.loads((OUT / "items.json").read_text(encoding="utf-8"))
         load = lambda p: json.loads(p.read_text(encoding="utf-8")) if p.exists() else None  # noqa: E731
-        report(items, load(OUT / "laya.json"), load(OUT / "nano.json"))
+        extra = {p.stem.removeprefix("laya-"): load(p) for p in sorted(OUT.glob("laya-*.json"))}
+        report(items, load(OUT / "laya.json"), load(OUT / "nano.json"), extra)
     return 0
 
 
