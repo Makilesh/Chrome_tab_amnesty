@@ -109,13 +109,22 @@ five: n < 80, no organiser, labels unconfirmed.
 
 **Owner's browser, read from disk 2026-10-05 (`tools/read-profile.ts`):** the collector in the
 owner's Chrome has recorded nothing since **20 Sep 06:47 UTC** (last tab switch 19 Sep 13:56 UTC,
-minutes after the Phase 1 build rewrote `dist/`), and the Phase 1 build never ran there (no
-`archive` store). So no Phase 1 data exists from the owner's browser yet, and `makilesh` is the
+minutes after the Phase 1 build rewrote `dist/`), until the owner reloaded the extension at 05 Oct
+14:55 IST; no build from 23 Sep or later ran before that (DECISIONS 2026-10-05 CORRECTION). `makilesh` is the
 20 Sep state: 30 http tabs, 5 groups — "Phinite" clean, "gitfut" + two pre-install research tabs,
 one 10-tab "AWS" group holding First Commit, Buildathon, Luma events and a careers page (four
 draft projects, or one "hackathons & events" project — only the owner can say), the job hunt split
 in two. Against DRAFT labels: ARI 0.371; S1+S2+S8 zeroed +0.042 (wrong direction); S1 alone −0.014.
 Fixed: automated runs never write `dist/` again (DECISIONS 2026-10-05).
+
+**Owner's browser after the reload (05 Oct, `makilesh-now`, read with `tools/read-profile.ts`):**
+recording is live again (a test tab and its digest were recorded within seconds). 59 tabs open,
+44 clustered; 27 of those were opened while the recorder was down, so they carry no lineage or
+switching. Six groups: "Phinite" and "Job" right; "Billing" = the GPU/CUDA setup plus Cloud billing
+(right project, weak name); "session" = the Claude in Chrome setup plus one stray job application
+(weak name — "Claude" is on the never-name-after-a-platform list); "VoidAlgo" = GitHub repos plus
+the gitfut thread (mostly same-site); "AWS" unchanged. No labels yet; no gate number from it.
+`makilesh.chrome.json` is a Claude in Chrome tab group, not an organiser baseline (DECISIONS).
 
 **Findings so far (report, don't hide):**
 - *Restore-time backfill (fixed 2026-09-19, DECISIONS):* pre-install tabs whose only history
