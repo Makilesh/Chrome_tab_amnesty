@@ -126,6 +126,18 @@ switching. Six groups: "Phinite" and "Job" right; "Billing" = the GPU/CUDA setup
 the gitfut thread (mostly same-site); "AWS" unchanged. No labels yet; no gate number from it.
 `makilesh.chrome.json` is a Claude in Chrome tab group, not an organiser baseline (DECISIONS).
 
+**The sweep page on the owner's own Chrome (05 Oct 15:53, owner's screenshots):** six groups as
+above, plus `amazon.jobs` pulled into "Phinite" and the PayPal/PwC pair named "Software". The most
+telling miss is the **job hunt, scattered across four groups**: Freshworks careers in "AWS", the
+Cognite application in "session", amazon.jobs in "Phinite", PayPal + PwC in "Software". Each job
+tab sits with whatever it was opened next to. That is the documented interleaving weakness
+(contemporaneity misleads when a project is done in the gaps between others) showing up on real
+data; a topic grouper would very likely have kept the job pages together, so on this browser, for
+this project, topic beats behaviour. Caveat, not excuse: 27 of the 44 clustered tabs were opened
+while the recorder was down and carry no lineage or switching, so the clusterer ran mostly on
+timing and site. Not corrected by eye: changing weights on one browser is tuning to pass; the
+honest route is the owner's labels for these tabs, then `refit.py`.
+
 **Findings so far (report, don't hide):**
 - *Restore-time backfill (fixed 2026-09-19, DECISIONS):* pre-install tabs whose only history
   visit is the session-restore `reload` all share one timestamp; they formed one blob under
@@ -172,6 +184,10 @@ week later?
       heuristic fallback (highest-IDF shared token or dominant domain) when `availability()` is
       unavailable; optional BYO-key cloud tier never on by default — **two tiers built; cloud tier
       not built, it is a network call (ask first, DECISIONS 2026-09-19)**
+      — **and Nano never engages on a machine where it is `downloadable` (supported, not yet
+      downloaded): the owner's Chrome reports exactly that, so every name there is the fallback
+      and no summary is ever written. Starting the download needs a user gesture and pulls a
+      multi-GB model — the owner's call (network + the settings anti-scope).**
 - [x] Archive & close: one action per group; archive card (name, event label, per-tab line, full
       digest, restore URLs) to IndexedDB, then close. Never deletes. Never auto-runs.
 - [x] Undo: persisted, survives restart, reachable 24 h, restores whole group incl. order

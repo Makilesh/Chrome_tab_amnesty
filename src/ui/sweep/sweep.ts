@@ -30,9 +30,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 function line(title: string, host: string, url: string, summary?: string | null): HTMLLIElement {
   const li = el('li');
-  const t = el('span', 't', title || url);
+  const label = title || url;
+  const t = el('span', 't', label);
   t.title = url;
-  li.append(t, el('span', 'host', host));
+  li.append(t);
+  if (host && host !== label) li.append(el('span', 'host', host)); // a page titled by its own address shows it once
   if (summary) li.append(el('span', 'sum', summary));
   return li;
 }

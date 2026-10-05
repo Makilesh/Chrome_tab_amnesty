@@ -25,7 +25,9 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 function tabLine(t: TabTrace): HTMLLIElement {
   const li = el('li');
-  li.append(el('span', undefined, t.title || t.url), el('span', 'host', t.host));
+  const label = t.title || t.url;
+  li.append(el('span', undefined, label));
+  if (t.host && t.host !== label) li.append(el('span', 'host', t.host));
   li.title = t.url;
   return li;
 }
