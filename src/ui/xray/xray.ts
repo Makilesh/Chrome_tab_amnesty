@@ -12,7 +12,7 @@ import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../../cluster/
 import { studySummary } from '../../archive/study';
 import { getCards } from '../../archive/store';
 import { getMeta, getOpenTraces } from '../../collector/db';
-import { redactTrace } from '../../collector/redact';
+import { redactTraces } from '../../collector/redact';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -71,7 +71,7 @@ type Mode = 'full' | 'shareable';
 
 
 function fixture(traces: TabTrace[], mode: Mode): TraceFixture {
-  const out = mode === 'shareable' ? traces.map(redactTrace) : traces;
+  const out = mode === 'shareable' ? redactTraces(traces) : traces;
   const times = traces.map((t) => t.openedAt);
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -96,8 +96,9 @@ function download(name: string, data: unknown): void {
 
 const CONSENT: Record<Mode, string> = {
   shareable:
-    'Shareable export includes: page titles, hosts and paths, page descriptions and headings, query parameter names, ' +
-    'timing and which tab opened which. It leaves out: full URLs, query parameter values, and page text.',
+    'Shareable export includes: page titles and headings, sites and page paths (with ids, links and numbers in them replaced by stand-ins), ' +
+    'query parameter names, timing and which tab opened which. It leaves out: full addresses, query values, page text, email addresses, ' +
+    'anything from mail, chat, calendar and search tabs except the site, and local file names.',
   full: 'Full export includes everything recorded: full URLs, query values, and page text. Keep this on your own machine.',
 };
 
