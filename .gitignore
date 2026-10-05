@@ -15,3 +15,5 @@ fixtures/report.png
 Claude outputs/*
 .walkthrough/
 .walkthrough.log
+.real/
+.check-build/
