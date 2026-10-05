@@ -5,6 +5,7 @@
  * Records are keyed on traceId, never tabId (§5.3). tabId is an index for live lookups only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import type { RememberedName } from '../archive/naming';
 import type { OpenSnapshot } from '../archive/study';
 import type { ArchiveCard, SummariseJob } from '../archive/types';
 import type { TabTrace } from '../cluster/types';
@@ -31,6 +32,8 @@ interface MetaRecords {
   neverRemember: string[];
   /** Phase 1 study only: open-tab count every few hours. Never shown in the product (§6.1). */
   openSnapshots: OpenSnapshot[];
+  /** Model names remembered per group, so a project keeps its name across sweeps (naming.ts). */
+  groupNames: RememberedName[];
 }
 
 interface TabAmnestyDB extends DBSchema {

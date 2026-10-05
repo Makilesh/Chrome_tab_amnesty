@@ -188,6 +188,9 @@ week later?
       downloaded): the owner's Chrome reports exactly that, so every name there is the fallback
       and no summary is ever written. Starting the download needs a user gesture and pulls a
       multi-GB model — the owner's call (network + the settings anti-scope).**
+      Measured 05 Oct (docs/research-jev-laya.md §9): Gemini Nano names groups far better than the
+      heuristic or Laya; the prompt now avoids stray-tab names, repeats and abbreviations, and a
+      group keeps its name across sweeps.
 - [x] Archive & close: one action per group; archive card (name, event label, per-tab line, full
       digest, restore URLs) to IndexedDB, then close. Never deletes. Never auto-runs.
 - [x] Undo: persisted, survives restart, reachable 24 h, restores whole group incl. order

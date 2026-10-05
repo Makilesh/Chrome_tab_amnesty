@@ -5,6 +5,7 @@
  */
 import { db, deleteTrace, getMeta, setMeta } from '../collector/db';
 import { normaliseDomain } from './forget';
+import type { RememberedName } from './naming';
 import type { ArchiveCard, SummariseJob } from './types';
 
 // --- archive cards -------------------------------------------------------------------------
@@ -46,12 +47,22 @@ export async function forgetCard(cardId: string): Promise<void> {
   for (const j of await tx.objectStore('jobs').getAll()) if (j.cardId === cardId) await tx.objectStore('jobs').delete(j.jobId);
   await tx.done;
   for (const t of card.tabs) await deleteTrace(t.traceId);
+  await forgetNamesOf(card.tabs.map((t) => t.traceId));
+}
+
+/** A forgotten tab takes any remembered group name that came from it along (§6.10). */
+async function forgetNamesOf(traceIds: string[]): Promise<void> {
+  const gone = new Set(traceIds);
+  const memory = await getRememberedNames();
+  const kept = memory.filter((m) => !m.members.some((id) => gone.has(id)));
+  if (kept.length !== memory.length) await saveRememberedNames(kept);
 }
 
 /** Forget one tab inside a card. The card stays; if it was the last tab the card goes too. */
 export async function forgetTab(cardId: string, traceId: string): Promise<void> {
   const next = await updateCard(cardId, (c) => ({ ...c, tabs: c.tabs.filter((t) => t.traceId !== traceId) }));
   await deleteTrace(traceId);
+  await forgetNamesOf([traceId]);
   const d = await db();
   for (const j of await d.getAll('jobs')) if (j.traceId === traceId) await d.delete('jobs', j.jobId);
   if (next && next.tabs.length === 0) await d.delete('archive', cardId);
@@ -72,6 +83,16 @@ export async function pendingJobs(limit: number): Promise<SummariseJob[]> {
 
 export async function putJob(job: SummariseJob): Promise<void> {
   await (await db()).put('jobs', job);
+}
+
+// --- remembered group names ----------------------------------------------------------------
+
+export async function getRememberedNames(): Promise<RememberedName[]> {
+  return (await getMeta('groupNames')) ?? [];
+}
+
+export async function saveRememberedNames(memory: RememberedName[]): Promise<void> {
+  await setMeta('groupNames', memory);
 }
 
 // --- never-remember list -------------------------------------------------------------------

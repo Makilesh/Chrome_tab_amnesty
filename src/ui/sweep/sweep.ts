@@ -9,8 +9,8 @@
  * restart because the card is in IndexedDB (§6.8); Forget is on every card and every tab (§6.10).
  */
 import { undoable } from '../../archive/card';
-import { betterName, type NamedGroup, quickName } from '../../archive/naming';
-import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, removeNeverRemember } from '../../archive/store';
+import { betterName, type NamedGroup, quickName, rememberedName, rememberName } from '../../archive/naming';
+import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, getRememberedNames, removeNeverRemember, saveRememberedNames } from '../../archive/store';
 import { archiveAndClose, bringBack, groupOnStrip, openOne, ungroupOurs } from '../../archive/sweep';
 import type { ArchiveCard } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
@@ -45,6 +45,8 @@ interface Group {
   name: NamedGroup;
   /** The card element currently showing this group, so a better name can land in place. */
   el?: HTMLElement;
+  /** Named from memory: the model is not asked again. */
+  remembered?: boolean;
 }
 
 let groups: Group[] = [];
@@ -66,8 +68,19 @@ async function load(): Promise<void> {
     members: c.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t),
     name: quickName(c, byId, traces),
   }));
+  // A group seen before keeps the name it had, from the first frame — no flicker, no renaming.
+  const memory = await getRememberedNames().catch(() => []);
+  const taken: string[] = [];
+  for (const g of groups) {
+    const known = rememberedName(g.community.traceIds, memory, taken);
+    if (known) {
+      g.name = { ...g.name, name: known, tier: 'nano' };
+      g.remembered = true;
+      taken.push(known);
+    }
+  }
   renderGroups();
-  void upgradeNames(byId);
+  void upgradeNames(byId, taken);
 
   const looseTraces = result.looseEnds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
   const loose = $('loose');
@@ -77,12 +90,17 @@ async function load(): Promise<void> {
   for (const t of looseTraces) list.append(line(t.title, t.host, t.url));
 }
 
-async function upgradeNames(byId: Map<string, TabTrace>): Promise<void> {
-  const taken: string[] = []; // names the model already gave other groups in this sweep
+async function upgradeNames(byId: Map<string, TabTrace>, taken: string[]): Promise<void> {
+  // `taken`: names already on screen from memory, plus each new one the model gives in this sweep.
+  let memory = await getRememberedNames().catch(() => []);
+  for (const g of groups) if (g.remembered) memory = rememberName(memory, g.community.traceIds, g.name.name);
   for (const g of [...groups]) {
+    if (g.remembered) continue;
     const better = await betterName(g.community, byId, g.name, taken);
     if (!better || !groups.includes(g)) continue;
     taken.push(better.name);
+    memory = rememberName(memory, g.community.traceIds, better.name);
+    await saveRememberedNames(memory).catch(() => {});
     g.name = better;
     const h = g.el?.querySelector('h2');
     if (h) {
