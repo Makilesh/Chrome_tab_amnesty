@@ -16,6 +16,7 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../src/cluster/types';
+import { scrubText } from '../src/collector/redact';
 
 const COMMENT_HEADER: Record<string, string> = {
   _comment:
@@ -36,6 +37,16 @@ function loadFixture(path: string): TabTrace[] {
 
 function isHttp(t: TabTrace): boolean {
   return /^https?:\/\//i.test(t.url);
+}
+
+/** File-level markers that must survive a re-merge — above all `_status: DRAFT…`, which says the
+ *  labels were proposed by someone other than the owner. Dropping it would launder drafts. */
+const KEPT_MARKERS = ['_status', '_scripted'] as const;
+
+function readMarkers(path: string): Record<string, string> {
+  if (!existsSync(path)) return {};
+  const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
+  return Object.fromEntries(KEPT_MARKERS.filter((k) => typeof raw[k] === 'string').map((k) => [k, raw[k] as string]));
 }
 
 function readExisting(path: string): Record<string, Label> {
@@ -67,13 +78,13 @@ function shortIds(traces: TabTrace[]): Map<string, string> {
   return out;
 }
 
-export function buildTemplate(traces: TabTrace[], existing: Record<string, Label>) {
+export function buildTemplate(traces: TabTrace[], existing: Record<string, Label>, markers: Record<string, string> = {}) {
   const open = traces
     .filter((t) => t.closedAt === null)
     .sort((a, b) => a.windowId - b.windowId || a.index - b.index);
   const ids = shortIds(open);
 
-  const out: Record<string, Label> = { ...COMMENT_HEADER };
+  const out: Record<string, Label> = { ...markers, ...COMMENT_HEADER };
   let kept = 0;
   let added = 0;
   let toLabel = 0;
@@ -91,7 +102,7 @@ export function buildTemplate(traces: TabTrace[], existing: Record<string, Label
     if (http && value === '') toLabel++;
     out[t.traceId] = value;
     const tag = http ? t.host : `(skip) ${t.host}`;
-    out[`_${ids.get(t.traceId)}`] = `${tag}  |  ${t.title}`;
+    out[`_${ids.get(t.traceId)}`] = `${tag}  |  ${scrubText(t.title)}`;
   }
 
   const present = new Set(open.map((t) => t.traceId));
@@ -106,7 +117,7 @@ function main(): void {
   const labelsPath = `fixtures/${name}.labels.json`;
   const traces = loadFixture(fixturePath);
   const existing = readExisting(labelsPath);
-  const { out, stats } = buildTemplate(traces, existing);
+  const { out, stats } = buildTemplate(traces, existing, readMarkers(labelsPath));
   writeFileSync(labelsPath, JSON.stringify(out, null, 1) + '\n');
   console.log(
     `${labelsPath}: ${stats.open} open traces; ${stats.kept} labels kept, ${stats.added} new, ${stats.toLabel} http tabs still unlabelled`,

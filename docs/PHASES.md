@@ -107,6 +107,16 @@ DRAFT proposed from the traces, not yet confirmed by the owner. `makilesh.chrome
 is one hand-made group, not the organiser (see DECISIONS 2026-09-19). Does not count toward the
 five: n < 80, no organiser, labels unconfirmed.
 
+**Owner's browser, read from disk 2026-10-05 (`tools/read-profile.ts`):** the collector in the
+owner's Chrome has recorded nothing since **20 Sep 06:47 UTC** (last tab switch 19 Sep 13:56 UTC,
+minutes after the Phase 1 build rewrote `dist/`), and the Phase 1 build never ran there (no
+`archive` store). So no Phase 1 data exists from the owner's browser yet, and `makilesh` is the
+20 Sep state: 30 http tabs, 5 groups — "Phinite" clean, "gitfut" + two pre-install research tabs,
+one 10-tab "AWS" group holding First Commit, Buildathon, Luma events and a careers page (four
+draft projects, or one "hackathons & events" project — only the owner can say), the job hunt split
+in two. Against DRAFT labels: ARI 0.371; S1+S2+S8 zeroed +0.042 (wrong direction); S1 alone −0.014.
+Fixed: automated runs never write `dist/` again (DECISIONS 2026-10-05).
+
 **Findings so far (report, don't hide):**
 - *Restore-time backfill (fixed 2026-09-19, DECISIONS):* pre-install tabs whose only history
   visit is the session-restore `reload` all share one timestamp; they formed one blob under
