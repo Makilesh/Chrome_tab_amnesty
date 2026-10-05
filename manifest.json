@@ -30,5 +30,6 @@
   "action": {
     "default_title": "Tab Amnesty"
   },
-  "incognito": "not_allowed"
+  "incognito": "not_allowed",
+  "minimum_chrome_version": "116"
 }

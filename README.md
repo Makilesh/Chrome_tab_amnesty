@@ -102,11 +102,31 @@ npm run labels <name>    # write/refresh fixtures/<name>.labels.json; keeps labe
 npm run phase1 <name...> # Phase 1 gate from fixtures/<name>.study.json: presses, open count before vs day 7
 npm run walkthrough      # the whole product on real sites in a visible Chrome for Testing (~6 min, scripted)
 npm run read-profile     # read YOUR profile's records from disk (copy -> throwaway Chrome); no clicks needed
+npm run package          # release/tab-amnesty-<version>.zip for testers (never touches dist/)
 npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
 npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
 npm run report a b c d e # per-browser chart -> fixtures/report.png
 npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also part of npm run check
 ```
+
+## Installing it as a tester (no Node, no build)
+
+The owner runs `npm run package` and sends you `tab-amnesty-<version>.zip`. Then:
+
+1. Unzip it somewhere you'll keep, such as Documents. Chrome runs the extension from that folder,
+   so don't delete or move it.
+2. Open `chrome://extensions` (Edge: `edge://extensions`, Brave: `brave://extensions`), switch on
+   **Developer mode** at the top right, click **Load unpacked**, and choose the unzipped
+   `tab-amnesty-<version>` folder.
+3. Click the puzzle-piece icon in the toolbar and pin **Tab Amnesty**, so it's one click away.
+4. Browse as you normally do. Whenever you like, click the icon: it shows what you have open,
+   grouped by what you were doing, with one **Archive & close** per group. Anything put away can
+   be brought back. Everything stays on your computer.
+
+Works in Chrome, Edge and Brave, version 116 or later (checked in Chrome 153/154, Edge 154,
+Brave 154). To update: replace the folder's contents with the new zip's, then switch Tab Amnesty
+off and on again in `chrome://extensions`. If the page ever says it isn't keeping up with your
+tabs, that same off-and-on fixes it.
 
 ## Getting a real fixture
 

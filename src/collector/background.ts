@@ -221,7 +221,7 @@ async function onUpdated(
     if (urlChanged && changeInfo.url) {
       // One trace per tab for its lifetime; a navigation refreshes what the tab is about but
       // keeps openedAt / transition / lineage as they were at creation.
-      next = { ...next, url: changeInfo.url, ...urlFeatures(changeInfo.url), digest: null, digestAt: null };
+      next = { ...next, url: changeInfo.url, ...urlFeatures(changeInfo.url), digest: null, digestAt: null, typing: false };
     }
     if (isNeverRemembered(next, never)) next = { ...next, title: '', digest: null, digestAt: null };
     return next;
@@ -400,6 +400,13 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   const m = msg as Partial<DigestMessage> | undefined;
   if ((m as { type?: string } | undefined)?.type === 'summarise-kick') {
     void kickSummariser();
+    return false;
+  }
+  const typed = msg as { type?: string; typing?: boolean } | undefined;
+  if (typed?.type === 'typing' && sender.tab?.id !== undefined && sender.frameId === 0) {
+    const tabId = sender.tab.id;
+    const value = typed.typing === true;
+    void serial(tabId, () => updateTraceByTabId(tabId, (t) => (!!t.typing === value ? null : { ...t, typing: value })));
     return false;
   }
   if (m?.type === 'digest' && sender.tab?.id !== undefined && m.digest && m.url) {

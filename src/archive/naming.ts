@@ -96,9 +96,20 @@ function titleWords(title: string): Map<string, string> {
  * times IDF over all open titles, in the casing the person saw. One word — pairing a second one
  * picks up coincidences ("AWS · Center"). Returns '' when no word is shared by two tabs.
  */
+/** Title-word document frequency, once per corpus array (see describe.ts, same reason). */
+const titleDfCache = new WeakMap<TabTrace[], Map<string, number>>();
+function titleDf(corpus: TabTrace[]): Map<string, number> {
+  let df = titleDfCache.get(corpus);
+  if (!df) {
+    df = new Map<string, number>();
+    for (const t of corpus) for (const k of titleWords(t.title).keys()) df.set(k, (df.get(k) ?? 0) + 1);
+    titleDfCache.set(corpus, df);
+  }
+  return df;
+}
+
 export function sharedTitleName(members: TabTrace[], corpus: TabTrace[]): string {
-  const df = new Map<string, number>();
-  for (const t of corpus) for (const k of titleWords(t.title).keys()) df.set(k, (df.get(k) ?? 0) + 1);
+  const df = titleDf(corpus);
   const inGroup = new Map<string, { n: number; form: string }>();
   for (const t of members) {
     for (const [k, form] of titleWords(t.title)) {

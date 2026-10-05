@@ -86,6 +86,12 @@ export interface TabTrace {
   discarded: boolean;
   /** Set when the tab closes. The record is kept — nothing is deleted. Null while open. */
   closedAt: number | null;
+  /**
+   * True while the page holds text the person typed and has not sent (a form, a draft, a
+   * message). Only this yes/no is recorded — never what was typed. Archive & close leaves such a
+   * tab open: closing it would lose the text, and Bring back reopens the page empty.
+   */
+  typing?: boolean;
 }
 
 /** Header + traces, as written by the x-ray page export. */

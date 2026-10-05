@@ -31,6 +31,22 @@ export function whenLabel(ms: number, now = Date.now()): string {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
 }
 
+/**
+ * Document frequency over the corpus, computed once per corpus array: describe() runs once per
+ * group, and recounting every open tab for every group was half the sweep page's time at 1,000
+ * tabs. Pure: keyed by the array object, garbage-collected with it.
+ */
+const dfCache = new WeakMap<TabTrace[], Map<string, number>>();
+function corpusDf(corpus: TabTrace[]): Map<string, number> {
+  let df = dfCache.get(corpus);
+  if (!df) {
+    df = new Map<string, number>();
+    for (const t of corpus) for (const w of new Set(tokens(t))) df.set(w, (df.get(w) ?? 0) + 1);
+    dfCache.set(corpus, df);
+  }
+  return df;
+}
+
 export function describe(community: Community, byId: Map<string, TabTrace>, corpus: TabTrace[]): Description {
   const members = community.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
 
@@ -40,8 +56,7 @@ export function describe(community: Community, byId: Map<string, TabTrace>, corp
   const hosts = [...hostCount.entries()].sort((a, b) => b[1] - a[1]).map(([h]) => h);
 
   // shared tokens ranked by (share of members containing it) * idf over the whole corpus
-  const df = new Map<string, number>();
-  for (const t of corpus) for (const w of new Set(tokens(t))) df.set(w, (df.get(w) ?? 0) + 1);
+  const df = corpusDf(corpus);
   const inGroup = new Map<string, number>();
   for (const t of members) for (const w of new Set(tokens(t))) inGroup.set(w, (inGroup.get(w) ?? 0) + 1);
   const n = corpus.length;

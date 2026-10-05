@@ -41,6 +41,7 @@ function page(title: string, links: string[]): string {
 <meta name="description" content="Test page: ${title}"></head>
 <body><nav><a href="/">home</a></nav><main><h1>${title}</h1><h2>Section one of ${title}</h2>
 <p>This paragraph is long enough to count as lead text for the digest of the page titled ${title}.</p>
+<p><label>Notes <input id="note" type="text"></label></p>
 <p>${links.map((l) => `<a href="${l}">${l}</a>`).join(' ')}</p></main></body></html>`;
 }
 
@@ -209,12 +210,45 @@ async function checkSweepArchive(browser: Browser, extId: string, userDataDir: s
     await page.close();
     return undefined;
   }
-  // Real grouping on the strip first (chrome.tabGroups write), then Archive & close.
+  console.log(`  "recorder not keeping up" note shown: ${await page.$eval('#health', (e) => !(e as HTMLElement).hidden)} (must be false)`);
+
+  // The person's own group must survive "show on strip", and Undo must remove only ours.
+  const ctl = await browser.newPage();
+  await ctl.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  const httpIds = (await ctl.evaluate(() =>
+    chrome.tabs.query({}).then((ts) => ts.filter((t) => /^https?:/.test(t.url ?? '')).map((t) => t.id!)),
+  )) as number[];
+  const mine = (await ctl.evaluate(async (id) => {
+    const g = await chrome.tabs.group({ tabIds: [id] });
+    await chrome.tabGroups.update(g, { title: 'mine' });
+    return g;
+  }, httpIds[0]!)) as number;
+  await page.bringToFront();
   await page.click('#strip');
   await sleep(1500);
   console.log(`  show on strip: ${await page.$eval('#strip-status', (e) => e.textContent)}`);
+  const mineAfterStrip = (await ctl.evaluate((g) => chrome.tabs.query({ groupId: g }).then((ts) => ts.length), mine)) as number;
+  await page.click('#strip-status button');
+  await sleep(1000);
+  const titlesAfterUndo = (await ctl.evaluate(() => chrome.tabGroups.query({}).then((gs) => gs.map((g) => g.title ?? '')))) as string[];
+  console.log(`  own group kept its tab through "show on strip": ${mineAfterStrip === 1} | groups after Undo: ${JSON.stringify(titlesAfterUndo)} (must be ["mine"])`);
+  await ctl.evaluate(async (g) => {
+    const ids = (await chrome.tabs.query({ groupId: g })).map((t) => t.id!);
+    if (ids.length) await chrome.tabs.ungroup(ids);
+  }, mine);
+  await ctl.close();
+
+  // A tab holding unsent typing stays open through Archive & close.
+  const typed = (await browser.pages()).find((p) => p.url().includes('/pricing/plans'));
+  if (typed) {
+    await typed.bringToFront();
+    await typed.type('#note', 'half-written thought');
+    await sleep(1200);
+  }
+  await page.bringToFront();
   await page.click('#groups button.primary');
   await sleep(2500);
+  console.log(`  message after Archive & close: ${await page.$eval('.toast', (e) => e.textContent).catch(() => '(none)')}`);
   const cards = await readCards(browser, extId);
   const card = cards[0];
   const openAfter = await httpTabs(browser);

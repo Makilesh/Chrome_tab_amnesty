@@ -11,11 +11,11 @@
 import { undoable } from '../../archive/card';
 import { betterName, type NamedGroup, quickName } from '../../archive/naming';
 import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, removeNeverRemember } from '../../archive/store';
-import { archiveAndClose, bringBack, groupOnStrip, openOne } from '../../archive/sweep';
+import { archiveAndClose, bringBack, groupOnStrip, openOne, ungroupOurs } from '../../archive/sweep';
 import type { ArchiveCard } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
 import type { Community, TabTrace } from '../../cluster/types';
-import { getOpenTraces } from '../../collector/db';
+import { getOpenTraces, getTraceByTabId } from '../../collector/db';
 
 const VISIBLE = 5;
 
@@ -116,6 +116,11 @@ function renderGroups(): void {
   $('more').hidden = groups.length <= shown;
 }
 
+function quoted(t: TabTrace): string {
+  const s = (t.title || t.host).trim();
+  return `“${s.length > 48 ? `${s.slice(0, 47)}…` : s}”`;
+}
+
 async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): Promise<void> {
   if (busy) return;
   busy = true;
@@ -123,11 +128,17 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
   btn.textContent = 'Putting away…';
   try {
     const d = g.name.description;
-    const saved = await archiveAndClose(g.community, g.members, g.name, d.when, d.hosts);
+    const { card: saved, keptOpen } = await archiveAndClose(g.community, g.members, g.name, d.when, d.hosts);
     groups = groups.filter((x) => x !== g);
     card.remove();
     renderGroups();
-    if (saved) toast(`Put away “${saved.name}”.`, saved.cardId);
+    const kept = keptOpen.length
+      ? ` Left open, because you typed something in ${keptOpen.length === 1 ? 'it' : 'them'}: ${keptOpen.map(quoted).join(', ')}.`
+      : '';
+    if (saved) toast(`Put away “${saved.name}”.${kept}`, saved.cardId);
+    else if (keptOpen.length) toast(`Nothing put away.${kept}`);
+    // Keyboard users keep their place: focus moves to the next thing they can act on.
+    ($('groups').querySelector<HTMLButtonElement>('button.primary') ?? $<HTMLButtonElement>('strip')).focus({ preventScroll: true });
     await renderArchive();
   } catch (e) {
     btn.disabled = false;
@@ -140,15 +151,43 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
 
 async function onStrip(): Promise<void> {
   const status = $('strip-status');
-  status.textContent = 'Grouping…';
+  status.replaceChildren('Grouping…');
   let locked = 0;
+  let leftInPlace = 0;
+  const made: number[] = [];
   for (const g of groups) {
     const r = await groupOnStrip(g.members, g.name);
     if (r.locked) locked++;
+    leftInPlace += r.leftInPlace;
+    if (r.groupId !== null) made.push(r.groupId);
   }
-  status.textContent = locked
-    ? `Done. Chrome keeps ${locked === 1 ? 'one of these' : 'some of these'} locked as a saved group, so it stays as it is on the strip.`
-    : 'Done — the groups are on your tab strip. Nothing was closed.';
+  const parts = ['Done — these groups are on your tab strip. Nothing was closed.'];
+  if (leftInPlace) parts.push('Tabs you had already grouped were left where they were.');
+  if (locked) parts.push(`Chrome keeps ${locked === 1 ? 'one of these' : 'some of these'} locked as a saved group.`);
+  status.replaceChildren(parts.join(' '));
+  if (made.length) {
+    const undo = el('button', 'quiet', 'Undo');
+    undo.addEventListener('click', async () => {
+      await ungroupOurs(made);
+      status.replaceChildren('Undone — your tab strip is back to how it was.');
+    });
+    status.append(' ', undo);
+  }
+}
+
+/**
+ * Is the recorder alive? Opening this page creates a tab, and a working collector records it
+ * within a moment. If it does not, the groups below may be stale — say so plainly rather than
+ * let someone act on them (the owner's browser once ran two weeks this way, unnoticed).
+ */
+async function checkRecorder(): Promise<void> {
+  const me = await chrome.tabs.getCurrent();
+  if (me?.id === undefined) return;
+  for (let i = 0; i < 8; i++) {
+    if (await getTraceByTabId(me.id)) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  $('health').hidden = false;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -209,17 +248,21 @@ async function renderArchive(): Promise<void> {
   for (const c of cards) root.append(archiveCard(c));
 }
 
-function toast(text: string, cardId: string): void {
+function toast(text: string, cardId?: string): void {
   document.querySelector('.toast')?.remove();
   const t = el('div', 'toast', text);
-  const back = el('button', undefined, 'Bring back');
-  back.addEventListener('click', async () => {
-    await bringBack(cardId);
-    t.remove();
-    await renderArchive();
-  });
-  t.append(back);
+  t.setAttribute('role', 'status'); // announced by screen readers without stealing focus
+  if (cardId) {
+    const back = el('button', undefined, 'Bring back');
+    back.addEventListener('click', async () => {
+      await bringBack(cardId);
+      t.remove();
+      await renderArchive();
+    });
+    t.append(back);
+  }
   document.body.append(t);
+  // The same Bring back stays under "Put away" for a day, so nothing depends on catching this.
   setTimeout(() => t.remove(), 12_000);
 }
 
@@ -242,7 +285,13 @@ function renderNever(list: string[]): void {
 // ---------------------------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  await load();
+  try {
+    await load();
+  } catch (e) {
+    console.error(e);
+    $('groups').replaceChildren(el('p', 'empty', 'Something went wrong reading your tabs. Reloading this page usually fixes it — nothing has been changed.'));
+  }
+  void checkRecorder();
   await renderArchive();
   renderNever(await getNeverRemember());
 
