@@ -132,7 +132,7 @@ async function captureBaseline(traces: TabTrace[]): Promise<string> {
   const all = await chrome.tabGroups.query({});
   const groupsRaw = all.filter((g) => !before.has(g.id));
   const leftAlone = all.length - groupsRaw.length;
-  const note = leftAlone ? ` ${leftAlone === 1 ? 'One group' : 'Some groups'} that were already there when this page opened ${leftAlone === 1 ? 'was' : 'were'} left alone.` : '';
+  const note = leftAlone ? ` ${leftAlone === 1 ? 'One group that was' : 'Groups that were'} already there when this page opened ${leftAlone === 1 ? 'was' : 'were'} left alone.` : '';
   if (groupsRaw.length === 0) {
     return `No new tab groups since this page opened. Run Chrome's Organize tabs now, accept its groups, then click again.${note}`;
   }
