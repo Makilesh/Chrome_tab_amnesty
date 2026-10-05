@@ -77,14 +77,15 @@ const PLATFORM = new Set([
   'instagram', 'chatgpt', 'claude', 'gemini', 'perplexity', 'amazon', 'search', 'results', 'login',
   'sign', 'account', 'create', 'untitled', 'new', 'tab', 'home', 'page', 'welcome', 'dashboard',
 ]);
-const TITLE_WORD = /[\p{L}\p{N}]{3,}/gu;
+/** Letters, combining marks (Indic vowel signs) and digits — a word in any script. */
+const TITLE_WORD = /[\p{L}\p{M}\p{N}]{3,}/gu;
 
 /** Distinct words of a title, lower-cased key -> the casing the person saw. */
 function titleWords(title: string): Map<string, string> {
   const out = new Map<string, string>();
   for (const w of title.match(TITLE_WORD) ?? []) {
     const k = w.toLowerCase();
-    if (STOP.has(k) || PLATFORM.has(k) || /^\d+$/.test(k) || out.has(k)) continue;
+    if (STOP.has(k) || PLATFORM.has(k) || /^\p{N}+$/u.test(k) || out.has(k)) continue;
     out.set(k, w);
   }
   return out;

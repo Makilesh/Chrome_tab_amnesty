@@ -239,3 +239,9 @@ class TestAblationPositiveControls:
         zero_s2 = self._ari("temporal", {**b, "S2_temporal": 0.0})
         zero_both = self._ari("temporal", {**b, "S2_temporal": 0.0, "S3_session": 0.0})
         assert full > 0.95 and zero_s2 > 0.95 and full - zero_both >= 0.5, (full, zero_s2, zero_both)
+
+
+def test_tokens_read_every_script_like_the_ts_side():
+    from tabamnesty.lexical import tokens
+    t = tr("x", 0, title="हिन्दी समाचार - Belém Tower 東京タワー 2026 २०२६ a1 Ünïcode", path=["p", "bel%c3%a9m"])
+    assert tokens(t) == ["हिन्दी", "समाचार", "belém", "tower", "東京タワー", "a1", "ünïcode", "bel", "c3", "a9m"]
