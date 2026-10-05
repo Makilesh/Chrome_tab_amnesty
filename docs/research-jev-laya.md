@@ -286,3 +286,14 @@ tabs share, plain words, and no reuse of names already given in the sweep (DECIS
 Over the same 39 groups: repeats per run 2.0 → 0, abbreviations 3.0 → 0.5, true-project mentions
 ~75% throughout. Names still vary between runs (15 of 39 identical over two runs), so the sweep page
 now remembers a group's name and reuses it while the group is mostly the same tabs.
+
+**Addendum — why Nano was "downloadable" on a machine that already had it.** The owner's everyday
+profile held the very same model version as the test profile (2025.8.8.1141, 4.0 GB, downloaded in
+April), yet Chrome reported `downloadable` and a user-gesture `create()` neither downloaded nor
+failed. The test profile on a drive with 141 GB free went `available` within minutes. Chrome's
+documented requirement is 22 GB free on the volume holding the profile; the owner's C: had 12.5 GB.
+So on a capable machine with a full system drive, the model can sit on disk unused, and Tab Amnesty
+silently falls back to heuristic names. For the owner, the model folder was moved to D: behind a
+directory junction (C: 12.5 → 16.5 GB free); whether Chrome checks the junction's drive or the
+profile's is only visible after a Chrome restart. Product consequence: expect many users on the
+fallback tier even with good hardware — the heuristic names and the name memory matter.
