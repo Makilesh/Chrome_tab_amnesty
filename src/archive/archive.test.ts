@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TabTrace, Transition } from '../cluster/types';
 import { buildCard, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
-import { clampName, evidence, heuristicName, namePrompt, NAME_SYSTEM, sharedTitleName } from './naming';
+import { clampName, evidence, heuristicName, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, rememberedName, rememberName, sharedTitleName } from './naming';
 import { appendSnapshot, readGate, studySummary } from './study';
 import { GROUP_COLORS, UNDO_WINDOW_MS } from './types';
 
@@ -169,3 +169,22 @@ describe('phase 1 study', () => {
     expect(readGate(studySummary(snaps(0, 9 * D, () => 100), [])).pressed).toBe(false);
   });
 });
+
+describe('name memory', () => {
+  it('a group that is still mostly the same tabs keeps its name; a different group does not', () => {
+    let mem = rememberName([], ['a', 'b', 'c', 'd'], 'PayPal Job Search', 1);
+    expect(rememberedName(['a', 'b', 'c', 'e'], mem)).toBe('PayPal Job Search'); // 3 of 5 shared
+    expect(rememberedName(['a', 'x', 'y', 'z'], mem)).toBeNull(); // 1 of 7 shared
+    expect(rememberedName(['a', 'b', 'c', 'd'], mem, ['paypal job search'])).toBeNull(); // already on screen
+    mem = rememberName(mem, ['a', 'b', 'c', 'e'], 'PayPal Applications', 2); // same group, renamed: replaces
+    expect(mem.map((m) => m.name)).toEqual(['PayPal Applications']);
+  });
+
+  it('keeps the newest entries only', () => {
+    let mem: ReturnType<typeof rememberName> = [];
+    for (let i = 0; i < NAME_MEMORY_MAX + 5; i++) mem = rememberName(mem, [`t${i}`], `Group ${i}`, i);
+    expect(mem.length).toBe(NAME_MEMORY_MAX);
+    expect(mem[0]!.name).toBe(`Group ${NAME_MEMORY_MAX + 4}`);
+  });
+});
+

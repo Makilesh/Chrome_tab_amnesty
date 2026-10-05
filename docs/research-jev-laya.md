@@ -280,3 +280,9 @@ several similar groups ("Lisbon Trip Planning" three times in one browser).
 3. **Laya is parked, not dropped.** Its case was reaching machines Nano cannot (any CPU, 524 MB
    in-browser); zero-shot it does not earn that. The way back is the fine-tuning track in §7, with
    consented labelled pairs from the five tester browsers.
+
+**Addendum, same day — fixing Nano's two naming failures.** The prompt now asks for what most
+tabs share, plain words, and no reuse of names already given in the sweep (DECISIONS 2026-10-05).
+Over the same 39 groups: repeats per run 2.0 → 0, abbreviations 3.0 → 0.5, true-project mentions
+~75% throughout. Names still vary between runs (15 of 39 identical over two runs), so the sweep page
+now remembers a group's name and reuses it while the group is mostly the same tabs.

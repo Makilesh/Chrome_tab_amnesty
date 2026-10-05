@@ -244,3 +244,51 @@ export async function nameGroup(community: Community, byId: Map<string, TabTrace
   const quick = quickName(community, byId, corpus);
   return (await betterName(community, byId, quick, taken)) ?? quick;
 }
+
+// --- name memory -------------------------------------------------------------------------------
+
+/**
+ * A project keeps its name across sweeps, the way it keeps its colour: the model's name for a group
+ * is remembered with the group's tabs and reused while the group is still mostly those tabs. Model
+ * names vary from run to run (measured: only 15 of 39 groups got the same name twice), and a card
+ * that renames itself on every visit is not recognisable at a glance (§6.3).
+ */
+export interface RememberedName {
+  members: string[];
+  name: string;
+  at: number;
+}
+
+export const NAME_MEMORY_MAX = 200;
+/** Share of tabs in common (Jaccard) for "still the same group". */
+export const SAME_GROUP = 0.5;
+
+function jaccard(a: readonly string[], b: ReadonlySet<string>): number {
+  if (a.length === 0 && b.size === 0) return 0;
+  let both = 0;
+  for (const x of a) if (b.has(x)) both++;
+  return both / (a.length + b.size - both);
+}
+
+/** The remembered name of the most similar earlier group (>= SAME_GROUP), unless already used in this sweep. */
+export function rememberedName(members: readonly string[], memory: readonly RememberedName[], taken: readonly string[] = []): string | null {
+  const ids = new Set(members);
+  let best: RememberedName | null = null;
+  let bestScore = SAME_GROUP;
+  for (const m of memory) {
+    const score = jaccard(m.members, ids);
+    if (score >= bestScore && !taken.some((t) => t.trim().toLowerCase() === m.name.trim().toLowerCase())) {
+      best = m;
+      bestScore = score;
+    }
+  }
+  return best?.name ?? null;
+}
+
+/** Record a group's name: replaces memories of the same group, keeps the newest NAME_MEMORY_MAX. */
+export function rememberName(memory: readonly RememberedName[], members: readonly string[], name: string, now = Date.now()): RememberedName[] {
+  const ids = new Set(members);
+  const rest = memory.filter((m) => jaccard(m.members, ids) < SAME_GROUP);
+  return [...rest, { members: [...members], name, at: now }].sort((a, b) => b.at - a.at).slice(0, NAME_MEMORY_MAX);
+}
+
