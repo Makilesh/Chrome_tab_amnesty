@@ -1,6 +1,6 @@
 {
  "schemaVersion": 1,
- "exportedAt": 1791185867442,
+ "exportedAt": 1791186164552,
  "mode": "shareable",
  "traceCount": 34,
  "openedAtMin": 1789155491928.174,
@@ -19,17 +19,17 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "https://builder.aws.com/connect/space/idbc60131c7395-id431c65dd7d99-id7ee73910eac9-iddf90b26f0f19-id44c66f56a63d/wemakedevs",
+   "url": "https://builder.aws.com/connect/space/id06bd70584104-id54c2c6c05055-idcfa314159107-id0444ee96852f-ida4b16993a45c/wemakedevs",
    "host": "builder.aws.com",
    "eTLD1": "aws.com",
    "pathTokens": [
     "connect",
     "space",
-    "idbc60131c7395",
-    "id431c65dd7d99",
-    "id7ee73910eac9",
-    "iddf90b26f0f19",
-    "id44c66f56a63d",
+    "id06bd70584104",
+    "id54c2c6c05055",
+    "idcfa314159107",
+    "id0444ee96852f",
+    "ida4b16993a45c",
     "wemakedevs"
    ],
    "queryKeys": {
@@ -146,13 +146,13 @@
     "a7f29540-480c-4331-bc25-8678e8d5b2ce": 2,
     "7a665602-87f4-4b19-a7cf-e235a01f39e7": 1
    },
-   "url": "https://app.notion.com/p/Buildathon-idbb7104f9edb8",
+   "url": "https://app.notion.com/p/Buildathon-id2f8ea251c337",
    "host": "app.notion.com",
    "eTLD1": "notion.com",
    "pathTokens": [
     "p",
     "buildathon",
-    "idbb7104f9edb8"
+    "id2f8ea251c337"
    ],
    "queryKeys": {},
    "title": "(1) Buildathon | Notion",
@@ -431,13 +431,13 @@
     "b038107d-29a3-4129-b556-a277c5efb019": 2,
     "ed2ba61c-fb6d-4a65-976a-4f2842ef65e8": 2
    },
-   "url": "https://paypal.eightfold.ai/careers/job/276620201652",
+   "url": "https://paypal.eightfold.ai/careers/job/152880597407",
    "host": "paypal.eightfold.ai",
    "eTLD1": "eightfold.ai",
    "pathTokens": [
     "careers",
     "job",
-    "276620201652"
+    "152880597407"
    ],
    "queryKeys": {
     "hl": "",
@@ -512,13 +512,13 @@
    "coActive": {
     "c1db03f0-34bd-4475-85bc-0f869bc14edf": 1
    },
-   "url": "https://job-boards.greenhouse.io/cognite/jobs/479424612433",
+   "url": "https://job-boards.greenhouse.io/cognite/jobs/072139902029",
    "host": "job-boards.greenhouse.io",
    "eTLD1": "greenhouse.io",
    "pathTokens": [
     "cognite",
     "jobs",
-    "479424612433"
+    "072139902029"
    ],
    "queryKeys": {},
    "title": "Job Application for Academy Engineer - (Data Scientist- Training) at Cognite - AI for Industry",
@@ -683,9 +683,9 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "chrome-extension://id76f303567549/src/ui/xray/index.html",
-   "host": "id76f303567549",
-   "eTLD1": "id76f303567549",
+   "url": "chrome-extension://iddeff7a106dc0/src/ui/xray/index.html",
+   "host": "iddeff7a106dc0",
+   "eTLD1": "iddeff7a106dc0",
    "pathTokens": [
     "src",
     "ui",
@@ -715,11 +715,11 @@
     "a4039f41-d474-4547-9d9d-50c5c155ceae": 3,
     "ea995d2b-7860-4d9a-8fd1-ed91db1f4f15": 1
    },
-   "url": "https://app.phinite.ai/id91db18b3a6ca/workspace/KYNmcBa",
+   "url": "https://app.phinite.ai/id949ab8123193/workspace/KYNmcBa",
    "host": "app.phinite.ai",
    "eTLD1": "phinite.ai",
    "pathTokens": [
-    "id91db18b3a6ca",
+    "id949ab8123193",
     "workspace",
     "kynmcba"
    ],
@@ -1260,16 +1260,16 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "https://chatgpt.com/c/idd378b4d0a417-id4d4a9102f4fe-idba06bc4ea883-id23b72e691cd9-id1693dd3a0c90",
+   "url": "https://chatgpt.com/c/id2e1c13f77e65-id9f3cb448ee2e-id8a0020a2587c-id2d9b455f49f6-ide31bf1797afe",
    "host": "chatgpt.com",
    "eTLD1": "chatgpt.com",
    "pathTokens": [
     "c",
-    "idd378b4d0a417",
-    "id4d4a9102f4fe",
-    "idba06bc4ea883",
-    "id23b72e691cd9",
-    "id1693dd3a0c90"
+    "id2e1c13f77e65",
+    "id9f3cb448ee2e",
+    "id8a0020a2587c",
+    "id2d9b455f49f6",
+    "ide31bf1797afe"
    ],
    "queryKeys": {},
    "title": "Explain OpenTelemetry",
@@ -1298,9 +1298,9 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "chrome-extension://id76f303567549/src/ui/xray/index.html",
-   "host": "id76f303567549",
-   "eTLD1": "id76f303567549",
+   "url": "chrome-extension://iddeff7a106dc0/src/ui/xray/index.html",
+   "host": "iddeff7a106dc0",
+   "eTLD1": "iddeff7a106dc0",
    "pathTokens": [
     "src",
     "ui",
@@ -1445,11 +1445,11 @@
     "ca3347c9-5144-429a-8bb3-a38541fcf2e6": 1,
     "468097a7-2127-4185-af28-784dfc571907": 2
    },
-   "url": "https://github.com/idb54c339601c1/nodriver",
+   "url": "https://github.com/idb15f87b636d3/nodriver",
    "host": "github.com",
    "eTLD1": "github.com",
    "pathTokens": [
-    "idb54c339601c1",
+    "idb15f87b636d3",
     "nodriver"
    ],
    "queryKeys": {},

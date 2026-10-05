@@ -19,30 +19,39 @@ describe('shareable redaction', () => {
   });
 
   it('knows an id when it sees one, and a word when it sees one', () => {
-    for (const id of ['zr31rrrnjmnph20f12xqh5r19c', '3d2e0ff3425b80919e8ecc9ec6e98296', '274922421881', '8REHIWx', 'KYNmcBaXqWvT', 'connor9994']) expect(looksLikeId(id)).toBe(true);
+    for (const id of ['zr31rrrnjmnph20f12xqh5r19c', '3d2e0ff3425b80919e8ecc9ec6e98296', '274922421881', '8REHIWx', 'KYNmcBaXqWvT', 'connor9994']) {
+      expect(looksLikeId(id)).toBe(true);
+    }
     for (const w of ['buildathon', 'careers', 'p', 'c3', 'pricing', 'workspace']) expect(looksLikeId(w)).toBe(false);
   });
 
   it('swaps ids for stand-ins: same value, same stand-in, in url, path tokens and across tabs', () => {
-    const [a, b, c] = redactTraces(
-      [
-        tr('a', 'https://www.ilovepdf.com/download/zr31rrrnjmnph20f12xqh5r19c?x=1'),
-        tr('b', 'https://app.notion.com/p/Buildathon-3d2e0ff3425b80919e8ecc9ec6e98296'),
-        tr('c', 'https://app.notion.com/p/3d2e0ff3425b80919e8ecc9ec6e98296'),
-      ],
-      'fixed-salt',
-    ) as [TabTrace, TabTrace, TabTrace];
+    const [a, b, c] = redactTraces([
+      tr('a', 'https://www.ilovepdf.com/download/zr31rrrnjmnph20f12xqh5r19c?x=1'),
+      tr('b', 'https://app.notion.com/p/Buildathon-3d2e0ff3425b80919e8ecc9ec6e98296'),
+      tr('c', 'https://app.notion.com/p/3d2e0ff3425b80919e8ecc9ec6e98296'),
+    ]) as [TabTrace, TabTrace, TabTrace];
     expect(JSON.stringify([a, b, c])).not.toMatch(/zr31rrrnjmnph20f12xqh5r19c|3d2e0ff3425b80919e8ecc9ec6e98296/);
     expect(a.url).toMatch(/^https:\/\/www\.ilovepdf\.com\/download\/id[0-9a-f]{12}$/);
     expect(a.queryKeys).toEqual({ x: '' });
     expect(b.pathTokens.at(-1)).toBe(c.pathTokens.at(-1));
     expect(b.url).toContain('/p/Buildathon-id');
-    expect(redactTraces([tr('n', 'https://jobs.example.com/job/274922421881')], 's')[0]!.pathTokens.at(-1)).toMatch(/^\d{12}$/);
+    expect(redactTraces([tr('n', 'https://jobs.example.com/job/274922421881')])[0]!.pathTokens.at(-1)).toMatch(/^\d{12}$/);
+  });
+
+  it('stand-ins are random: the same value gets unrelated stand-ins in every export', () => {
+    const t = tr('x', 'https://example.com/year/2026/report-9f8e7d6c');
+    const runs = Array.from({ length: 5 }, () => redactTraces([t])[0]!.pathTokens.join('/'));
+    expect(new Set(runs).size).toBe(5);
+    for (const r of runs) expect(r).not.toMatch(/2026|9f8e7d6c/);
   });
 
   it('keeps nothing from mail/search tabs but the site, and nothing from local files', () => {
     const [mail, search, file] = redactTraces([
-      tr('m', 'https://mail.google.com/mail/u/0/', { title: 'Inbox (3) - me@x.com', digest: { description: '', headings: ['Your invoice from Acme'], leadText: '' } }),
+      tr('m', 'https://mail.google.com/mail/u/0/', {
+        title: 'Inbox (3) - me@x.com',
+        digest: { description: '', headings: ['Your invoice from Acme'], leadText: '' },
+      }),
       tr('s', 'https://www.google.com/search?q=private+thing', { title: 'private thing - Google Search' }),
       tr('f', 'file:///D:/Users/me/Resume_Me.pdf', { title: 'Resume_Me.pdf' }),
     ]) as [TabTrace, TabTrace, TabTrace];
@@ -61,6 +70,6 @@ describe('shareable redaction', () => {
       tr('b3', 'https://www.booking.com/hotel/pt/casa-123456.html', { title: 'Casa Lisbon hotel', openedAt: 42 * 60_000, openerTraceId: 'b1' }),
     ];
     const norm = (p: ReturnType<typeof cluster>) => p.communities.map((c) => [...c.traceIds].sort().join(',')).sort();
-    expect(norm(cluster(redactTraces(ts, 'salt')))).toEqual(norm(cluster(ts)));
+    expect(norm(cluster(redactTraces(ts)))).toEqual(norm(cluster(ts)));
   });
 });

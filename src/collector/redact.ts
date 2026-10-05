@@ -8,10 +8,14 @@
  *   - URL reduced to scheme + host + path; query values blanked (keys are S6 features).
  *   - Identifier-looking runs in the host and path — anything with a digit and 4+ characters,
  *     mixed-case slugs of 12+, any run of 20+ — become stand-ins: share links, download tokens,
- *     document / workspace / job / account ids. The stand-in is the same for the same value
- *     throughout one export (so tabs that shared an id still share it: S6, S7 and S5 see the same
- *     equalities), differs between exports (a per-export random salt that is never written out), and
- *     a numeric id stays numeric (S7 ignores pure numbers, so the text signal is unchanged).
+ *     document / workspace / job / account ids. Each distinct value gets a fresh RANDOM stand-in
+ *     from a table that lives only in memory for one export: the same value gets the same stand-in
+ *     throughout that file (so tabs that shared an id still share it — S6, S7 and S5 see the same
+ *     equalities), nothing links a stand-in to its value or to any other export, and a numeric id
+ *     stays numeric (S7 ignores pure numbers, so the text signal is unchanged). Not a hash: a keyed
+ *     hash of a low-entropy id (a year, a 6-digit job number) can be tested against guesses by anyone
+ *     who recovers the key, and the first version here used a non-cryptographic one (DECISIONS
+ *     2026-10-05).
  *   - Email addresses in titles, descriptions and headings become "[email]".
  *   - Mail, chat, calendar and search tabs (the ambient list) keep no title or page text: they are
  *     excluded from clustering, and their headings are other people's subject lines.
@@ -35,31 +39,38 @@ export function looksLikeId(run: string): boolean {
   return run.length >= 20;
 }
 
-function fnv1a(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h >>> 0;
-}
-
-function randomSalt(): string {
-  const b = new Uint8Array(16);
+function randomHex(bytes: number): string {
+  const b = new Uint8Array(bytes);
   crypto.getRandomValues(b);
   return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
+function randomDigits(n: number): string {
+  let out = '';
+  while (out.length < n) {
+    const b = new Uint8Array(n);
+    crypto.getRandomValues(b);
+    for (const x of b) if (x < 250 && out.length < n) out += String(x % 10); // 250-255 rejected: no bias
+  }
+  return out;
+}
+
 /**
- * Redact a set of traces for one shareable file. One salt per call: stand-ins are consistent
- * inside the returned set and meaningless outside it. Pass a fixed salt only in tests.
+ * Redact a set of traces for one shareable file. Stand-ins are consistent inside the returned set
+ * and meaningless outside it: the table is a local variable and is never written anywhere.
  */
-export function redactTraces(traces: TabTrace[], salt: string = randomSalt()): TabTrace[] {
+export function redactTraces(traces: TabTrace[]): TabTrace[] {
+  const table = new Map<string, string>();
+  const used = new Set<string>();
   const stand = (key: string): string => {
-    const a = fnv1a(`${salt}\u0000${key}`);
-    const b = fnv1a(`${key}\u0000${salt}`);
-    if (/^\d+$/.test(key)) return (BigInt(a) * 4294967296n + BigInt(b)).toString().padStart(12, '0').slice(-12);
-    return `id${a.toString(16).padStart(8, '0')}${b.toString(16).padStart(8, '0').slice(0, 4)}`;
+    const known = table.get(key);
+    if (known) return known;
+    let s: string;
+    do s = /^\d+$/.test(key) ? randomDigits(12) : `id${randomHex(6)}`;
+    while (used.has(s));
+    used.add(s);
+    table.set(key, s);
+    return s;
   };
   // Keys are lower-case: pathTokens and hosts are lower-cased when recorded, URLs keep case.
   const idKeys = new Set<string>();
