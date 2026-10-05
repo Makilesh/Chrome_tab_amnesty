@@ -278,6 +278,58 @@ async function checkStudyExport(browser: Browser, extId: string, userDataDir: st
   await page.close();
 }
 
+/**
+ * Baseline capture takes only groups made after the study page opened (Organize tabs) and never
+ * touches groups that were already there — the person's own, saved ones, or another tool's.
+ */
+async function checkBaselineCapture(browser: Browser, extId: string, userDataDir: string): Promise<void> {
+  const ctl = await browser.newPage();
+  await ctl.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  const httpTabIds = async () =>
+    (await ctl.evaluate(() => chrome.tabs.query({}).then((ts) => ts.filter((t) => /^https?:/.test(t.url ?? '')).map((t) => t.id!)))) as number[];
+  const [mineTab, orgTab] = await httpTabIds();
+  if (mineTab === undefined || orgTab === undefined) {
+    console.log('\nbaseline capture: needs two http tabs; skipped');
+    await ctl.close();
+    return;
+  }
+  const mine = (await ctl.evaluate(async (id) => {
+    const g = await chrome.tabs.group({ tabIds: [id] });
+    await chrome.tabGroups.update(g, { title: 'mine' });
+    return g;
+  }, mineTab)) as number;
+
+  const page = await browser.newPage();
+  const downloads = join(userDataDir, 'baseline-downloads');
+  const cdp = await page.createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
+  await page.goto(`chrome-extension://${extId}/src/ui/xray/index.html`);
+  await page.waitForSelector('#study');
+  await sleep(800);
+  await ctl.evaluate(async (id) => {
+    const g = await chrome.tabs.group({ tabIds: [id] });
+    await chrome.tabGroups.update(g, { title: 'organizer' });
+  }, orgTab); // stands in for Chrome's Organize tabs, which Chrome for Testing does not have
+  await page.click('#study summary');
+  await page.type('#name', 'base');
+  await page.click('#baseline');
+  await sleep(1500);
+  const status = await page.$eval('#status', (e) => e.textContent ?? '');
+  const file = existsSync(downloads) ? readdirSync(downloads).find((f) => f.endsWith('.chrome.json')) : undefined;
+  const captured = file ? (JSON.parse(readFileSync(join(downloads, file), 'utf8')).groups as { name: string }[]).map((g) => g.name) : [];
+  const after = (await ctl.evaluate(() => chrome.tabGroups.query({}).then((gs) => gs.map((g) => g.title ?? '')))) as string[];
+  console.log(
+    `\nbaseline capture: captured ${JSON.stringify(captured)} (must be ["organizer"]); groups left on the strip ${JSON.stringify(after)} ` +
+      `(must still include "mine"); status: ${status}`,
+  );
+  await ctl.evaluate(async (g) => {
+    const ids = (await chrome.tabs.query({ groupId: g })).map((t) => t.id!);
+    if (ids.length) await chrome.tabs.ungroup(ids);
+  }, mine);
+  await page.close();
+  await ctl.close();
+}
+
 async function main(): Promise<void> {
   const site = await startSite();
   const userDataDir = mkdtempSync(join(tmpdir(), 'tab-amnesty-check-'));
@@ -323,6 +375,7 @@ async function main(): Promise<void> {
 
     // 5. The x-ray page: renders, breaks no §6 rule, and exports a loadable fixture.
     await checkXray(browser, extId, userDataDir);
+    await checkBaselineCapture(browser, extId, userDataDir);
   } finally {
     await browser.close();
   }

@@ -114,12 +114,27 @@ function nameOr(fallback: string): string {
 // For the study: Chrome's own grouping as the baseline
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * Groups that already existed when this page opened are not Chrome's organiser output — they are
+ * the person's own, a saved group, or another tool's (Claude in Chrome names its groups "✅…"; the
+ * owner's first "baseline" was one of those). They are never captured and never ungrouped.
+ * Recorded once, at page load: open this page, THEN run Organize tabs, then capture.
+ */
+const groupsAtLoad: Promise<Set<number>> = chrome.tabGroups
+  .query({})
+  .then((gs) => new Set(gs.map((g) => g.id)))
+  .catch(() => new Set<number>());
+
 async function captureBaseline(traces: TabTrace[]): Promise<string> {
   const byTabId = new Map(traces.map((t) => [t.tabId, t.traceId]));
+  const before = await groupsAtLoad;
   const tabs = await chrome.tabs.query({});
-  const groupsRaw = await chrome.tabGroups.query({});
+  const all = await chrome.tabGroups.query({});
+  const groupsRaw = all.filter((g) => !before.has(g.id));
+  const leftAlone = all.length - groupsRaw.length;
+  const note = leftAlone ? ` ${leftAlone === 1 ? 'One group' : 'Some groups'} that were already there when this page opened ${leftAlone === 1 ? 'was' : 'were'} left alone.` : '';
   if (groupsRaw.length === 0) {
-    return 'No tab groups found. Run Chrome’s Organize tabs and accept its groups first.';
+    return `No new tab groups since this page opened. Run Chrome's Organize tabs now, accept its groups, then click again.${note}`;
   }
   const groups = groupsRaw.map((g) => ({
     name: g.title ?? '',
@@ -128,9 +143,9 @@ async function captureBaseline(traces: TabTrace[]): Promise<string> {
   }));
   const grouped = new Set(groups.flatMap((g) => g.traceIds));
   const ungrouped = traces.map((t) => t.traceId).filter((id) => !grouped.has(id));
-  download(`${nameOr('browser')}.chrome.json`, { method: 'captured', capturedAt: Date.now(), groups, ungrouped });
+  download(`${nameOr('browser')}.chrome.json`, { method: 'captured', capturedAt: Date.now(), groups, ungrouped, preexistingGroupsIgnored: leftAlone });
 
-  // Put the strip back. Saved/synced groups refuse this (§5.6); say so rather than leave it silent.
+  // Put the strip back — only the groups Organize tabs just made. Saved groups refuse (§5.6); say so.
   const locked: string[] = [];
   for (const g of groupsRaw) {
     const ids = tabs.filter((t) => t.groupId === g.id && t.id !== undefined).map((t) => t.id!);
@@ -141,8 +156,8 @@ async function captureBaseline(traces: TabTrace[]): Promise<string> {
     }
   }
   return locked.length
-    ? `Saved. Chrome would not let me undo ${locked.length === 1 ? 'one group' : 'some groups'} (${locked.join(', ')}) — those are saved groups; you can ungroup them by hand.`
-    : 'Saved, and your tab strip is back to how it was.';
+    ? `Saved. Chrome would not let me undo ${locked.length === 1 ? 'one group' : 'some groups'} (${locked.join(', ')}) — those are saved groups; you can ungroup them by hand.${note}`
+    : `Saved, and the groups Organize tabs made are undone.${note}`;
 }
 
 // ---------------------------------------------------------------------------------------------
