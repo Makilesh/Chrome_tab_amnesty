@@ -12,7 +12,7 @@ import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../../cluster/
 import { studySummary } from '../../archive/study';
 import { getCards } from '../../archive/store';
 import { getMeta, getOpenTraces } from '../../collector/db';
-import { reduceUrl } from '../../collector/url';
+import { redactTrace } from '../../collector/redact';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -69,17 +69,9 @@ async function render(): Promise<TabTrace[]> {
 
 type Mode = 'full' | 'shareable';
 
-function redact(t: TabTrace): TabTrace {
-  return {
-    ...t,
-    url: reduceUrl(t.url),
-    queryKeys: Object.fromEntries(Object.keys(t.queryKeys).map((k) => [k, ''])),
-    digest: t.digest ? { ...t.digest, leadText: '' } : null,
-  };
-}
 
 function fixture(traces: TabTrace[], mode: Mode): TraceFixture {
-  const out = mode === 'shareable' ? traces.map(redact) : traces;
+  const out = mode === 'shareable' ? traces.map(redactTrace) : traces;
   const times = traces.map((t) => t.openedAt);
   return {
     schemaVersion: SCHEMA_VERSION,
