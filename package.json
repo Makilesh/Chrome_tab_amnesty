@@ -26,6 +26,8 @@
     "refit": "node tools/py.mjs refit",
     "judge-sim": "node tools/py.mjs judge_sim",
     "laya-probe": "node tools/py.mjs laya_probe",
+    "compare": "node tools/py.mjs judge_compare",
+    "nano": "tsx tools/judge-nano.ts",
     "synth": "node tools/py.mjs synth",
     "pytest": "node tools/py.mjs pytest",
     "cluster:python": "node tools/py.mjs cli cluster"
