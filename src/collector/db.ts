@@ -60,9 +60,21 @@ interface TabAmnestyDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<TabAmnestyDB>> | null = null;
 
-/** Cached connection. Safe to cache: if the worker dies the module re-evaluates and re-opens. */
+/**
+ * Cached connection. Safe to cache: if the worker dies the module re-evaluates and re-opens.
+ *
+ * Builds of different ages can share this database: Chrome keeps running the worker it registered
+ * until the extension is reloaded, while pages load whatever build is on disk. So this connection
+ * gives way when a newer build asks to upgrade, and a database already past DB_VERSION is opened
+ * as it is — later versions only ever add stores. The 11 Sep worker had neither and recorded
+ * nothing for two weeks once a Phase 1 page moved the database to v2 (DECISIONS 2026-10-06).
+ */
 export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
   if (!dbPromise) {
+    const giveWay = (d: IDBPDatabase<TabAmnestyDB>) => () => {
+      d.close();
+      dbPromise = null;
+    };
     dbPromise = openDB<TabAmnestyDB>(DB_NAME, DB_VERSION, {
       upgrade(d, oldVersion) {
         if (oldVersion < 1) {
@@ -77,7 +89,19 @@ export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
           d.createObjectStore('jobs', { keyPath: 'jobId' }).createIndex('byState', 'state');
         }
       },
-    });
+    })
+      .catch(async (e: unknown) => {
+        if ((e as { name?: string })?.name !== 'VersionError') throw e;
+        return openDB<TabAmnestyDB>(DB_NAME);
+      })
+      .then((d) => {
+        d.addEventListener('versionchange', giveWay(d));
+        return d;
+      })
+      .catch((e: unknown) => {
+        dbPromise = null; // the next call tries again instead of failing forever
+        throw e;
+      });
   }
   return dbPromise;
 }

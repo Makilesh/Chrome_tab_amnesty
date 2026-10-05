@@ -21,7 +21,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
-import { NAME_SAMPLING, namePrompt, quickName } from '../src/archive/naming';
+import { languagesToTry } from '../src/archive/language';
+import { languageHints, NAME_SAMPLING, namePrompt, quickName } from '../src/archive/naming';
 import type { Community, TabTrace } from '../src/cluster/types';
 
 const CHROME = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
@@ -61,12 +62,17 @@ async function launch(): Promise<Browser> {
   });
 }
 
+/** Availability for what the extension asks: English text in and out (Chrome warns without it). */
 async function availability(page: Page) {
-  return page.evaluate(async () => ({
-    languageModel: typeof LanguageModel === 'undefined' ? 'API not exposed' : await LanguageModel.availability(),
-    summarizer: typeof Summarizer === 'undefined' ? 'API not exposed' : await Summarizer.availability(),
-    chrome: navigator.userAgent.match(/Chrome\/[\d.]+/)?.[0] ?? '?',
-  }));
+  return page.evaluate(
+    async (hints) => ({
+      languageModel: typeof LanguageModel === 'undefined' ? 'API not exposed' : await LanguageModel.availability(hints),
+      summarizer:
+        typeof Summarizer === 'undefined' ? 'API not exposed' : await Summarizer.availability({ expectedInputLanguages: ['en'], outputLanguage: 'en' }),
+      chrome: navigator.userAgent.match(/Chrome\/[\d.]+/)?.[0] ?? '?',
+    }),
+    languageHints('en'),
+  );
 }
 
 interface Items {
@@ -91,16 +97,17 @@ const PAIR_SCHEMA = {
 };
 /**
  * One prompt in a fresh session (system prompt only), returning parsed JSON and milliseconds.
- * `sampling` is tried first and dropped if this Chrome refuses it, exactly as the extension does.
+ * `sampling` is tried first and dropped if this Chrome refuses it, exactly as the extension does;
+ * `hints` are the language hints (English unless given, as the extension asks on an English browser).
  */
-async function ask(page: Page, system: string, text: string, schema: object, sampling?: object): Promise<{ json: any; ms: number }> {
+async function ask(page: Page, system: string, text: string, schema: object, sampling?: object, hints: object = languageHints('en')): Promise<{ json: any; ms: number }> {
   return page.evaluate(
-    async (system, text, schema, sampling) => {
+    async (system, text, schema, sampling, hints) => {
       const t0 = performance.now();
-      const initialPrompts = [{ role: 'system' as const, content: system }];
+      const base = { initialPrompts: [{ role: 'system' as const, content: system }], ...hints };
       const s = await (sampling
-        ? LanguageModel!.create({ initialPrompts, ...sampling }).catch(() => LanguageModel!.create({ initialPrompts }))
-        : LanguageModel!.create({ initialPrompts }));
+        ? LanguageModel!.create({ ...base, ...sampling }).catch(() => LanguageModel!.create(base))
+        : LanguageModel!.create(base));
       try {
         const raw = await s.prompt(text, { responseConstraint: schema });
         return { json: JSON.parse(raw), ms: performance.now() - t0 };
@@ -112,6 +119,7 @@ async function ask(page: Page, system: string, text: string, schema: object, sam
     text,
     schema,
     sampling ?? null,
+    hints,
   );
 }
 
@@ -124,11 +132,12 @@ const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLow
 async function nameGroups(page: Page, b: Items['browsers'][number], byId: Map<string, TabTrace>, corpus: TabTrace[]) {
   const taken: string[] = [];
   const out: { name: string; shown: string; repeat: boolean; ms: number }[] = [];
+  const hints = languageHints(languagesToTry(await page.evaluate(() => navigator.language))[0]!);
   for (const g of b.groups) {
     const members = g.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
     const heuristic = quickName({ id: g.id, traceIds: g.traceIds }, byId, corpus).name;
     const { system, text, schema } = namePrompt(members, byId, taken);
-    const r = await ask(page, system, text, schema, NAME_SAMPLING);
+    const r = await ask(page, system, text, schema, NAME_SAMPLING, hints);
     const name = String(r.json.name ?? '').trim();
     const repeat = !name || taken.some((t) => same(t, name));
     if (!repeat) taken.push(name);

@@ -118,6 +118,7 @@ its own singleton cluster, applied identically to both partitions.
 - Prefer deleting scope to adding it.
 - `dist/` is the owner's live install. Never rebuild it as a side effect: `npm run check` and
   `npm run walkthrough` build into `.check-build/`. If you run `npm run build`, tell the owner to
-  press Reload in chrome://extensions — a rebuilt `dist/` under a loaded extension stopped the
-  owner's collector for two weeks (DECISIONS 2026-10-05). `npm run read-profile` reads the owner's
-  records from disk without touching their browser.
+  press Reload in chrome://extensions — Chrome keeps the worker it registered until Reload while
+  pages load the new build, and on 19 Sep a new page upgraded the database under the 11 Sep worker:
+  two weeks recorded nothing (DECISIONS 2026-10-05, 2026-10-06). `npm run read-profile` reads the
+  owner's records from disk without touching their browser.

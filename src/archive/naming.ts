@@ -10,6 +10,7 @@
  * `evidence()` and `heuristicName()` are pure and unit-tested; `nanoName()` touches the browser.
  */
 import { colorFor } from './card';
+import { inputLanguages, languagesToTry } from './language';
 import { GROUP_COLORS, type GroupColor, type GroupName, MAX_NAME_CHARS } from './types';
 import { describe, type Description } from '../cluster/describe';
 import { STOP } from '../cluster/lexical';
@@ -177,12 +178,25 @@ function sameName(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-export async function nanoAvailable(): Promise<boolean> {
-  try {
-    return typeof LanguageModel !== 'undefined' && (await LanguageModel.availability()) === 'available';
-  } catch {
-    return false;
+/** The language hints for one name request — the same for `availability()` and `create()`. */
+export function languageHints(lang: string): Pick<LanguageModelCreateOptions, 'expectedInputs' | 'expectedOutputs'> {
+  return {
+    expectedInputs: [{ type: 'text', languages: inputLanguages(lang) }],
+    expectedOutputs: [{ type: 'text', languages: [lang] }],
+  };
+}
+
+/** The language the model can name groups in on this machine, or null when it cannot here. */
+export async function nanoLanguage(ui?: string): Promise<string | null> {
+  if (typeof LanguageModel === 'undefined') return null;
+  for (const lang of languagesToTry(ui)) {
+    try {
+      if ((await LanguageModel.availability(languageHints(lang))) === 'available') return lang;
+    } catch {
+      // this Chrome refuses that language; try the next
+    }
   }
+  return null;
 }
 
 /**
@@ -196,12 +210,13 @@ export async function nanoName(
   fallbackColor: GroupColor,
   taken: string[] = [],
 ): Promise<GroupName | null> {
-  if (!(await nanoAvailable())) return null;
+  const lang = await nanoLanguage();
+  if (!lang) return null;
   const { system, text, schema } = namePrompt(members, byId, taken);
   let session: LanguageModelSession | null = null;
   try {
-    const initialPrompts = [{ role: 'system' as const, content: system }];
-    session = await LanguageModel!.create({ initialPrompts, ...NAME_SAMPLING }).catch(() => LanguageModel!.create({ initialPrompts }));
+    const base = { initialPrompts: [{ role: 'system' as const, content: system }], ...languageHints(lang) };
+    session = await LanguageModel!.create({ ...base, ...NAME_SAMPLING }).catch(() => LanguageModel!.create(base));
     const parsed = JSON.parse(await session.prompt(text, { responseConstraint: schema })) as { name?: unknown; color?: unknown };
     const name = typeof parsed.name === 'string' ? clampName(parsed.name) : '';
     if (!name || taken.some((t) => sameName(t, name))) return null;
