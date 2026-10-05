@@ -78,9 +78,11 @@ async function load(): Promise<void> {
 }
 
 async function upgradeNames(byId: Map<string, TabTrace>): Promise<void> {
+  const taken: string[] = []; // names the model already gave other groups in this sweep
   for (const g of [...groups]) {
-    const better = await betterName(g.community, byId, g.name);
+    const better = await betterName(g.community, byId, g.name, taken);
     if (!better || !groups.includes(g)) continue;
+    taken.push(better.name);
     g.name = better;
     const h = g.el?.querySelector('h2');
     if (h) {

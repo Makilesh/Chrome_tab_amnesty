@@ -97,6 +97,24 @@ def run_laya(items: dict, checkpoint: str = "english") -> dict:
     return out
 
 
+def _labels_for(name: str) -> dict | None:
+    if name.startswith("generated-"):
+        from .judge_sim import make_realistic
+        return make_realistic(int(name.split("-", 1)[1]))[1]
+    p = FIXTURES / f"{name}.labels.json"
+    return load_labels(p) if p.exists() else None
+
+
+def _truth(labels: dict | None, ids: list[str]) -> str:
+    """The group's majority project and its share of the group — what a good name should say."""
+    if not labels:
+        return "-"
+    from collections import Counter
+    c = Counter(labels.get(i) for i in ids)
+    top, n = c.most_common(1)[0]
+    return f"{top or '(no project)'} {n}/{len(ids)}"
+
+
 def _fmt(v) -> str:
     return "   -  " if v is None or (isinstance(v, float) and math.isnan(v)) else f"{v:6.3f}"
 
@@ -135,15 +153,20 @@ def report(items: dict, laya: dict | None, nano: dict | None, extra: dict | None
                 if "ms_per_pair" in d:
                     print(f"   {label} time per pair: {d['ms_per_pair']:.0f} ms")
         if b["groups"]:
-            print("   per group:  heuristic name  |  Laya activity  |  Nano activity  |  Nano name")
+            labels = _labels_for(name)
+            before = N.get("groups_before")
+            print("   per group:  truth (majority project, share) | heuristic | Laya activity | Nano name" + (" before -> now" if before else ""))
             hn = N.get("heuristic", [])
             for i, g in enumerate(b["groups"]):
                 lg = (L.get("groups") or [None] * len(b["groups"]))[i]
                 ng = (N.get("groups") or [None] * len(b["groups"]))[i]
                 hosts = sorted({t["host"] for t in b["traces"] if t["traceId"] in set(g["traceIds"])})[:3]
-                print(f"   {len(g['traceIds']):2d} tabs  {(hn[i] if i < len(hn) else '?'):16s} | "
-                      f"{(lg['activity'] + f' ({lg['p']:.2f})') if lg else '-':40s} | "
-                      f"{(ng.get('activity') or '-') if ng else '-':32s} | {(ng.get('name') or '-') if ng else '-':24s}  ({', '.join(hosts)})")
+                now = (ng.get("name") or "-") if ng else "-"
+                if ng and ng.get("repeat"):
+                    now += " (model repeated a name; fallback kept)"
+                nano_col = f"{before[i]} -> {now}" if before else now
+                print(f"   {len(g['traceIds']):2d} tabs  {_truth(labels, g['traceIds']):26s} | {(hn[i] if i < len(hn) else '?'):14s} | "
+                      f"{(lg['activity']) if lg else '-':28s} | {nano_col}   ({', '.join(hosts)})")
         print()
 
 
