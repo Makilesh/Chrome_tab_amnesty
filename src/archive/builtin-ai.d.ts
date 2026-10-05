@@ -16,15 +16,23 @@ interface LanguageModelSession {
   destroy(): void;
 }
 
+/** What a session will be given or asked to produce. Chrome warns when no output language is named. */
+interface LanguageModelExpected {
+  type: 'text' | 'image' | 'audio';
+  languages?: string[];
+}
+
 interface LanguageModelCreateOptions {
   initialPrompts?: { role: 'system' | 'user' | 'assistant'; content: string }[];
+  expectedInputs?: LanguageModelExpected[];
+  expectedOutputs?: LanguageModelExpected[];
   temperature?: number;
   topK?: number;
   signal?: AbortSignal;
 }
 
 interface LanguageModelStatic {
-  availability(): Promise<AIAvailability>;
+  availability(options?: Pick<LanguageModelCreateOptions, 'expectedInputs' | 'expectedOutputs'>): Promise<AIAvailability>;
   create(options?: LanguageModelCreateOptions): Promise<LanguageModelSession>;
 }
 
@@ -33,6 +41,9 @@ interface SummarizerCreateOptions {
   format?: 'plain-text' | 'markdown';
   length?: 'short' | 'medium' | 'long';
   sharedContext?: string;
+  expectedInputLanguages?: string[];
+  expectedContextLanguages?: string[];
+  outputLanguage?: string;
   signal?: AbortSignal;
 }
 
@@ -42,7 +53,7 @@ interface SummarizerSession {
 }
 
 interface SummarizerStatic {
-  availability(): Promise<AIAvailability>;
+  availability(options?: Omit<SummarizerCreateOptions, 'signal'>): Promise<AIAvailability>;
   create(options?: SummarizerCreateOptions): Promise<SummarizerSession>;
 }
 

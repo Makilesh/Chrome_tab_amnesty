@@ -7,6 +7,7 @@
  * Summarizer is unavailable on this machine every pending job is marked so and nothing is retried
  * until something new is queued. Nothing leaves the machine.
  */
+import { inputLanguages, languagesToTry } from '../archive/language';
 import { pendingJobs, putJob, updateCard } from '../archive/store';
 import type { SummariseJob } from '../archive/types';
 
@@ -14,12 +15,22 @@ const BATCH = 4;
 const MAX_ATTEMPTS = 2;
 const MAX_INPUT_CHARS = 4000;
 
-async function summariserAvailable(): Promise<boolean> {
-  try {
-    return typeof Summarizer !== 'undefined' && (await Summarizer.availability()) === 'available';
-  } catch {
-    return false;
+function summaryOptions(lang: string): SummarizerCreateOptions {
+  const languages = inputLanguages(lang);
+  return { type: 'tl;dr', format: 'plain-text', length: 'short', expectedInputLanguages: languages, expectedContextLanguages: languages, outputLanguage: lang };
+}
+
+/** The language the Summarizer can write in on this machine, or null when it cannot here. */
+async function summaryLanguage(): Promise<string | null> {
+  if (typeof Summarizer === 'undefined') return null;
+  for (const lang of languagesToTry()) {
+    try {
+      if ((await Summarizer.availability(summaryOptions(lang))) === 'available') return lang;
+    } catch {
+      // this Chrome refuses that language; try the next
+    }
   }
+  return null;
 }
 
 async function inputFor(job: SummariseJob): Promise<{ text: string; context: string } | null> {
@@ -43,11 +54,12 @@ async function writeSummary(job: SummariseJob, summary: string): Promise<void> {
 }
 
 async function drain(): Promise<'empty' | 'unavailable'> {
-  if (!(await summariserAvailable())) {
+  const lang = await summaryLanguage();
+  if (!lang) {
     for (const j of await pendingJobs(1000)) await putJob({ ...j, state: 'unavailable' });
     return 'unavailable';
   }
-  const s = await Summarizer!.create({ type: 'tl;dr', format: 'plain-text', length: 'short' });
+  const s = await Summarizer!.create(summaryOptions(lang));
   try {
     for (;;) {
       const batch = await pendingJobs(BATCH);

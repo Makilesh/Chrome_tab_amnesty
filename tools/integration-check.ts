@@ -367,6 +367,50 @@ async function checkBaselineCapture(browser: Browser, extId: string, userDataDir
   await ctl.close();
 }
 
+/**
+ * A page from a newer build moves the database past this build's version while the worker is
+ * running — what Chrome does when `dist/` is rebuilt without a Reload, and what stopped the owner's
+ * recording from 20 Sep to 5 Oct (DECISIONS 2026-10-06). The worker must let the upgrade through
+ * and keep recording into the newer database.
+ */
+async function checkNewerDatabase(browser: Browser, extId: string, origin: string): Promise<void> {
+  const tab = await browser.newPage();
+  await tab.goto(`${origin}/before-upgrade`, { waitUntil: 'load' });
+  await sleep(500); // the worker has just written, so its connection is open
+  const ctl = await browser.newPage();
+  await ctl.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  const upgrade = (await ctl.evaluate(
+    () =>
+      new Promise<string>((done) => {
+        const req = indexedDB.open('tab-amnesty', 99);
+        const timer = setTimeout(() => done('BLOCKED for 5 s by an open connection'), 5000);
+        req.onsuccess = () => {
+          clearTimeout(timer);
+          const v = req.result.version;
+          req.result.close();
+          done(`went through (now v${v})`);
+        };
+        req.onerror = () => {
+          clearTimeout(timer);
+          done(`failed: ${req.error?.name}`);
+        };
+      }),
+  )) as string;
+  await ctl.close();
+  const after = await browser.newPage();
+  await after.goto(`${origin}/after-upgrade`, { waitUntil: 'load' });
+  await sleep(1500);
+  const traces = await readTraces(browser, extId).catch((e: Error) => {
+    console.log(`  reading traces failed: ${e.message}`);
+    return [] as TabTrace[];
+  });
+  const recorded = traces.some((t) => t.url.endsWith('/after-upgrade'));
+  console.log(`
+newer database: a newer page's upgrade ${upgrade}; a tab opened afterwards was recorded: ${recorded} (must be true)`);
+  await after.close();
+  await tab.close();
+}
+
 async function main(): Promise<void> {
   const site = await startSite();
   const userDataDir = mkdtempSync(join(tmpdir(), 'tab-amnesty-check-'));
@@ -457,6 +501,16 @@ async function main(): Promise<void> {
     } finally {
       await browser.close();
     }
+  }
+
+  // 9. Last, because it leaves the database at a version no build has: a newer build's upgrade.
+  browser = await launch(exe, userDataDir);
+  try {
+    const extId = await extensionId(browser);
+    await sleep(1500);
+    await checkNewerDatabase(browser, extId, site.origin);
+  } finally {
+    await browser.close();
   }
   site.close();
 }

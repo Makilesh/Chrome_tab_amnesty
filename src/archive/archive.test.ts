@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { TabTrace, Transition } from '../cluster/types';
 import { buildCard, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
-import { clampName, evidence, heuristicName, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, rememberedName, rememberName, sharedTitleName } from './naming';
+import { inputLanguages, languagesToTry } from './language';
+import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, rememberedName, rememberName, sharedTitleName } from './naming';
 import { appendSnapshot, readGate, studySummary } from './study';
 import { GROUP_COLORS, UNDO_WINDOW_MS } from './types';
 
@@ -119,6 +120,19 @@ describe('naming', () => {
     expect(taken.text).toContain('Names already given to other groups: "Porto Trip", "Job Applications"');
     expect(taken.text).toContain('Do not reuse one');
     expect(NAME_SYSTEM).toContain('no abbreviations');
+  });
+
+  it('asks the model in the language of the browser when a model may have it, else English', () => {
+    expect(languagesToTry('en-IN')).toEqual(['en']);
+    expect(languagesToTry('de-DE')).toEqual(['de', 'en']);
+    expect(languagesToTry('ja')).toEqual(['ja', 'en']);
+    expect(languagesToTry('hi-IN')).toEqual(['en']); // not offered by Chrome's models: English, never nothing
+    expect(languagesToTry('')).toEqual(['en']);
+    expect(inputLanguages('fr')).toEqual(['fr', 'en']);
+    expect(languageHints('de')).toEqual({
+      expectedInputs: [{ type: 'text', languages: ['de', 'en'] }],
+      expectedOutputs: [{ type: 'text', languages: ['de'] }],
+    });
   });
 
   it('evidence leads with timing, lineage and switching, never with a judgement', () => {

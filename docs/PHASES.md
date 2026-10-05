@@ -115,7 +115,12 @@ minutes after the Phase 1 build rewrote `dist/`), until the owner reloaded the e
 one 10-tab "AWS" group holding First Commit, Buildathon, Luma events and a careers page (four
 draft projects, or one "hackathons & events" project — only the owner can say), the job hunt split
 in two. Against DRAFT labels: ARI 0.371; S1+S2+S8 zeroed +0.042 (wrong direction); S1 alone −0.014.
-Fixed: automated runs never write `dist/` again (DECISIONS 2026-10-05).
+Fixed: automated runs never write `dist/` again (DECISIONS 2026-10-05). Cause found 06 Oct: Chrome
+kept the worker it registered on 11 Sep through every rebuild; a Phase 1 page moved the database to
+v2 on 19 Sep and that worker could never open it again (VersionError in chrome://extensions). The
+collector now survives this and `npm run check` reproduces it (DECISIONS 2026-10-06). It also means
+every owner record up to 20 Sep was written by the 11 Sep collector (first backfill rule — timing
+the clusterer already treats as unknown).
 
 **Owner's browser after the reload (05 Oct, `makilesh-now`, read with `tools/read-profile.ts`):**
 recording is live again (a test tab and its digest were recorded within seconds). 59 tabs open,
@@ -211,6 +216,9 @@ Search · any MCP · any cloud default · any auto-close · settings beyond the 
       non-English titles get a content signal; 1,000 tabs group and name in ~0.7 s. Open: the
       Chrome Web Store (owner's decision) and Gemini Nano on `downloadable` machines (owner's
       decision) — until then most users see fallback names.
+- [x] Mixed builds (06 Oct): a page from a newer build upgrading the database no longer stops the
+      recorder (`npm run check` step 9, fails on the old code); built-in model calls name their
+      languages, so chrome://extensions stays clean (DECISIONS 2026-10-06)
 
 ### Done when
 - [ ] A real 100+ tab browser can be swept, grouped, named, archived group-by-group (needs the owner's
