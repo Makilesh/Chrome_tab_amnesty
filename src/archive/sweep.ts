@@ -5,7 +5,7 @@
  * so a crash between the two leaves the person with an extra card, never a lost tab.
  */
 import type { Community, TabTrace } from '../cluster/types';
-import { deleteTrace, updateTrace } from '../collector/db';
+import { deleteTrace, getTrace, updateTrace } from '../collector/db';
 import { buildCard, inStripOrder, restoreOrder, undoable } from './card';
 import { isNeverRemembered } from './forget';
 import { enqueue, getCard, getNeverRemember, putCard, updateCard } from './store';
@@ -15,6 +15,14 @@ export interface GroupResult {
   groupId: number | null;
   /** §5.6: a saved/synced group refused the edit. The clustering stands; the strip was not changed. */
   locked: boolean;
+  /** Tabs that were already in a group of the person's (or another tool's) and were left there. */
+  leftInPlace: number;
+}
+
+export interface ArchiveResult {
+  card: ArchiveCard | null;
+  /** Tabs left open because they hold text the person typed and has not sent (TabTrace.typing). */
+  keptOpen: TabTrace[];
 }
 
 /** Live tab ids for a set of traces, in strip order, skipping tabs that no longer exist. */
@@ -27,25 +35,40 @@ function isSavedGroupError(e: unknown): boolean {
   return /saved group/i.test((e as Error)?.message ?? '');
 }
 
-/** Write one community to the tab strip as a named, coloured group. */
+/**
+ * Write one community to the tab strip as a named, coloured group. Tabs that are already in a
+ * group stay where they are: that group is the person's own, a saved one, or another tool's, and
+ * pulling tabs out of it would undo their organising (and saved groups refuse anyway, §5.6).
+ */
 export async function groupOnStrip(members: TabTrace[], name: GroupName): Promise<GroupResult> {
-  const tabIds = await liveTabIds(members);
-  if (tabIds.length === 0) return { groupId: null, locked: false };
+  const live = new Map((await chrome.tabs.query({})).map((t) => [t.id, t]));
+  const ids = inStripOrder(members).map((t) => t.tabId).filter((id) => live.has(id));
+  const free = ids.filter((id) => (live.get(id)!.groupId ?? -1) === -1);
+  const leftInPlace = ids.length - free.length;
+  if (free.length === 0) return { groupId: null, locked: false, leftInPlace };
   try {
-    // Tabs already in a saved group cannot be moved out of it (§5.6); chrome.tabs.group throws.
-    const groupId = await chrome.tabs.group({ tabIds });
+    const groupId = await chrome.tabs.group({ tabIds: free });
     await chrome.tabGroups.update(groupId, { title: name.name, color: name.color });
-    return { groupId, locked: false };
+    return { groupId, locked: false, leftInPlace };
   } catch (e) {
-    if (isSavedGroupError(e)) return { groupId: null, locked: true };
+    if (isSavedGroupError(e)) return { groupId: null, locked: true, leftInPlace };
     throw e;
+  }
+}
+
+/** Undo "show on strip": ungroup exactly the groups it made, if they still exist. */
+export async function ungroupOurs(groupIds: number[]): Promise<void> {
+  for (const g of groupIds) {
+    const ids = (await chrome.tabs.query({ groupId: g })).map((t) => t.id).filter((id): id is number => id !== undefined);
+    if (ids.length) await chrome.tabs.ungroup(ids).catch(() => {});
   }
 }
 
 /**
  * Archive & close, one group at a time. Tabs on never-remember sites are closed but not
- * archived, and their records go with them (§6.10). Returns the card, or null if nothing was
- * left to archive.
+ * archived, and their records go with them (§6.10). Tabs holding unsent typing are neither
+ * archived nor closed — they stay open, and the caller says so. Returns the card (null if nothing
+ * was left to archive) and the tabs kept open.
  */
 export async function archiveAndClose(
   community: Community,
@@ -53,10 +76,14 @@ export async function archiveAndClose(
   name: GroupName,
   when: string,
   hosts: string[],
-): Promise<ArchiveCard | null> {
+): Promise<ArchiveResult> {
+  // Re-read each record now: the person may have started typing after the page was drawn.
+  const fresh = await Promise.all(members.map(async (t) => (await getTrace(t.traceId)) ?? t));
+  const keptOpen = fresh.filter((t) => t.typing === true);
+  const closable = fresh.filter((t) => t.typing !== true);
   const never = await getNeverRemember();
-  const kept = members.filter((t) => !isNeverRemembered(t, never));
-  const dropped = members.filter((t) => isNeverRemembered(t, never));
+  const kept = closable.filter((t) => !isNeverRemembered(t, never));
+  const dropped = closable.filter((t) => isNeverRemembered(t, never));
 
   const card = buildCard(community, kept, name, when, hosts);
   if (kept.length > 0) {
@@ -71,9 +98,9 @@ export async function archiveAndClose(
   // Never-remember records go before the tabs close, so the collector's onRemoved finds nothing
   // to mark and cannot resurrect them; the archived ones it marks closedAt as usual.
   for (const t of dropped) await deleteTrace(t.traceId);
-  const tabIds = await liveTabIds(members);
+  const tabIds = await liveTabIds(closable);
   if (tabIds.length) await chrome.tabs.remove(tabIds);
-  return kept.length > 0 ? card : null;
+  return { card: kept.length > 0 ? card : null, keptOpen };
 }
 
 /**

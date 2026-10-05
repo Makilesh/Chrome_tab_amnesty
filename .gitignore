@@ -17,3 +17,4 @@ Claude outputs/*
 .walkthrough.log
 .real/
 .check-build/
+release/

@@ -17,6 +17,7 @@
     "labels": "tsx tools/labels-template.ts",
     "phase1": "tsx tools/phase1-report.ts",
     "walkthrough": "npm run build:check && tsx tools/walkthrough.ts",
+    "package": "node tools/package.mjs",
     "read-profile": "tsx tools/read-profile.ts",
     "score": "node tools/py.mjs cli score",
     "ablate": "node tools/py.mjs cli ablate",

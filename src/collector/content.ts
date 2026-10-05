@@ -92,6 +92,36 @@ document.addEventListener('visibilitychange', () => {
 });
 if (document.visibilityState === 'visible') firstVisibleSent = true;
 
+// ---------------------------------------------------------------------------------------------
+// Unsent typing — a yes/no only, never the text. See TabTrace.typing.
+// ---------------------------------------------------------------------------------------------
+
+const NOT_TEXT = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
+let typing = false;
+
+function isTextField(target: EventTarget | null): target is HTMLElement {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target instanceof HTMLTextAreaElement) return true;
+  return target instanceof HTMLInputElement && !NOT_TEXT.has(target.type);
+}
+
+function hasText(el: HTMLElement): boolean {
+  const v = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.value : el.textContent ?? '';
+  return v.trim().length > 0;
+}
+
+function reportTyping(value: boolean): void {
+  if (value === typing) return;
+  typing = value;
+  chrome.runtime.sendMessage({ type: 'typing', url: location.href, typing: value }).catch(() => {});
+}
+
+document.addEventListener('input', (e) => {
+  if (isTextField(e.target) && hasText(e.target)) reportTyping(true);
+}, true);
+// Sent: the text is no longer only in this tab.
+document.addEventListener('submit', () => reportTyping(false), true);
+
 chrome.runtime.onMessage.addListener((msg: unknown) => {
   if ((msg as { type?: string } | undefined)?.type === 'capture') send('requested');
 });

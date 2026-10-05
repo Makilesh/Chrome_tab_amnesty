@@ -199,6 +199,14 @@ week later?
 ### Anti-scope
 Search · any MCP · any cloud default · any auto-close · settings beyond the never-remember list.
 
+- [x] User-compatibility review (05 Oct): runs in Chrome 153/154, Edge 154, Brave 154 (full
+      `npm run check` journey in each); Chrome 116+ declared; tester zip (`npm run package`) with
+      four install steps; Archive & close never closes a tab with unsent typing; "show on strip"
+      never touches existing groups and can be undone; a stopped recorder is shown, not hidden;
+      non-English titles get a content signal; 1,000 tabs group and name in ~0.7 s. Open: the
+      Chrome Web Store (owner's decision) and Gemini Nano on `downloadable` machines (owner's
+      decision) — until then most users see fallback names.
+
 ### Done when
 - [ ] A real 100+ tab browser can be swept, grouped, named, archived group-by-group (needs the owner's
       browser; the check does it on a 3-tab one)

@@ -166,7 +166,19 @@ async function captureBaseline(traces: TabTrace[]): Promise<string> {
 
 async function main(): Promise<void> {
   let traces = await render();
-  setInterval(() => void render().then((t) => (traces = t)), 5000);
+  // Re-group only when someone is looking, and at most once a minute: on a 1,000-tab browser a
+  // five-second refresh kept about a quarter of a CPU core busy for as long as the tab was open.
+  let last = Date.now();
+  const refresh = () => {
+    if (document.visibilityState !== 'visible' || Date.now() - last < 60_000) return;
+    last = Date.now();
+    void render().then((t) => (traces = t));
+  };
+  setInterval(refresh, 15_000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') last = 0;
+    refresh();
+  });
 
   const consent = $('consent');
   const updateConsent = () => (consent.textContent = CONSENT[mode()]);

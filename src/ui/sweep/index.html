@@ -56,6 +56,7 @@
       .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
       .toast button { background: transparent; color: inherit; border-color: currentColor; }
       .empty { color: var(--muted); }
+      .health { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 0 0 18px; color: var(--fg); background: var(--card); }
       .study { margin-top: 24px; font-size: 13px; color: var(--muted); }
       .study a { color: inherit; }
     </style>
@@ -63,7 +64,8 @@
   <body>
     <main>
       <h1>What you have open, by what you were doing</h1>
-      <p class="lede">Put a whole thing away in one go. Everything is kept and can come back any time.</p>
+      <p class="lede">Put a whole thing away in one go. Everything is kept on this computer and can come back any time.</p>
+      <p class="health" id="health" hidden>Tab Amnesty isn’t keeping up with your tabs right now, so these groups may be out of date. Switching it off and on again in <strong>chrome://extensions</strong> fixes this.</p>
       <div class="toolbar">
         <button id="strip">Show these groups on my tab strip</button>
         <span id="strip-status"></span>
