@@ -191,6 +191,8 @@ week later?
       Measured 05 Oct (docs/research-jev-laya.md §9): Gemini Nano names groups far better than the
       heuristic or Laya; the prompt now avoids stray-tab names, repeats and abbreviations, and a
       group keeps its name across sweeps.
+      Chrome enables Nano only with 22 GB free on the profile's drive: on the owner's machine the
+      model sat on C: unused (12.5 GB free). Many users will see fallback names on good hardware.
 - [x] Archive & close: one action per group; archive card (name, event label, per-tab line, full
       digest, restore URLs) to IndexedDB, then close. Never deletes. Never auto-runs.
 - [x] Undo: persisted, survives restart, reachable 24 h, restores whole group incl. order
