@@ -33,9 +33,9 @@
       .group h2 { font-size: 16px; font-weight: 600; margin: 0; }
       .group .when { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
       .group ul { list-style: none; margin: 0; padding: 0; }
-      .group li { padding: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 8px; align-items: baseline; }
-      .group li .t { overflow: hidden; text-overflow: ellipsis; }
-      .group li .host { color: var(--muted); font-size: 12px; flex: none; }
+      .group li, .loose li { padding: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 8px; align-items: baseline; }
+      .group li .t, .loose li .t { overflow: hidden; text-overflow: ellipsis; }
+      .group li .host, .loose li .host { color: var(--muted); font-size: 12px; flex: none; }
       .group li .sum { color: var(--muted); font-size: 13px; white-space: normal; }
       .group .note { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
       .group .done { color: var(--muted); }
@@ -45,6 +45,7 @@
       .more { margin: 4px 0 24px; }
       section.later { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px; }
       section.later h2 { font-size: 14px; color: var(--muted); font-weight: 500; margin: 0 0 10px; }
+      .loose ul { list-style: none; margin: 0; padding: 0; }
       .loose li { color: var(--muted); }
       details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       .never { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; }
