@@ -116,3 +116,8 @@ its own singleton cluster, applied identically to both partitions.
   as deliverables complete.
 - When a measurement comes out badly, say so plainly. A harness tuned to pass is worse than none.
 - Prefer deleting scope to adding it.
+- `dist/` is the owner's live install. Never rebuild it as a side effect: `npm run check` and
+  `npm run walkthrough` build into `.check-build/`. If you run `npm run build`, tell the owner to
+  press Reload in chrome://extensions — a rebuilt `dist/` under a loaded extension stopped the
+  owner's collector for two weeks (DECISIONS 2026-10-05). `npm run read-profile` reads the owner's
+  records from disk without touching their browser.

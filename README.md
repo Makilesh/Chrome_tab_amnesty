@@ -80,11 +80,13 @@ Extension (no Python needed):
 
 ```
 npm install
-npm run build            # dist/ — load unpacked in chrome://extensions
+npm run build            # dist/ — load unpacked in chrome://extensions, then press Reload there
+                         # after EVERY build: a rebuilt dist/ under a loaded extension stops it recording
 npm test                 # vitest: url features + clusterer
 npm run check:setup      # once: Chrome for Testing into ./chrome (branded Chrome ignores --load-extension)
 npm run check            # drives a real Chrome, prints what the collector recorded, restarts,
-                         # re-binds, audits the x-ray page, then runs parity (needs Python)
+                         # re-binds, audits the x-ray page, then runs parity (needs Python).
+                         # Builds into .check-build/ — never dist/, which is what your own Chrome loads
 ```
 
 Measurement (Python 3.11+):
@@ -99,6 +101,7 @@ npm run cluster <name>   # TS clusterer -> fixtures/<name>.partition.json
 npm run labels <name>    # write/refresh fixtures/<name>.labels.json; keeps labels already filled in
 npm run phase1 <name...> # Phase 1 gate from fixtures/<name>.study.json: presses, open count before vs day 7
 npm run walkthrough      # the whole product on real sites in a visible Chrome for Testing (~6 min, scripted)
+npm run read-profile     # read YOUR profile's records from disk (copy -> throwaway Chrome); no clicks needed
 npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
 npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
 npm run report a b c d e # per-browser chart -> fixtures/report.png

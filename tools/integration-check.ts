@@ -21,7 +21,8 @@ import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import type { ArchiveCard } from '../src/archive/types';
 import type { TabTrace } from '../src/cluster/types';
 
-const DIST = resolve('dist');
+/** Never dist/: that is the folder the owner's own Chrome loads (DECISIONS 2026-10-05). */
+const DIST = resolve('.check-build');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function findChrome(): string {
