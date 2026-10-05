@@ -1,6 +1,6 @@
 {
  "schemaVersion": 1,
- "exportedAt": 1791185477825,
+ "exportedAt": 1791185867442,
  "mode": "shareable",
  "traceCount": 34,
  "openedAtMin": 1789155491928.174,
@@ -19,17 +19,17 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "https://builder.aws.com/connect/space/29f78273-9a25-34b1-818f-eec9b0bacb31/wemakedevs",
+   "url": "https://builder.aws.com/connect/space/idbc60131c7395-id431c65dd7d99-id7ee73910eac9-iddf90b26f0f19-id44c66f56a63d/wemakedevs",
    "host": "builder.aws.com",
    "eTLD1": "aws.com",
    "pathTokens": [
     "connect",
     "space",
-    "29f78273",
-    "9a25",
-    "34b1",
-    "818f",
-    "eec9b0bacb31",
+    "idbc60131c7395",
+    "id431c65dd7d99",
+    "id7ee73910eac9",
+    "iddf90b26f0f19",
+    "id44c66f56a63d",
     "wemakedevs"
    ],
    "queryKeys": {
@@ -146,13 +146,13 @@
     "a7f29540-480c-4331-bc25-8678e8d5b2ce": 2,
     "7a665602-87f4-4b19-a7cf-e235a01f39e7": 1
    },
-   "url": "https://app.notion.com/p/Buildathon-3d2e0ff3425b80919e8ecc9ec6e98296",
+   "url": "https://app.notion.com/p/Buildathon-idbb7104f9edb8",
    "host": "app.notion.com",
    "eTLD1": "notion.com",
    "pathTokens": [
     "p",
     "buildathon",
-    "3d2e0ff3425b80919e8ecc9ec6e98296"
+    "idbb7104f9edb8"
    ],
    "queryKeys": {},
    "title": "(1) Buildathon | Notion",
@@ -246,12 +246,8 @@
     "wemakedevs"
    ],
    "queryKeys": {},
-   "title": "Discord",
-   "digest": {
-    "description": "wemakedevs.org is an inclusive global community for anyone passionate about technology. We foster collaboration and innovation through global hackathons an",
-    "headings": [],
-    "leadText": ""
-   },
+   "title": "",
+   "digest": null,
    "digestAt": 1789886875685,
    "pinned": false,
    "discarded": false,
@@ -410,17 +406,8 @@
     "0"
    ],
    "queryKeys": {},
-   "title": "AWS credits issue: sorted - [email] - Gmail",
-   "digest": {
-    "description": "Google's approach to email",
-    "headings": [
-     "GmailSearch mailtabActive",
-     "Labels",
-     "AWS credits issue: sorted",
-     "[email] Unsubscribe"
-    ],
-    "leadText": ""
-   },
+   "title": "",
+   "digest": null,
    "digestAt": 1789886865515,
    "pinned": false,
    "discarded": false,
@@ -444,13 +431,13 @@
     "b038107d-29a3-4129-b556-a277c5efb019": 2,
     "ed2ba61c-fb6d-4a65-976a-4f2842ef65e8": 2
    },
-   "url": "https://paypal.eightfold.ai/careers/job/274922421881",
+   "url": "https://paypal.eightfold.ai/careers/job/276620201652",
    "host": "paypal.eightfold.ai",
    "eTLD1": "eightfold.ai",
    "pathTokens": [
     "careers",
     "job",
-    "274922421881"
+    "276620201652"
    ],
    "queryKeys": {
     "hl": "",
@@ -503,25 +490,8 @@
     "gs_lp": "",
     "sclient": ""
    },
-   "title": "types of searches in google - Google Search",
-   "digest": {
-    "description": "",
-    "headings": [
-     "Search Results",
-     "Web results",
-     "In-Depth Guide to How Google Search Works",
-     "10 Common Search Queries to Target Your Audience Better",
-     "The Four Core Types of Searches—Plus Emerging Ones ...",
-     "Google Search Operators: The Complete List (44 ...",
-     "Advanced Google Search Techniques to Master",
-     "The Different Types of Google Searches | LNM",
-     "Advanced Search",
-     "11 Easy Search Symbols to Make Google Work Better for You",
-     "The 3 Essential Types of Searches",
-     "Share"
-    ],
-    "leadText": ""
-   },
+   "title": "",
+   "digest": null,
    "digestAt": 1789886866511,
    "pinned": false,
    "discarded": false,
@@ -542,13 +512,13 @@
    "coActive": {
     "c1db03f0-34bd-4475-85bc-0f869bc14edf": 1
    },
-   "url": "https://job-boards.greenhouse.io/cognite/jobs/4969944101",
+   "url": "https://job-boards.greenhouse.io/cognite/jobs/479424612433",
    "host": "job-boards.greenhouse.io",
    "eTLD1": "greenhouse.io",
    "pathTokens": [
     "cognite",
     "jobs",
-    "4969944101"
+    "479424612433"
    ],
    "queryKeys": {},
    "title": "Job Application for Academy Engineer - (Data Scientist- Training) at Cognite - AI for Industry",
@@ -713,9 +683,9 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "chrome-extension://nknndnngjadidaobedcikodiidodgflo/src/ui/xray/index.html",
-   "host": "nknndnngjadidaobedcikodiidodgflo",
-   "eTLD1": "nknndnngjadidaobedcikodiidodgflo",
+   "url": "chrome-extension://id76f303567549/src/ui/xray/index.html",
+   "host": "id76f303567549",
+   "eTLD1": "id76f303567549",
    "pathTokens": [
     "src",
     "ui",
@@ -745,11 +715,11 @@
     "a4039f41-d474-4547-9d9d-50c5c155ceae": 3,
     "ea995d2b-7860-4d9a-8fd1-ed91db1f4f15": 1
    },
-   "url": "https://app.phinite.ai/8REHIWx/workspace/KYNmcBa",
+   "url": "https://app.phinite.ai/id91db18b3a6ca/workspace/KYNmcBa",
    "host": "app.phinite.ai",
    "eTLD1": "phinite.ai",
    "pathTokens": [
-    "8rehiwx",
+    "id91db18b3a6ca",
     "workspace",
     "kynmcba"
    ],
@@ -1290,16 +1260,16 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "https://chatgpt.com/c/6a9c3141-6e0c-83e8-8eec-f04fe6b5ce33",
+   "url": "https://chatgpt.com/c/idd378b4d0a417-id4d4a9102f4fe-idba06bc4ea883-id23b72e691cd9-id1693dd3a0c90",
    "host": "chatgpt.com",
    "eTLD1": "chatgpt.com",
    "pathTokens": [
     "c",
-    "6a9c3141",
-    "6e0c",
-    "83e8",
-    "8eec",
-    "f04fe6b5ce33"
+    "idd378b4d0a417",
+    "id4d4a9102f4fe",
+    "idba06bc4ea883",
+    "id23b72e691cd9",
+    "id1693dd3a0c90"
    ],
    "queryKeys": {},
    "title": "Explain OpenTelemetry",
@@ -1328,9 +1298,9 @@
    "activationCount": 0,
    "dwellMs": 0,
    "coActive": {},
-   "url": "chrome-extension://nknndnngjadidaobedcikodiidodgflo/src/ui/xray/index.html",
-   "host": "nknndnngjadidaobedcikodiidodgflo",
-   "eTLD1": "nknndnngjadidaobedcikodiidodgflo",
+   "url": "chrome-extension://id76f303567549/src/ui/xray/index.html",
+   "host": "id76f303567549",
+   "eTLD1": "id76f303567549",
    "pathTokens": [
     "src",
     "ui",
@@ -1475,11 +1445,11 @@
     "ca3347c9-5144-429a-8bb3-a38541fcf2e6": 1,
     "468097a7-2127-4185-af28-784dfc571907": 2
    },
-   "url": "https://github.com/Connor9994/nodriver",
+   "url": "https://github.com/idb54c339601c1/nodriver",
    "host": "github.com",
    "eTLD1": "github.com",
    "pathTokens": [
-    "connor9994",
+    "idb54c339601c1",
     "nodriver"
    ],
    "queryKeys": {},

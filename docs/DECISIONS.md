@@ -294,3 +294,8 @@ Append; never rewrite history.
 - **Decision:** `npm run labels` carries `_status` and `_scripted` through a re-merge.
 - **Rejected:** Regenerating only `_comment`/`_how` (the previous behaviour).
 - **Why:** A re-merge silently dropped `_status: DRAFT … NOT confirmed by the owner`, which would have let Claude-proposed labels pass for the owner's.
+
+## 2026-10-05 — Shareable redaction also replaces ids, drops ambient and local-file content (security review)
+- **Decision:** `redactTraces(traces, salt)` replaces identifier-looking runs in host and path — a digit and 4+ characters, a mixed-case slug of 12+, any run of 20+ — with stand-ins that are equal for equal values within one export (random salt per export, never written) and stay numeric when the id was numeric. Mail, chat, calendar and search tabs keep no title or digest; `file:` tabs keep nothing but "local file". Consent text on the x-ray page says all of this.
+- **Rejected:** Dropping paths entirely (S6 and S7 need them); hashing whole path tokens (would change S7's token boundaries); leaving ambient tabs' text in (the clusterer excludes them; their headings are other people's subject lines).
+- **Why:** A background security review of the previous commit flagged sensitive-data exposure in `redact.ts`; on inspection, "shareable" files kept download tokens (an `ilovepdf.com/download/<token>` link is in the public history), document and workspace ids, local file paths and search queries. On the owner's data the new file gives the identical partition to the previous one and no signal moves by more than 2.3e-4 (S7, where an id also appears in a title). Already-public history still contains the old files.

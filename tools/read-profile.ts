@@ -23,7 +23,7 @@ import { globSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser } from 'puppeteer-core';
 import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../src/cluster/types';
-import { redactTrace } from '../src/collector/redact';
+import { redactTraces } from '../src/collector/redact';
 
 const DIST = resolve('dist');
 const OUT = resolve('.real');
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
     traceCount: open.length,
     openedAtMin: Math.min(...times),
     openedAtMax: Math.max(...times),
-    traces: open.map(redactTrace),
+    traces: redactTraces(open),
   };
   writeFileSync(`fixtures/${name}.json`, JSON.stringify(fixture, null, 1) + '\n');
 
