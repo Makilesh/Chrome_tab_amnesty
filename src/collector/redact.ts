@@ -23,6 +23,7 @@
  *   - Page text (leadText) is dropped.
  */
 import { isAmbient } from '../cluster/affinity';
+import { decodeSegment } from '../cluster/lexical';
 import type { TabTrace } from '../cluster/types';
 
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
@@ -77,16 +78,27 @@ export function redactTraces(traces: TabTrace[]): TabTrace[] {
   const remember = (s: string) => {
     for (const run of s.match(RUN) ?? []) if (looksLikeId(run)) idKeys.add(run.toLowerCase());
   };
+  // Ids are looked for in DECODED text: in "/my%20notes" the run "20notes" is an escape plus a
+  // word, not an id. S7 decodes path tokens the same way (lexical.decodeSegment).
+  const decodePath = (p: string) => p.split('/').map(decodeSegment).join('/');
   for (const t of traces) {
     remember(t.host ?? '');
     try {
-      remember(new URL(t.url).pathname);
+      remember(decodePath(new URL(t.url).pathname));
     } catch {
       /* not a URL */
     }
-    for (const p of t.pathTokens ?? []) remember(p);
+    for (const p of t.pathTokens ?? []) remember(decodeSegment(p));
   }
   const swap = (s: string) => s.replace(RUN, (run) => (idKeys.has(run.toLowerCase()) ? stand(run.toLowerCase()) : run));
+  /** A path token: decoded, ids swapped, re-encoded if it was encoded — S6 sees the same
+   *  equalities, and S7 (which decodes) sees the same words with ids renamed. */
+  const swapToken = (p: string) => {
+    const d = decodeSegment(p);
+    if (d === p) return swap(p);
+    const s = swap(d);
+    return s === d ? p : encodeURIComponent(s);
+  };
 
   return traces.map((t) => {
     if (/^file:/i.test(t.url)) {
@@ -95,7 +107,7 @@ export function redactTraces(traces: TabTrace[]): TabTrace[] {
     let url = '';
     try {
       const u = new URL(t.url);
-      url = `${u.protocol}//${swap(u.host)}${swap(u.pathname)}`;
+      url = `${u.protocol}//${swap(u.host)}${swap(decodePath(u.pathname))}`;
     } catch {
       url = '';
     }
@@ -105,7 +117,7 @@ export function redactTraces(traces: TabTrace[]): TabTrace[] {
       url,
       host: swap(t.host ?? ''),
       eTLD1: swap(t.eTLD1 ?? ''),
-      pathTokens: (t.pathTokens ?? []).map(swap),
+      pathTokens: (t.pathTokens ?? []).map(swapToken),
       queryKeys: Object.fromEntries(Object.keys(t.queryKeys ?? {}).map((k) => [k, ''])),
       title: ambient ? '' : scrubText(t.title ?? ''),
       digest:

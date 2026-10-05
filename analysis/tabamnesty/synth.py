@@ -137,10 +137,22 @@ def write(name: str, out_dir: Path, seed: int = 1) -> None:
 # Adversarial fixtures: positive controls for the ablation. Four projects on the SAME host with
 # the SAME vocabulary, INTERLEAVED in time and on the tab strip, distinguishable by exactly one
 # behavioural signal. If zeroing that signal does not crater ARI here, the ablation is broken.
+# `multilingual` is the one content control: each project has its own vocabulary in its own
+# script and only S7 can tell them apart. It also keeps non-English text under `npm run parity`.
 # Mechanics only — never counts toward the gate.
 # ---------------------------------------------------------------------------------------------
 
-ADVERSARIAL = ("lineage", "coactive", "temporal")
+ADVERSARIAL = ("lineage", "coactive", "temporal", "multilingual")
+
+# Hindi, Tamil, Japanese (no spaces between words), German (accents). Titles are two words drawn
+# from one row; the shared path is percent-encoded Japanese, as chrome gives it to us.
+MULTILINGUAL_VOCAB = (
+    "बजट किराया बिजली बचत खर्च रसीद".split(),
+    "தேர்வு பாடம் வினா விடை மதிப்பெண் அட்டவணை".split(),
+    "東京旅行 新幹線予約 温泉旅館 観光案内 京都散策 夜行バス".split(),
+    "Überweisung Gebühren Kündigung Mietvertrag Nebenkosten Stromanbieter".split(),
+)
+MULTILINGUAL_PATH = "wiki/%E3%83%A1%E3%82%A4%E3%83%B3"  # /wiki/メイン, identical on every tab
 
 
 def make_adversarial(kind: str, seed: int = 1, projects: int = 4, per_project: int = 10,
@@ -168,8 +180,13 @@ def make_adversarial(kind: str, seed: int = 1, projects: int = 4, per_project: i
         idx += 1
         tid = _uid(rng)
         opener = rng.choice(members[p][-3:]) if kind == "lineage" and members[p] else None
-        title = f"{rng.choice(vocab)} {rng.choice(vocab)}"
-        traces.append(_trace(tid, host, f"{stem}/{rng.choice(vocab)}", title, clock, 1, idx, opener, "link"))
+        if kind == "multilingual":
+            words = MULTILINGUAL_VOCAB[p % len(MULTILINGUAL_VOCAB)]
+            title = f"{rng.choice(words)} {rng.choice(words)}"
+            traces.append(_trace(tid, "wikipedia.org", MULTILINGUAL_PATH, title, clock, 1, idx, opener, "link"))
+        else:
+            title = f"{rng.choice(vocab)} {rng.choice(vocab)}"
+            traces.append(_trace(tid, host, f"{stem}/{rng.choice(vocab)}", title, clock, 1, idx, opener, "link"))
         labels[tid] = f"project {p}"
         members[p].append(tid)
 
@@ -205,9 +222,10 @@ def write_adversarial(out_dir: Path, seed: int = 1) -> None:
         name = f"synthetic_{kind}"
         fixture = {"schemaVersion": SCHEMA_VERSION, "exportedAt": hi, "mode": "full", "_synthetic": True,
                    "traceCount": len(traces), "openedAtMin": lo, "openedAtMax": hi, "traces": traces}
-        (out_dir / f"{name}.json").write_text(json.dumps(fixture, indent=1), encoding="utf-8")
+        (out_dir / f"{name}.json").write_text(json.dumps(fixture, indent=1, ensure_ascii=False), encoding="utf-8")
         (out_dir / f"{name}.labels.json").write_text(
-            json.dumps({"_comment": f"SYNTHETIC positive control for {kind}. Never counts toward the gate.", **labels}, indent=1),
+            json.dumps({"_comment": f"SYNTHETIC positive control for {kind}. Never counts toward the gate.", **labels},
+                       indent=1, ensure_ascii=False),
             encoding="utf-8")
         (out_dir / f"{name}.chrome.json").write_text(json.dumps(chrome_like(traces), indent=1), encoding="utf-8")
 
