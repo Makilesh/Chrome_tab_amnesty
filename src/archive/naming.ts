@@ -138,7 +138,7 @@ export function heuristicName(members: TabTrace[], d: Description, corpus: TabTr
 
 // --- on-device tier --------------------------------------------------------------------------
 
-const SCHEMA = {
+export const NAME_SCHEMA = {
   type: 'object',
   properties: {
     name: { type: 'string', maxLength: MAX_NAME_CHARS },
@@ -148,11 +148,34 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-const SYSTEM =
+export const NAME_SYSTEM =
   'You name groups of browser tabs for the person who opened them. A group is one thing they were doing — ' +
   'a task, an errand, a piece of research — not a topic. Answer with a short, specific name (at most 24 ' +
   'characters) in the language of the tabs, the kind of name the person would recognise at a glance. ' +
-  'Never describe the person or judge what they did. Pick the colour that fits the group.';
+  'Use plain words, no abbreviations, and keep the place, product or subject when there is one. ' +
+  'If a few tabs do not fit with the rest, name what most of the tabs share — never name the group after ' +
+  'a single tab. Never describe the person or judge what they did. Pick the colour that fits the group.';
+
+/** Sampling the extension asks for; some Chrome versions refuse it outside extensions — then defaults. */
+export const NAME_SAMPLING = { temperature: 0.3, topK: 3 } as const;
+
+/**
+ * The exact prompt for one group — used by the extension and by tools/judge-nano.ts, so a
+ * measurement of names measures what users get. `taken`: names already given to other groups in
+ * this sweep; the model is told to tell this one apart (two trips are "Lisbon Trip" and "Porto
+ * Trip", not "Trip Planning" twice).
+ */
+export function namePrompt(members: TabTrace[], byId: Map<string, TabTrace>, taken: string[] = []): { system: string; text: string; schema: object } {
+  let text = evidence(members, byId);
+  if (taken.length) {
+    text += `\nNames already given to other groups: ${taken.map((n) => `"${n}"`).join(', ')}. Do not reuse one. Only if this group is about the same thing as one of those, add what makes it different, such as a place, a product or a person; otherwise name it on its own terms.`;
+  }
+  return { system: NAME_SYSTEM, text, schema: NAME_SCHEMA };
+}
+
+function sameName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
 
 export async function nanoAvailable(): Promise<boolean> {
   try {
@@ -162,16 +185,26 @@ export async function nanoAvailable(): Promise<boolean> {
   }
 }
 
-/** One prompt per community. Returns null when the model is unavailable or answers badly. */
-export async function nanoName(members: TabTrace[], byId: Map<string, TabTrace>, fallbackColor: GroupColor): Promise<GroupName | null> {
+/**
+ * One prompt per community. Returns null when the model is unavailable, answers badly, or — even
+ * after being told — repeats a name another group already has (the heuristic name, which differs,
+ * is kept instead: two cards with one name are worse than one plainer name).
+ */
+export async function nanoName(
+  members: TabTrace[],
+  byId: Map<string, TabTrace>,
+  fallbackColor: GroupColor,
+  taken: string[] = [],
+): Promise<GroupName | null> {
   if (!(await nanoAvailable())) return null;
+  const { system, text, schema } = namePrompt(members, byId, taken);
   let session: LanguageModelSession | null = null;
   try {
-    session = await LanguageModel!.create({ initialPrompts: [{ role: 'system', content: SYSTEM }], temperature: 0.3, topK: 3 });
-    const raw = await session.prompt(evidence(members, byId), { responseConstraint: SCHEMA });
-    const parsed = JSON.parse(raw) as { name?: unknown; color?: unknown };
+    const initialPrompts = [{ role: 'system' as const, content: system }];
+    session = await LanguageModel!.create({ initialPrompts, ...NAME_SAMPLING }).catch(() => LanguageModel!.create({ initialPrompts }));
+    const parsed = JSON.parse(await session.prompt(text, { responseConstraint: schema })) as { name?: unknown; color?: unknown };
     const name = typeof parsed.name === 'string' ? clampName(parsed.name) : '';
-    if (!name) return null;
+    if (!name || taken.some((t) => sameName(t, name))) return null;
     const color = (GROUP_COLORS as readonly string[]).includes(parsed.color as string) ? (parsed.color as GroupColor) : fallbackColor;
     return { name, color, tier: 'nano' };
   } catch {
@@ -192,16 +225,22 @@ export function quickName(community: Community, byId: Map<string, TabTrace>, cor
 
 /**
  * The on-device upgrade of a quick name, or null to keep it. Colour always stays the stable-hash
- * one so a project keeps it across sweeps (DECISIONS 2026-09-19).
+ * one so a project keeps it across sweeps (DECISIONS 2026-09-19). `taken`: names other groups
+ * already got from the model in this sweep.
  */
-export async function betterName(community: Community, byId: Map<string, TabTrace>, quick: NamedGroup): Promise<NamedGroup | null> {
+export async function betterName(
+  community: Community,
+  byId: Map<string, TabTrace>,
+  quick: NamedGroup,
+  taken: string[] = [],
+): Promise<NamedGroup | null> {
   const members = community.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
-  const nano = await nanoName(members, byId, quick.color);
+  const nano = await nanoName(members, byId, quick.color, taken);
   return nano ? { ...nano, color: quick.color, description: quick.description } : null;
 }
 
 /** The name for a community: Nano if it can, the heuristic otherwise. Always returns something. */
-export async function nameGroup(community: Community, byId: Map<string, TabTrace>, corpus: TabTrace[]): Promise<NamedGroup> {
+export async function nameGroup(community: Community, byId: Map<string, TabTrace>, corpus: TabTrace[], taken: string[] = []): Promise<NamedGroup> {
   const quick = quickName(community, byId, corpus);
-  return (await betterName(community, byId, quick)) ?? quick;
+  return (await betterName(community, byId, quick, taken)) ?? quick;
 }

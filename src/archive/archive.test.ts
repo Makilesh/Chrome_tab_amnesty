@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TabTrace, Transition } from '../cluster/types';
 import { buildCard, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
-import { clampName, evidence, heuristicName, sharedTitleName } from './naming';
+import { clampName, evidence, heuristicName, namePrompt, NAME_SYSTEM, sharedTitleName } from './naming';
 import { appendSnapshot, readGate, studySummary } from './study';
 import { GROUP_COLORS, UNDO_WINDOW_MS } from './types';
 
@@ -105,6 +105,20 @@ describe('naming', () => {
     const bare = [tr('1', { host: 'www.acme.com' }), tr('2', { host: 'www.acme.com' })];
     expect(heuristicName(bare, { heading: 'deploy · rollout', hosts: ['www.acme.com'], when: '' }).name).toBe('Deploy');
     expect(heuristicName(bare, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '' }).name).toBe('acme.com');
+  });
+
+  it('the naming prompt asks for what most tabs share, and to tell a group apart from names already given', () => {
+    const a = tr('a', { title: 'Lisbon hotels' });
+    const b = tr('b', { title: 'Alfama walking tour' });
+    const byId = new Map([a, b].map((t) => [t.traceId, t]));
+    expect(NAME_SYSTEM).toContain('name what most of the tabs share');
+    expect(NAME_SYSTEM).toContain('never name the group after a single tab');
+    const plain = namePrompt([a, b], byId);
+    expect(plain.text).toBe(evidence([a, b], byId));
+    const taken = namePrompt([a, b], byId, ['Porto Trip', 'Job Applications']);
+    expect(taken.text).toContain('Names already given to other groups: "Porto Trip", "Job Applications"');
+    expect(taken.text).toContain('Do not reuse one');
+    expect(NAME_SYSTEM).toContain('no abbreviations');
   });
 
   it('evidence leads with timing, lineage and switching, never with a judgement', () => {

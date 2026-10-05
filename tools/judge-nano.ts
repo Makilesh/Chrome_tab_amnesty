@@ -4,6 +4,8 @@
  *   npx tsx tools/judge-nano.ts status     what Chrome says about the on-device model in that profile
  *   npx tsx tools/judge-nano.ts download   start (or finish) the model download, with progress
  *   npx tsx tools/judge-nano.ts answer     answer .real/compare/items.json -> .real/compare/nano.json
+ *   npx tsx tools/judge-nano.ts names      re-ask only the group names (keeps the pair answers; the
+ *                                          previous names are kept as groups_before for a before/after)
  *
  * Runs the installed Chrome (CHROME_PATH overrides) on its own profile in
  * D:\Installations\tab-amnesty-models\chrome-nano-profile (NANO_PROFILE overrides), so the
@@ -19,8 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
-import { evidence, quickName } from '../src/archive/naming';
-import { GROUP_COLORS, MAX_NAME_CHARS } from '../src/archive/types';
+import { NAME_SAMPLING, namePrompt, quickName } from '../src/archive/naming';
 import type { Community, TabTrace } from '../src/cluster/types';
 
 const CHROME = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
@@ -88,25 +89,18 @@ const PAIR_SCHEMA = {
   required: ['answer', 'confidence'],
   additionalProperties: false,
 };
-// The extension's own naming prompt (src/archive/naming.ts), so this is the name a user would see.
-const NAME_SYSTEM =
-  'You name groups of browser tabs for the person who opened them. A group is one thing they were doing — ' +
-  'a task, an errand, a piece of research — not a topic. Answer with a short, specific name (at most 24 ' +
-  'characters) in the language of the tabs, the kind of name the person would recognise at a glance. ' +
-  'Never describe the person or judge what they did. Pick the colour that fits the group.';
-const NAME_SCHEMA = {
-  type: 'object',
-  properties: { name: { type: 'string', maxLength: MAX_NAME_CHARS }, color: { type: 'string', enum: [...GROUP_COLORS] } },
-  required: ['name', 'color'],
-  additionalProperties: false,
-};
-
-/** One prompt in a fresh session (system prompt only), returning parsed JSON and milliseconds. */
-async function ask(page: Page, system: string, text: string, schema: object): Promise<{ json: any; ms: number }> {
+/**
+ * One prompt in a fresh session (system prompt only), returning parsed JSON and milliseconds.
+ * `sampling` is tried first and dropped if this Chrome refuses it, exactly as the extension does.
+ */
+async function ask(page: Page, system: string, text: string, schema: object, sampling?: object): Promise<{ json: any; ms: number }> {
   return page.evaluate(
-    async (system, text, schema) => {
+    async (system, text, schema, sampling) => {
       const t0 = performance.now();
-      const s = await LanguageModel!.create({ initialPrompts: [{ role: 'system', content: system }] });
+      const initialPrompts = [{ role: 'system' as const, content: system }];
+      const s = await (sampling
+        ? LanguageModel!.create({ initialPrompts, ...sampling }).catch(() => LanguageModel!.create({ initialPrompts }))
+        : LanguageModel!.create({ initialPrompts }));
       try {
         const raw = await s.prompt(text, { responseConstraint: schema });
         return { json: JSON.parse(raw), ms: performance.now() - t0 };
@@ -117,7 +111,30 @@ async function ask(page: Page, system: string, text: string, schema: object): Pr
     system,
     text,
     schema,
+    sampling ?? null,
   );
+}
+
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Names for one browser's groups, in order, the way the sweep page asks: each group is told the
+ * names the model already gave the others, and a repeat falls back to the heuristic name.
+ */
+async function nameGroups(page: Page, b: Items['browsers'][number], byId: Map<string, TabTrace>, corpus: TabTrace[]) {
+  const taken: string[] = [];
+  const out: { name: string; shown: string; repeat: boolean; ms: number }[] = [];
+  for (const g of b.groups) {
+    const members = g.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
+    const heuristic = quickName({ id: g.id, traceIds: g.traceIds }, byId, corpus).name;
+    const { system, text, schema } = namePrompt(members, byId, taken);
+    const r = await ask(page, system, text, schema, NAME_SAMPLING);
+    const name = String(r.json.name ?? '').trim();
+    const repeat = !name || taken.some((t) => same(t, name));
+    if (!repeat) taken.push(name);
+    out.push({ name, shown: repeat ? heuristic : name, repeat, ms: r.ms });
+  }
+  return out;
 }
 
 async function answer(page: Page): Promise<void> {
@@ -160,9 +177,12 @@ async function answer(page: Page): Promise<void> {
         heuristic.push(quickName(community, byId, corpus).name);
         const titles = members.slice(0, 15).map((t) => `- ${t.title}`).join('\n');
         const act = await ask(page, 'You say what a person was doing with a set of browser tabs.', `What was the person doing with these tabs?\n${titles}`, doingSchema);
-        const nm = await ask(page, NAME_SYSTEM, evidence(members, byId), NAME_SCHEMA);
-        groups.push({ activity: act.json.activity, name: String(nm.json.name ?? '') });
-        ms += act.ms + nm.ms;
+        groups.push({ activity: act.json.activity, name: '' });
+        ms += act.ms;
+      }
+      for (const [i, n] of (await nameGroups(page, b, byId, corpus)).entries()) {
+        groups[i]!.name = n.shown;
+        ms += n.ms;
       }
       res.groups = groups;
       res.heuristic = heuristic;
@@ -172,6 +192,26 @@ async function answer(page: Page): Promise<void> {
     console.log(`nano: ${b.name} done (${b.pairs.length} pairs, ${b.groups.length} groups)`);
   }
   writeFileSync(join(OUT, 'nano.json'), JSON.stringify(out, null, 1));
+  console.log(`-> ${join(OUT, 'nano.json')}`);
+}
+
+/** Re-ask only the names; keep everything else in nano.json and remember the previous names. */
+async function names(page: Page): Promise<void> {
+  const items = JSON.parse(readFileSync(join(OUT, 'items.json'), 'utf8')) as Items;
+  const prev = JSON.parse(readFileSync(join(OUT, 'nano.json'), 'utf8'));
+  for (const b of items.browsers) {
+    const res = prev.browsers[b.name];
+    if (!res?.groups?.length) continue;
+    const fixture = join('fixtures', `${b.name}.json`);
+    const corpus: TabTrace[] = existsSync(fixture) ? JSON.parse(readFileSync(fixture, 'utf8')).traces : b.traces;
+    const byId = new Map<string, TabTrace>(corpus.map((t) => [t.traceId, t]));
+    for (const t of b.traces) if (!byId.has(t.traceId)) byId.set(t.traceId, t);
+    res.groups_before = res.groups_before ?? res.groups.map((g: { name: string }) => g.name);
+    const fresh = await nameGroups(page, b, byId, corpus);
+    res.groups = res.groups.map((g: object, i: number) => ({ ...g, name: fresh[i]!.shown, repeat: fresh[i]!.repeat }));
+    console.log(`nano names: ${b.name} — ${fresh.filter((f) => f.repeat).length} repeat(s) caught`);
+  }
+  writeFileSync(join(OUT, 'nano.json'), JSON.stringify(prev, null, 1));
   console.log(`-> ${join(OUT, 'nano.json')}`);
 }
 
@@ -196,6 +236,8 @@ async function main(): Promise<void> {
       }
     } else if (mode === 'answer') {
       await answer(page);
+    } else if (mode === 'names') {
+      await names(page);
     }
   } finally {
     await browser.close();
