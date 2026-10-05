@@ -68,8 +68,13 @@ describe('shareable redaction', () => {
       tr('b1', 'https://en.wikipedia.org/wiki/Lisbon', { title: 'Lisbon', openedAt: 40 * 60_000, transition: 'typed' }),
       tr('b2', 'https://en.wikipedia.org/wiki/Alfama', { title: 'Alfama', openedAt: 41 * 60_000, openerTraceId: 'b1' }),
       tr('b3', 'https://www.booking.com/hotel/pt/casa-123456.html', { title: 'Casa Lisbon hotel', openedAt: 42 * 60_000, openerTraceId: 'b1' }),
+      tr('b4', 'https://notes.example.org/my%20lisbon%20notes2026/%E6%9D%B1%E4%BA%AC', { title: 'Trip notes', openedAt: 43 * 60_000, openerTraceId: 'b1' }),
+      tr('a4', 'https://notes.example.org/my%20launch%20notes2026/plan', { title: 'Launch notes', openedAt: 95_000, openerTraceId: 'a1' }),
     ];
     const norm = (p: ReturnType<typeof cluster>) => p.communities.map((c) => [...c.traceIds].sort().join(',')).sort();
     expect(norm(cluster(redactTraces(ts)))).toEqual(norm(cluster(ts)));
+    // and the encoded path keeps its words: "my lisbon notes" is still readable, the id is not
+    const [b4] = redactTraces([ts[6]!]);
+    expect(b4!.url).toMatch(/^https:\/\/notes\.example\.org\/my lisbon id[0-9a-f]{12}\/東京$/);
   });
 });

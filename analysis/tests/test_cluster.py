@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from tabamnesty.cluster import ablation_betas, build_graph, cluster, partition_to_target
+from tabamnesty.cluster import ablation_betas, build_graph, cluster, pair_signals, partition_to_target
 from tabamnesty.config import load_ambient, load_betas
 from tabamnesty.lexical import cosine, tfidf_vectors, tokens
 from tabamnesty.score import assignments, score
@@ -139,6 +139,18 @@ class TestLexical:
         t = tr("a", title="The Deploy Runbook 42", path=("acme", "deploy"))
         assert tokens(t) == ["deploy", "runbook", "acme", "deploy"]
 
+    # Same inputs and expectations as the 'lexical' block in src/cluster/cluster.test.ts.
+    def test_tokens_keep_non_latin_scripts_whole(self):
+        t = tr("a", title="मार्च का बिजली बिल · தமிழ்நாடு அரசு · Café Müller Gebühren १२३")
+        assert tokens(t) == ["मार्च", "का", "बिजली", "बिल", "தமிழ்நாடு", "அரசு", "café", "müller", "gebühren"]
+
+    def test_tokens_bigram_scripts_without_spaces(self):
+        assert tokens(tr("a", title="東京の天気 iPhone15")) == ["東京", "京の", "の天", "天気", "iphone15"]
+
+    def test_path_tokens_are_percent_decoded(self):
+        t = tr("a", path=("wiki", "%e6%9d%b1%e4%ba%ac", "caf%c3%a9", "%zz", "%ed%a0%80"))
+        assert tokens(t) == ["wiki", "東京", "café", "zz", "ed", "a0"]  # malformed escapes stay as they were
+
     def test_cosine_bounds(self):
         ts = [tr("a", title="pandas groupby error"), tr("b", title="pandas groupby dtype"), tr("c", title="lisbon hotel")]
         v = tfidf_vectors(ts)
@@ -205,7 +217,9 @@ class TestDeterminism:
                 "t,_=make(seed=11,per_project=(14,20));print(json.dumps(cluster(t).communities))")
         outs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                                env={"PYTHONHASHSEED": str(i), "PATH": __import__('os').environ['PATH'],
-                                    "SYSTEMROOT": __import__('os').environ.get('SYSTEMROOT', '')},
+                                    "SYSTEMROOT": __import__('os').environ.get('SYSTEMROOT', ''),
+                                    # without it Windows writes caches to a literal analysis/%SystemDrive%/
+                                    "SYSTEMDRIVE": __import__('os').environ.get('SYSTEMDRIVE', '')},
                                cwd=__import__('pathlib').Path(__file__).resolve().parents[1]).stdout for i in (1, 2, 3)}
         assert len(outs) == 1, "partition varies with PYTHONHASHSEED"
 
@@ -230,6 +244,16 @@ class TestAblationPositiveControls:
         full, zero = self._ari("coactive", b), self._ari("coactive", {**b, "S8_coactive": 0.0})
         assert full > 0.6 and full - zero >= 0.30, (full, zero)
 
+    def test_multilingual_text_separates_in_s7(self):
+        # Hindi / Tamil / Japanese / German projects on one host and one (percent-encoded) path.
+        # Before Unicode tokens, within- and across-project S7 were 0.84 / 0.70 (encoded path
+        # bytes were the shared "words"); only a real content signal gets them this far apart.
+        traces, labels = make_adversarial("multilingual")
+        _, vecs = pair_signals(traces)
+        same = [v["S7_lexical"] for (a, b), v in vecs.items() if labels[a] == labels[b]]
+        other = [v["S7_lexical"] for (a, b), v in vecs.items() if labels[a] != labels[b]]
+        assert min(same) > 0 and sum(same) / len(same) > 0.3 and sum(other) / len(other) < 0.15
+
     def test_temporal_is_detected_only_together_with_session(self):
         # S3 (same session) is cut from the same timestamps S2 decays over, so the two are
         # redundant evidence: zeroing S2 alone leaves S3 carrying the boundary. Report this when
@@ -242,6 +266,7 @@ class TestAblationPositiveControls:
 
 
 def test_tokens_read_every_script_like_the_ts_side():
+    """Same input and expected list as the TS test: parity on non-English text."""
     from tabamnesty.lexical import tokens
     t = tr("x", 0, title="हिन्दी समाचार - Belém Tower 東京タワー 2026 २०२६ a1 Ünïcode", path=["p", "bel%c3%a9m"])
-    assert tokens(t) == ["हिन्दी", "समाचार", "belém", "tower", "東京タワー", "a1", "ünïcode", "bel", "c3", "a9m"]
+    assert tokens(t) == ["हिन्दी", "समाचार", "belém", "tower", "東京", "京タ", "タワ", "ワー", "a1", "ünïcode", "belém"]
