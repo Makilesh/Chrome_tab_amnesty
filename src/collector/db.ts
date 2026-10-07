@@ -5,7 +5,7 @@
  * Records are keyed on traceId, never tabId (§5.3). tabId is an index for live lookups only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { noteCreated, noteReset, readBackup } from '../archive/backup';
+import { noteCreated, noteReset, readBackup, type Reset } from '../archive/backup';
 import type { RememberedName } from '../archive/naming';
 import type { OpenSnapshot } from '../archive/study';
 import type { ArchiveCard, SummariseJob } from '../archive/types';
@@ -35,6 +35,8 @@ interface MetaRecords {
   openSnapshots: OpenSnapshot[];
   /** Model names remembered per group, so a project keeps its name across sweeps (naming.ts). */
   groupNames: RememberedName[];
+  /** Each time Chrome replaced this database with an empty one (copied from backup.ts). */
+  resets: Reset[];
 }
 
 interface TabAmnestyDB extends DBSchema {
@@ -82,16 +84,20 @@ async function afterCreate(d: IDBPDatabase<TabAmnestyDB>, dataLoss: string): Pro
     const backup = await readBackup();
     if (!backup) return;
     const now = Date.now();
-    if (backup.createdAt === undefined) {
+    // Anything in the copy means there was a database before this one — even if the copy was
+    // still being filled in (pages write to it before a new worker has seeded it).
+    const hadOne = backup.createdAt !== undefined || backup.cards.length > 0 || backup.neverRemember !== undefined || backup.openSnapshots !== undefined;
+    if (!hadOne) {
       await noteCreated(now);
       return;
     }
+    const resets = await noteReset({ at: now, dataLoss });
     const tx = d.transaction(['archive', 'meta'], 'readwrite');
     for (const card of backup.cards) await tx.objectStore('archive').put(card);
     if (backup.neverRemember) await tx.objectStore('meta').put(backup.neverRemember, 'neverRemember');
     if (backup.openSnapshots) await tx.objectStore('meta').put(backup.openSnapshots, 'openSnapshots');
+    await tx.objectStore('meta').put(resets, 'resets');
     await tx.done;
-    await noteReset({ at: now, dataLoss });
     if (onReset) onReset();
     else await chrome.runtime.sendMessage({ type: 'database-reset' }).catch(() => {});
   } catch {

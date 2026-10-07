@@ -416,12 +416,22 @@ async function checkDatabaseReplaced(browser: Browser, extId: string, origin: st
   await page.waitForSelector('#never-list');
   await sleep(500);
   const never = await page.$$eval('#never-list li', (lis) => lis.map((li) => li.firstChild?.textContent ?? ''));
-  const resets = (await page.evaluate(() => chrome.storage.local.get('resets').then((r) => (r.resets ?? []).length))) as number;
+  const resets = (await page.evaluate(() =>
+    caches
+      .open('tab-amnesty-backup')
+      .then((c) => c.match('https://tab-amnesty.invalid/resets'))
+      .then((r) => (r ? r.json() : []))
+      .then((x: unknown[]) => x.length),
+  )) as number;
+  const exposed = (await page.evaluate(() =>
+    chrome.storage ? chrome.storage.local.get(null).then((all) => Object.keys(all).length) : 0,
+  )) as number;
   await page.close();
   console.log(
     `
 database replaced (${replaced}): archived cards back ${cardsAfter} of ${cardsBefore}; never-remember list back: ` +
-      `${never.includes('example.org')}; open tabs adopted again at once: ${adopted} of ${httpOpen}; resets noted: ${resets} (must be 1)`,
+      `${never.includes('example.org')}; open tabs adopted again at once: ${adopted} of ${httpOpen}; resets noted: ${resets} (must be 1); ` +
+      `entries in chrome.storage.local, which content scripts can read: ${exposed} (must be 0)`,
   );
   await tab.close();
 }
