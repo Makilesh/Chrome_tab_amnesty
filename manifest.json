@@ -6,7 +6,6 @@
   "permissions": [
     "tabs",
     "history",
-    "storage",
     "alarms",
     "tabGroups",
     "offscreen",

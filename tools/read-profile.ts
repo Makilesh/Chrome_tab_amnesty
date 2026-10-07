@@ -17,8 +17,7 @@
  * stored traces to live tabs and closes the ones it cannot find. It finds none, so every trace that
  * was open in the real browser gets closedAt >= the moment the copy was opened; those are put back
  * to open here, and any trace the throwaway browser minted for its own tabs is dropped. Nothing is
- * ever written back to the real profile. The extension's second copy (chrome.storage.local, see
- * src/archive/backup.ts) is copied and read the same way when the real profile has one.
+ * ever written back to the real profile.
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { globSync } from 'node:fs';
@@ -60,7 +59,6 @@ async function extensionId(browser: Browser): Promise<string> {
 interface Dump {
   version: number;
   stores: Record<string, { keys: unknown[]; values: unknown[] }>;
-  backup: Record<string, unknown>;
 }
 
 async function dump(browser: Browser, id: string): Promise<Dump> {
@@ -82,8 +80,7 @@ async function dump(browser: Browser, id: string): Promise<Dump> {
             const v = s.getAll();
             tx.addEventListener('complete', () => (out.stores[n] = { keys: k.result as unknown[], values: v.result as unknown[] }));
           }
-          tx.oncomplete = () =>
-            setTimeout(() => void chrome.storage.local.get(null).then((backup) => resolveDump({ ...out, backup })), 0);
+          tx.oncomplete = () => setTimeout(() => resolveDump(out), 0);
           tx.onerror = () => reject(tx.error);
         };
       }),
@@ -116,16 +113,6 @@ async function main(): Promise<void> {
   rmSync(to, { recursive: true, force: true });
   mkdirSync(to, { recursive: true });
   for (const f of readdirSync(from)) if (f !== 'LOCK') cpSync(join(from, f), join(to, f));
-  // The second copy, if this browser has run a build that keeps one. Without it the throwaway's own
-  // (made by step 1) is removed, so nothing it wrote can pass for the real browser's.
-  const backupFrom = join(source, 'Local Extension Settings', id);
-  const backupTo = join(PROFILE, 'Default', 'Local Extension Settings', id);
-  const hadBackup = existsSync(backupFrom);
-  rmSync(backupTo, { recursive: true, force: true });
-  if (hadBackup) {
-    mkdirSync(backupTo, { recursive: true });
-    for (const f of readdirSync(backupFrom)) if (f !== 'LOCK') cpSync(join(backupFrom, f), join(backupTo, f));
-  }
 
   // 3. Read it back through Chrome.
   const openedAt = Date.now();
@@ -134,7 +121,7 @@ async function main(): Promise<void> {
   await sleep(2500);
   const d = await dump(browser, id);
   await browser.close();
-  const raw = JSON.stringify({ readAt: openedAt, source, hadBackup, ...d }, null, 1);
+  const raw = JSON.stringify({ readAt: openedAt, source, ...d }, null, 1);
   const stamp = new Date(openedAt).toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
   writeFileSync(join(OUT, `${name}.raw.json`), raw);
   writeFileSync(join(OUT, `${name}.${stamp}.raw.json`), raw);
@@ -168,18 +155,10 @@ async function main(): Promise<void> {
   const last = Math.max(...all.filter((t) => t.openedAt < openedAt).flatMap((t) => [t.openedAt, t.lastActiveAt ?? 0, t.digestAt ?? 0, t.closedAt && t.closedAt < openedAt ? t.closedAt : 0]));
   console.log(`  archive cards ${cards.length}${cards.length ? ` (brought back ${cards.filter((c) => c.restoredAt).length})` : ''}; open-tab snapshots ${snaps.length}`);
   console.log(`  last thing the real browser recorded: ${new Date(last).toISOString()}${openedAt - last > 86_400_000 ? '  <- over a day ago: is the extension still running? (reload it in chrome://extensions)' : ''}`);
-  if (!hadBackup) {
-    console.log('  second copy: none yet (no build that keeps one has run in that browser)');
-  } else {
-    const b = d.backup;
-    const backupCards = Object.keys(b).filter((k) => k.startsWith('card:')).length;
-    const resets = (b.resets as { at: number; dataLoss: string }[] | undefined) ?? [];
-    console.log(
-      `  second copy: ${backupCards} card(s), never-remember ${((b.neverRemember as string[] | undefined) ?? []).length}, ` +
-        `snapshots ${((b.openSnapshots as unknown[] | undefined) ?? []).length}; kept since ${b.createdAt ? new Date(b.createdAt as number).toISOString() : '?'}; ` +
-        `database replaced by Chrome: ${resets.length ? resets.map((r) => `${new Date(r.at).toISOString()} (${r.dataLoss})`).join(', ') : 'never'}`,
-    );
-  }
+  const resets = (meta?.values[metaKeys.indexOf('resets')] ?? []) as { at: number; dataLoss: string }[];
+  console.log(
+    `  database replaced by Chrome (and restored from the second copy): ${resets.length ? resets.map((r) => `${new Date(r.at).toISOString()} (${r.dataLoss})`).join(', ') : 'not since this build arrived'}`,
+  );
   console.log(`  -> fixtures/${name}.json (shareable), .real/${name}.raw.json (full, git-ignored)`);
 }
 
