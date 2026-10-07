@@ -13,13 +13,14 @@ import {
   getMeta,
   getOpenTraces,
   getTraceByTabId,
+  onDatabaseReset,
   putTrace,
   setMeta,
   updateTrace,
   updateTraceByTabId,
 } from './db';
 import { isNeverRemembered } from '../archive/forget';
-import { getNeverRemember } from '../archive/store';
+import { getNeverRemember, seedBackup } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
 import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
 import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
@@ -398,6 +399,11 @@ async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
 
 chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   const m = msg as Partial<DigestMessage> | undefined;
+  // An extension page was the first to open a database Chrome had replaced (db.ts afterCreate).
+  if ((m as { type?: string } | undefined)?.type === 'database-reset' && sender.url?.startsWith(chrome.runtime.getURL(''))) {
+    void rebindAll();
+    return false;
+  }
   if ((m as { type?: string } | undefined)?.type === 'summarise-kick') {
     void kickSummariser();
     return false;
@@ -467,6 +473,9 @@ chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfi
 // Also on every worker start: idempotent, cheap, and independent of whether onInstalled fired.
 void refreshBackfilled();
 chrome.runtime.onStartup.addListener(() => void rebindAll());
+// Chrome replaced the database with an empty one (db.ts): adopt every open tab again now, rather
+// than recording nothing about them until the next restart (7 Oct: 13 hours).
+onDatabaseReset(() => void rebindAll());
 
 // Phase 1: the icon opens the sweep page. The x-ray page stays reachable by URL for the study.
 chrome.action.onClicked.addListener(() => {
@@ -475,3 +484,4 @@ chrome.action.onClicked.addListener(() => {
 // Anything left in the queue from before the worker died gets picked up on start.
 void runSummariser();
 void ensureStudyAlarm();
+void seedBackup();

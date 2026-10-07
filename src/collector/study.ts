@@ -3,6 +3,7 @@
  * titles. It exists so the Phase 1 gate ("open-tab count still lower seven days later") can be
  * read from the study export; nothing in the product ever shows it (§6.1).
  */
+import { backupSnapshots } from '../archive/backup';
 import { appendSnapshot, SNAPSHOT_EVERY_MIN } from '../archive/study';
 import { getMeta, setMeta } from './db';
 
@@ -10,7 +11,9 @@ export const STUDY_ALARM = 'study-snapshot';
 
 export async function takeSnapshot(): Promise<void> {
   const open = (await chrome.tabs.query({})).filter((t) => /^https?:/.test(t.url || t.pendingUrl || '')).length;
-  await setMeta('openSnapshots', appendSnapshot((await getMeta('openSnapshots')) ?? [], { at: Date.now(), open }));
+  const list = appendSnapshot((await getMeta('openSnapshots')) ?? [], { at: Date.now(), open });
+  await setMeta('openSnapshots', list);
+  await backupSnapshots(list);
 }
 
 /** Idempotent: keeps an existing schedule, creates one if missing. */

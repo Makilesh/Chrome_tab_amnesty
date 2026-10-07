@@ -131,6 +131,12 @@ switching. Six groups: "Phinite" and "Job" right; "Billing" = the GPU/CUDA setup
 the gitfut thread (mostly same-site); "AWS" unchanged. No labels yet; no gate number from it.
 `makilesh.chrome.json` is a Claude in Chrome tab group, not an organiser baseline (DECISIONS).
 
+**07 Oct: Chrome replaced the owner's database** at 00:09:48 with an empty one (DECISIONS
+2026-10-07). Everything recorded before is gone from the browser; the committed `makilesh` and
+`makilesh-now` fixtures (20 Sep, 5 Oct) are what remains. The owner's records — and their Phase 1
+study data — restart from the Reload at 12:55: 65 open tabs adopted without lineage or switching,
+so their groups will look worse for a while.
+
 **The sweep page on the owner's own Chrome (05 Oct 15:53, owner's screenshots):** six groups as
 above, plus `amazon.jobs` pulled into "Phinite" and the PayPal/PwC pair named "Software". The most
 telling miss is the **job hunt, scattered across four groups**: Freshworks careers in "AWS", the
@@ -216,6 +222,9 @@ Search · any MCP · any cloud default · any auto-close · settings beyond the 
       non-English titles get a content signal; 1,000 tabs group and name in ~0.7 s. Open: the
       Chrome Web Store (owner's decision) and Gemini Nano on `downloadable` machines (owner's
       decision) — until then most users see fallback names.
+- [x] Survives Chrome replacing its database (07 Oct): archived cards, the never-remember list and
+      the study snapshots have a second copy and come back; open tabs are adopted at once;
+      `unlimitedStorage` (`npm run check` step 9; DECISIONS 2026-10-07)
 - [x] Mixed builds (06 Oct): a page from a newer build upgrading the database no longer stops the
       recorder (`npm run check` step 9, fails on the old code); built-in model calls name their
       languages, so chrome://extensions stays clean (DECISIONS 2026-10-06)

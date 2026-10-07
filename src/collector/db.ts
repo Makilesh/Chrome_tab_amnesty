@@ -5,6 +5,7 @@
  * Records are keyed on traceId, never tabId (§5.3). tabId is an index for live lookups only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { noteCreated, noteReset, readBackup } from '../archive/backup';
 import type { RememberedName } from '../archive/naming';
 import type { OpenSnapshot } from '../archive/study';
 import type { ArchiveCard, SummariseJob } from '../archive/types';
@@ -59,6 +60,44 @@ interface TabAmnestyDB extends DBSchema {
 }
 
 let dbPromise: Promise<IDBPDatabase<TabAmnestyDB>> | null = null;
+let onReset: (() => void) | null = null;
+
+/**
+ * What the collector's worker does after Chrome hands back an empty database: adopt the open tabs
+ * again. When an extension page is the first to open the empty database, the worker is told by a
+ * `database-reset` message instead.
+ */
+export function onDatabaseReset(fn: () => void): void {
+  onReset = fn;
+}
+
+/**
+ * The database was just created from nothing: a first install, or Chrome replacing a database it
+ * could not open (the owner's, 7 Oct 00:09 — DECISIONS 2026-10-07). After a replacement, put the
+ * second copy back (archived projects, the never-remember list, the study's snapshots) before
+ * anything reads, note when it happened, and get the open tabs adopted again.
+ */
+async function afterCreate(d: IDBPDatabase<TabAmnestyDB>, dataLoss: string): Promise<void> {
+  try {
+    const backup = await readBackup();
+    if (!backup) return;
+    const now = Date.now();
+    if (backup.createdAt === undefined) {
+      await noteCreated(now);
+      return;
+    }
+    const tx = d.transaction(['archive', 'meta'], 'readwrite');
+    for (const card of backup.cards) await tx.objectStore('archive').put(card);
+    if (backup.neverRemember) await tx.objectStore('meta').put(backup.neverRemember, 'neverRemember');
+    if (backup.openSnapshots) await tx.objectStore('meta').put(backup.openSnapshots, 'openSnapshots');
+    await tx.done;
+    await noteReset({ at: now, dataLoss });
+    if (onReset) onReset();
+    else await chrome.runtime.sendMessage({ type: 'database-reset' }).catch(() => {});
+  } catch {
+    // Recording matters more than restoring: the copy stays where it is for the next start.
+  }
+}
 
 /**
  * Cached connection. Safe to cache: if the worker dies the module re-evaluates and re-opens.
@@ -75,9 +114,13 @@ export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
       d.close();
       dbPromise = null;
     };
+    const fresh = { created: false, dataLoss: 'none' };
     dbPromise = openDB<TabAmnestyDB>(DB_NAME, DB_VERSION, {
-      upgrade(d, oldVersion) {
+      upgrade(d, oldVersion, _newVersion, _tx, event) {
         if (oldVersion < 1) {
+          fresh.created = true;
+          // Chrome-only: 'total' when it had to throw the previous database away.
+          fresh.dataLoss = (event as IDBVersionChangeEvent & { dataLoss?: string }).dataLoss ?? 'unknown';
           const traces = d.createObjectStore('traces', { keyPath: 'traceId' });
           traces.createIndex('byTabId', 'tabId');
           traces.createIndex('byUrl', 'url');
@@ -94,8 +137,9 @@ export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
         if ((e as { name?: string })?.name !== 'VersionError') throw e;
         return openDB<TabAmnestyDB>(DB_NAME);
       })
-      .then((d) => {
+      .then(async (d) => {
         d.addEventListener('versionchange', giveWay(d));
+        if (fresh.created) await afterCreate(d, fresh.dataLoss);
         return d;
       })
       .catch((e: unknown) => {
