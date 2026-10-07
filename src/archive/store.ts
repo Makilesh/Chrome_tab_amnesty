@@ -1,9 +1,12 @@
 /**
  * IndexedDB access for Phase 1: archive cards, the summarisation queue, the never-remember list.
  * Every write lands immediately (§5.5). Deletion happens in exactly two functions, both named
- * `forget…`, both only ever called from an explicit user action.
+ * `forget…`, both only ever called from an explicit user action. Cards and the never-remember
+ * list are also kept in a second store (backup.ts) so a database Chrome replaces does not take
+ * them along.
  */
 import { db, deleteTrace, getMeta, setMeta } from '../collector/db';
+import { backupCard, backupNeverRemember, backupSnapshots, dropCardBackup, noteCreated, readBackup } from './backup';
 import { normaliseDomain } from './forget';
 import type { RememberedName } from './naming';
 import type { ArchiveCard, SummariseJob } from './types';
@@ -12,6 +15,7 @@ import type { ArchiveCard, SummariseJob } from './types';
 
 export async function putCard(card: ArchiveCard): Promise<void> {
   await (await db()).put('archive', card);
+  await backupCard(card);
 }
 
 export async function getCard(cardId: string): Promise<ArchiveCard | undefined> {
@@ -34,6 +38,7 @@ export async function updateCard(cardId: string, fn: (c: ArchiveCard) => Archive
   const next = fn(cur);
   if (next) await tx.store.put(next);
   await tx.done;
+  if (next) await backupCard(next);
   return next ?? cur;
 }
 
@@ -41,6 +46,7 @@ export async function updateCard(cardId: string, fn: (c: ArchiveCard) => Archive
 export async function forgetCard(cardId: string): Promise<void> {
   const card = await getCard(cardId);
   if (!card) return;
+  await dropCardBackup(cardId); // first: an interrupted forget must not come back through a restore
   const d = await db();
   const tx = d.transaction(['archive', 'jobs'], 'readwrite');
   await tx.objectStore('archive').delete(cardId);
@@ -60,12 +66,22 @@ async function forgetNamesOf(traceIds: string[]): Promise<void> {
 
 /** Forget one tab inside a card. The card stays; if it was the last tab the card goes too. */
 export async function forgetTab(cardId: string, traceId: string): Promise<void> {
+  const card = await getCard(cardId);
+  if (card) {
+    // The second copy first, as in forgetCard.
+    const tabs = card.tabs.filter((t) => t.traceId !== traceId);
+    if (tabs.length) await backupCard({ ...card, tabs });
+    else await dropCardBackup(cardId);
+  }
   const next = await updateCard(cardId, (c) => ({ ...c, tabs: c.tabs.filter((t) => t.traceId !== traceId) }));
   await deleteTrace(traceId);
   await forgetNamesOf([traceId]);
   const d = await db();
   for (const j of await d.getAll('jobs')) if (j.traceId === traceId) await d.delete('jobs', j.jobId);
-  if (next && next.tabs.length === 0) await d.delete('archive', cardId);
+  if (next && next.tabs.length === 0) {
+    await d.delete('archive', cardId);
+    await dropCardBackup(cardId); // updateCard just copied the emptied card over
+  }
 }
 
 // --- summarisation queue -------------------------------------------------------------------
@@ -106,6 +122,7 @@ export async function addNeverRemember(domain: string): Promise<string[]> {
   const list = await getNeverRemember();
   if (d && !list.includes(d)) list.push(d);
   await setMeta('neverRemember', list);
+  await backupNeverRemember(list);
   return list;
 }
 
@@ -113,5 +130,23 @@ export async function removeNeverRemember(domain: string): Promise<string[]> {
   const d = normaliseDomain(domain);
   const list = (await getNeverRemember()).filter((x) => x !== d);
   await setMeta('neverRemember', list);
+  await backupNeverRemember(list);
   return list;
+}
+
+// --- the second copy ---------------------------------------------------------------------------
+
+/**
+ * Once per install: a build with the second copy arrives on an install that already has records,
+ * so copy them over before anything can be lost. Afterwards every write keeps it current.
+ */
+export async function seedBackup(): Promise<void> {
+  const backup = await readBackup();
+  if (!backup || backup.createdAt !== undefined) return;
+  for (const card of await getCards()) await backupCard(card);
+  const never = await getMeta('neverRemember');
+  if (never) await backupNeverRemember(never);
+  const snapshots = await getMeta('openSnapshots');
+  if (snapshots) await backupSnapshots(snapshots);
+  await noteCreated(Date.now());
 }

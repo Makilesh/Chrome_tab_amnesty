@@ -368,6 +368,65 @@ async function checkBaselineCapture(browser: Browser, extId: string, userDataDir
 }
 
 /**
+ * Chrome replaces a database it cannot open with an empty one — the owner's, 7 Oct 00:09
+ * (DECISIONS 2026-10-07). Archived projects and the never-remember list must come back from the
+ * second copy, and the open tabs must be adopted again at once, not at the next restart.
+ */
+async function checkDatabaseReplaced(browser: Browser, extId: string, origin: string): Promise<void> {
+  const tab = await browser.newPage();
+  await tab.goto(`${origin}/still-open`, { waitUntil: 'load' });
+  const sweep = await browser.newPage();
+  await sweep.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
+  await sweep.waitForSelector('#never-input');
+  await sweep.click('.never summary');
+  await sweep.type('#never-input', 'example.org');
+  await sweep.click('#never-add');
+  await sleep(500);
+  await sweep.close();
+  await sleep(1000);
+  const cardsBefore = (await readCards(browser, extId)).length;
+  const httpOpen = (await httpTabs(browser)).length;
+
+  const ctl = await browser.newPage();
+  await ctl.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  const replaced = (await ctl.evaluate(
+    () =>
+      new Promise<string>((done) => {
+        const req = indexedDB.deleteDatabase('tab-amnesty');
+        const timer = setTimeout(() => done('BLOCKED for 5 s by an open connection'), 5000);
+        req.onsuccess = () => {
+          clearTimeout(timer);
+          done('thrown away');
+        };
+        req.onerror = () => {
+          clearTimeout(timer);
+          done(`failed: ${req.error?.name}`);
+        };
+      }),
+  )) as string;
+  await ctl.close();
+  await sleep(1500); // whichever context opens first restores; give it time before reading
+
+  const cardsAfter = (await readCards(browser, extId)).length;
+  await sleep(2000);
+  const traces = await readTraces(browser, extId);
+  const adopted = traces.filter((t) => t.closedAt === null && isHttp(t)).length;
+  const page = await browser.newPage();
+  await page.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
+  await page.waitForSelector('#never-list');
+  await sleep(500);
+  const never = await page.$$eval('#never-list li', (lis) => lis.map((li) => li.firstChild?.textContent ?? ''));
+  const resets = (await page.evaluate(() => chrome.storage.local.get('resets').then((r) => (r.resets ?? []).length))) as number;
+  await page.close();
+  console.log(
+    `
+database replaced (${replaced}): archived cards back ${cardsAfter} of ${cardsBefore}; never-remember list back: ` +
+      `${never.includes('example.org')}; open tabs adopted again at once: ${adopted} of ${httpOpen}; resets noted: ${resets} (must be 1)`,
+  );
+  await tab.close();
+}
+
+/**
  * A page from a newer build moves the database past this build's version while the worker is
  * running — what Chrome does when `dist/` is rebuilt without a Reload, and what stopped the owner's
  * recording from 20 Sep to 5 Oct (DECISIONS 2026-10-06). The worker must let the upgrade through
@@ -503,11 +562,13 @@ async function main(): Promise<void> {
     }
   }
 
-  // 9. Last, because it leaves the database at a version no build has: a newer build's upgrade.
+  // 9. Chrome replacing the database; then, last because it leaves the database at a version no
+  //    build has, a newer build's upgrade.
   browser = await launch(exe, userDataDir);
   try {
     const extId = await extensionId(browser);
     await sleep(1500);
+    await checkDatabaseReplaced(browser, extId, site.origin);
     await checkNewerDatabase(browser, extId, site.origin);
   } finally {
     await browser.close();

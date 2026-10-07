@@ -9,7 +9,8 @@
     "storage",
     "alarms",
     "tabGroups",
-    "offscreen"
+    "offscreen",
+    "unlimitedStorage"
   ],
   "background": {
     "service_worker": "src/collector/background.ts",
