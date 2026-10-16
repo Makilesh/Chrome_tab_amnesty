@@ -213,13 +213,14 @@ def report_main(argv: list[str] | None = None) -> None:
     pb = pd.DataFrame(per_browser).set_index("browser")
     ps = pd.DataFrame(per_signal).T.drop(index="baseline", errors="ignore")
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
-    pb.plot.bar(ax=ax1, rot=0)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    pb.plot.bar(ax=ax1, rot=30)
+    plt.setp(ax1.get_xticklabels(), ha="right")  # long browser names overlapped when level
     ax1.set_title("ARI vs hand labels (higher is better)")
     ax1.set_ylim(-0.1, 1.0)
     ax1.axhline(0, color="grey", lw=0.5)
     ps.plot.barh(ax=ax2)
-    ax2.set_title("ARI delta when a signal is zeroed (more negative = signal matters)")
+    ax2.set_title("ARI delta when a signal is zeroed\n(more negative = signal matters)")
     ax2.axvline(-0.10, color="red", lw=0.8, ls="--", label="gate (S1/S2/S8)")
     ax2.legend(fontsize=7)
     fig.suptitle("partition source: " + ("PYTHON BENCH (not shipped code)" if a.python else "ts (shipped clusterer)"), fontsize=9)
