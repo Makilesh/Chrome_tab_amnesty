@@ -253,7 +253,9 @@ After at least eight days past their first press, they export the study summary 
 whether any press was prompted — the data cannot tell. A tester who never presses is a result,
 not a dropout. The open count is compared as the median over the 48 h before the first press vs
 days 6–8 after; a browser with no snapshot before its first press cannot be read and is reported
-as such, not dropped silently.
+as such, not dropped silently — and neither can one with no snapshot in days 6–8 (snapshots are
+taken only while Chrome runs; the owner's browser had none on 10–13 Oct), which `npm run phase1`
+now says instead of naming a date that has passed.
 
 ---
 
