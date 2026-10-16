@@ -4,6 +4,10 @@ import manifest from './manifest.json';
 
 export default defineConfig({
   plugins: [crx({ manifest })],
+  // One id per build, in the worker and in every page alike. Chrome keeps running the worker it
+  // registered until the extension is reloaded, while pages load whatever is on disk; the sweep
+  // page compares the two and says how to finish an update (DECISIONS 2026-10-17).
+  define: { __BUILD_ID__: JSON.stringify(Date.now()) },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

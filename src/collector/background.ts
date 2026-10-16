@@ -408,6 +408,12 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     void kickSummariser();
     return false;
   }
+  // The sweep page asks which build this worker is: an older one than the page means Chrome is
+  // still running the worker it registered before the folder was updated (DECISIONS 2026-10-17).
+  if ((m as { type?: string } | undefined)?.type === 'build' && sender.url?.startsWith(chrome.runtime.getURL(''))) {
+    sendResponse({ build: __BUILD_ID__ });
+    return false;
+  }
   const typed = msg as { type?: string; typing?: boolean } | undefined;
   if (typed?.type === 'typing' && sender.tab?.id !== undefined && sender.frameId === 0) {
     const tabId = sender.tab.id;
