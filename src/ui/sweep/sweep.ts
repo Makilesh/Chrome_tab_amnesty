@@ -210,6 +210,18 @@ async function checkRecorder(): Promise<void> {
   $('health').hidden = false;
 }
 
+/**
+ * Is the recorder this page's build? Chrome keeps running the worker it registered until the
+ * extension is reloaded or switched off and on — not on a restart — while this page loads from
+ * disk. The owner's Chrome ran an old worker for two weeks and then nine days that way. A worker
+ * too old to answer is older than this page; a newer one means this page is the stale one, which
+ * the next visit fixes by itself.
+ */
+async function checkBuild(): Promise<void> {
+  const r = (await chrome.runtime.sendMessage({ type: 'build' }).catch(() => null)) as { build?: number } | null;
+  if (typeof r?.build !== 'number' || r.build < __BUILD_ID__) $('stale').hidden = false;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Archive: bring back, open, forget
 // ---------------------------------------------------------------------------------------------
@@ -312,6 +324,7 @@ async function main(): Promise<void> {
     $('groups').replaceChildren(el('p', 'empty', 'Something went wrong reading your tabs. Reloading this page usually fixes it — nothing has been changed.'));
   }
   void checkRecorder();
+  void checkBuild();
   await renderArchive();
   renderNever(await getNeverRemember());
 

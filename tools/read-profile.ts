@@ -18,8 +18,12 @@
  * was open in the real browser gets closedAt >= the moment the copy was opened; those are put back
  * to open here, and any trace the throwaway browser minted for its own tabs is dropped. Nothing is
  * ever written back to the real profile.
+ *
+ * It also says whether that browser keeps the second copy (src/archive/backup.ts, in Cache
+ * Storage) and when it was last written — read from the files' keys, not opened by Chrome. None
+ * means the worker running there predates the copy, so the extension needs a reload.
  */
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { globSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser } from 'puppeteer-core';
@@ -59,6 +63,50 @@ async function extensionId(browser: Browser): Promise<string> {
 interface Dump {
   version: number;
   stores: Record<string, { keys: unknown[]; values: unknown[] }>;
+}
+
+const COPY_KEY = /https:\/\/tab-amnesty\.invalid\/(card\/[0-9a-f-]{36}|neverRemember|openSnapshots|createdAt|resets)/;
+
+/**
+ * The second copy (src/archive/backup.ts) is in the extension's Cache Storage. Chrome names that
+ * folder by an internal hash, so it is found by the origin and cache name in its index; each entry
+ * file starts with its key. Presence and freshness only — read straight from the real profile,
+ * never copied, never opened by Chrome. null: no copy for this extension there.
+ */
+function secondCopy(source: string, id: string): { keys: string[]; createdAt: number | null; lastWrite: number } | null {
+  const root = join(source, 'Service Worker', 'CacheStorage');
+  if (!existsSync(root)) return null;
+  for (const dir of readdirSync(root)) {
+    let index = '';
+    try {
+      index = readFileSync(join(root, dir, 'index.txt'), 'latin1');
+    } catch {
+      continue;
+    }
+    if (!index.includes(`chrome-extension://${id}/`) || !index.includes('tab-amnesty-backup')) continue;
+    const keys: string[] = [];
+    let createdAt: number | null = null;
+    let lastWrite = 0;
+    for (const sub of readdirSync(join(root, dir), { withFileTypes: true })) {
+      if (!sub.isDirectory()) continue;
+      for (const f of readdirSync(join(root, dir, sub.name), { withFileTypes: true })) {
+        if (!f.isFile() || !f.name.endsWith('_0')) continue;
+        const p = join(root, dir, sub.name, f.name);
+        try {
+          const head = readFileSync(p, 'latin1').slice(0, 600);
+          const m = head.match(COPY_KEY);
+          if (!m) continue;
+          keys.push(m[1]!);
+          if (m[1] === 'createdAt') createdAt = Number(head.slice(m.index! + m[0].length).match(/^\d{13}/)?.[0] ?? NaN) || null;
+          lastWrite = Math.max(lastWrite, statSync(p).mtimeMs);
+        } catch {
+          // held open by the running browser; counted as missing
+        }
+      }
+    }
+    return { keys, createdAt, lastWrite };
+  }
+  return null;
 }
 
 async function dump(browser: Browser, id: string): Promise<Dump> {
@@ -158,6 +206,14 @@ async function main(): Promise<void> {
   const resets = (meta?.values[metaKeys.indexOf('resets')] ?? []) as { at: number; dataLoss: string }[];
   console.log(
     `  database replaced by Chrome (and restored from the second copy): ${resets.length ? resets.map((r) => `${new Date(r.at).toISOString()} (${r.dataLoss})`).join(', ') : 'not since this build arrived'}`,
+  );
+  const copy = secondCopy(source, id);
+  console.log(
+    copy
+      ? `  second copy: ${copy.keys.filter((k) => k.startsWith('card/')).length} card(s); never-remember ${copy.keys.includes('neverRemember') ? 'yes' : 'no'}; ` +
+          `snapshots ${copy.keys.includes('openSnapshots') ? 'yes' : 'no'}; started ${copy.createdAt ? new Date(copy.createdAt).toISOString() : '-'}; ` +
+          `last written ${copy.lastWrite ? new Date(copy.lastWrite).toISOString() : '-'}`
+      : '  second copy: none — the worker running in that browser predates it (reload the extension in chrome://extensions)',
   );
   console.log(`  -> fixtures/${name}.json (shareable), .real/${name}.raw.json (full, git-ignored)`);
 }

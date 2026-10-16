@@ -211,6 +211,7 @@ async function checkSweepArchive(browser: Browser, extId: string, userDataDir: s
     return undefined;
   }
   console.log(`  "recorder not keeping up" note shown: ${await page.$eval('#health', (e) => !(e as HTMLElement).hidden)} (must be false)`);
+  console.log(`  "still running the older version" note shown: ${await page.$eval('#stale', (e) => !(e as HTMLElement).hidden)} (must be false: one build)`);
 
   // The person's own group must survive "show on strip", and Undo must remove only ours.
   const ctl = await browser.newPage();

@@ -228,6 +228,11 @@ Search · any MCP · any cloud default · any auto-close · settings beyond the 
 - [x] Mixed builds (06 Oct): a page from a newer build upgrading the database no longer stops the
       recorder (`npm run check` step 9, fails on the old code); built-in model calls name their
       languages, so chrome://extensions stays clean (DECISIONS 2026-10-06)
+- [x] Stale worker (17 Oct): when Chrome is still running an older worker than the pages on disk,
+      the sweep page says so and how to finish the update (switch it off and on). Measured in
+      Chrome for Testing: a restart does not replace the worker, a new manifest version does not
+      either, off-and-on does. The owner's Chrome ran the 5 Oct worker until at least 16 Oct
+      (DECISIONS 2026-10-17)
 
 ### Done when
 - [ ] A real 100+ tab browser can be swept, grouped, named, archived group-by-group (needs the owner's
