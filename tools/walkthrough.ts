@@ -238,11 +238,18 @@ async function main(): Promise<void> {
   const sweep2 = await browser.newPage();
   await sweep2.goto(`chrome-extension://${id}/src/ui/sweep/index.html`);
   await sweep2.waitForSelector('#cards .group', { timeout: 10_000 });
-  const preUrls = (await browser.pages()).map((p) => p.url());
+  // Chrome's own tab list, asked from the extension page: puppeteer's page list lags behind tabs
+  // the extension creates in the background, and after the restart it reported 0 of 6 (16 Oct).
+  const tabUrls = () => sweep2.evaluate(async () => (await chrome.tabs.query({})).map((t) => t.url || t.pendingUrl || ''));
+  const preUrls = await tabUrls();
   await sweep2.evaluate(() => ([...document.querySelectorAll('#cards button')].find((b) => b.textContent === 'Bring back') as HTMLButtonElement)?.click());
-  await sleep(4000);
-  const back = (await browser.pages()).map((p) => p.url()).filter((u) => /^https?:/.test(u) && !preUrls.includes(u));
-  console.log(`  ${back.length} tabs came back: ${back.map((u) => u.replace(/^https:\/\//, '')).join(', ')}`);
+  let back: string[] = [];
+  for (let waited = 0; waited < 10_000 && back.length < (card?.tabs.length ?? 0); waited += 500) {
+    await sleep(500);
+    back = (await tabUrls()).filter((u) => /^https?:/.test(u) && !preUrls.includes(u));
+  }
+  console.log(`  ${back.length} of ${card?.tabs.length ?? '?'} tabs came back: ${back.map((u) => u.replace(/^https:\/\//, '')).join(', ')}`);
+  await sleep(2000); // titles arrive as the pages load
   await sweep2.reload();
   await sleep(1500);
   await sweep2.screenshot({ path: join(OUT, '3-after-bring-back.png'), fullPage: true });

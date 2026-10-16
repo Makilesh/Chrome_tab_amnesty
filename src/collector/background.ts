@@ -100,7 +100,8 @@ async function bindOrAdopt(tab: chrome.tabs.Tab, live?: Set<number>): Promise<Ta
       index: tab.index,
       pinned: tab.pinned,
       discarded: tab.discarded ?? false,
-      title: tab.title ?? orphan.title,
+      // A tab created by Bring back has title "" until its page loads; the stored one is right.
+      title: tab.title || orphan.title,
     };
     await putTrace(bound);
     return bound;
@@ -217,7 +218,10 @@ async function onUpdated(
       index: tab.index,
       pinned: tab.pinned,
       discarded: tab.discarded ?? false,
-      title: tab.title ?? t.title,
+      // While a page loads Chrome shows its address as the title; that placeholder must not
+      // replace a stored title (a brought-back group lost its name to it). Take a title when
+      // Chrome reports one, when the tab has moved to another page, or when there is none yet.
+      title: changeInfo.title ?? (urlChanged || !t.title ? (tab.title || t.title) : t.title),
     };
     if (urlChanged && changeInfo.url) {
       // One trace per tab for its lifetime; a navigation refreshes what the tab is about but
