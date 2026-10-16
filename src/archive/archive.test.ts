@@ -182,6 +182,14 @@ describe('phase 1 study', () => {
 
     expect(readGate(studySummary(snaps(0, 9 * D, () => 100), [])).pressed).toBe(false);
   });
+
+  it('says when waiting cannot help: snapshots run past day 8 but none fell in days 6-8', () => {
+    const first = 10 * D;
+    // The browser was not opened on days 6-8: snapshots before the press and from day 9 on only.
+    const gap = [...snaps(first - 3 * D, first, () => 120), ...snaps(first + 9 * D, first + 10 * D, () => 70)];
+    const g = readGate(studySummary(gap, [card(first)]));
+    expect(g).toMatchObject({ before: 120, day7: null, lowerAtDay7: null, readableFrom: null });
+  });
 });
 
 describe('name memory', () => {

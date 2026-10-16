@@ -72,7 +72,11 @@ export interface GateReading {
   pressed: boolean;
   /** null = not enough snapshots yet to say. */
   lowerAtDay7: boolean | null;
-  /** When day 7 can be read, if it cannot yet. */
+  /**
+   * When day 7 can be read, if it cannot yet: snapshots so far stop before day 8, so a later
+   * export will have it. null when waiting will not help — nothing to compare against before the
+   * first press, or the snapshots run past day 8 but none fell in days 6–8 (browser not opened).
+   */
   readableFrom: number | null;
 }
 
@@ -99,7 +103,6 @@ export function readGate(s: StudySummary): GateReading {
     day7,
     pressed: true,
     lowerAtDay7,
-    // With no snapshot before the first press there is nothing to compare against, ever.
-    readableFrom: lowerAtDay7 === null && before !== null ? firstPress + 8 * DAY : null,
+    readableFrom: lowerAtDay7 === null && before !== null && !complete ? firstPress + 8 * DAY : null,
   };
 }

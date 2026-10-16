@@ -18,6 +18,7 @@ function main(): void {
   let pressed = 0;
   let lower = 0;
   let unreadable = 0;
+  let cannot = 0;
   console.log('== Phase 1 gate: pressed Archive & close of their own accord AND open-tab count lower 7 days later');
   console.log('   "own accord" is the tester\'s report, not in the data; ask each tester whether they were prompted.\n');
   for (const name of names) {
@@ -26,13 +27,16 @@ function main(): void {
     const g = readGate(s);
     if (g.pressed) pressed++;
     if (g.lowerAtDay7) lower++;
-    if (g.pressed && g.lowerAtDay7 === null) unreadable++;
+    if (g.pressed && g.readableFrom !== null) unreadable++;
+    if (g.pressed && g.lowerAtDay7 === null && g.readableFrom === null) cannot++;
     const verdict = !g.pressed
       ? 'never pressed'
       : g.lowerAtDay7 === null
         ? g.readableFrom
-          ? `day 7 not readable until ${day(g.readableFrom)}`
-          : 'no snapshot before the first press — cannot compare'
+          ? `day 7 is not in this export (made ${day(s.exportedAt)}); export again after ${day(g.readableFrom)}`
+          : g.before === null
+            ? 'no snapshot before the first press — cannot compare'
+            : 'no snapshot in days 6-8 (browser not opened then) — cannot compare'
         : g.lowerAtDay7
           ? 'LOWER at day 7'
           : 'NOT lower at day 7';
@@ -43,7 +47,10 @@ function main(): void {
         ` | ${s.snapshots.length} snapshots`,
     );
   }
-  console.log(`\n${pressed} of ${names.length} pressed; ${lower} of ${names.length} lower at day 7; ${unreadable} not yet readable.`);
+  console.log(
+    `\n${pressed} of ${names.length} pressed; ${lower} of ${names.length} lower at day 7; ${unreadable} not yet readable; ` +
+      `${cannot} cannot be compared from the snapshots they have.`,
+  );
 }
 
 main();
