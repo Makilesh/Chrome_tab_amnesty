@@ -93,6 +93,16 @@ export async function noteCreated(at: number): Promise<void> {
   await put('createdAt', at);
 }
 
+/**
+ * Whether this install's copy was ever started — one key, not every card, because the worker asks
+ * on every start and the archive only grows. null where there is no Cache Storage.
+ */
+export async function copyStarted(): Promise<boolean | null> {
+  const cache = await open();
+  if (!cache) return null;
+  return (await cache.match(KEY + 'createdAt')) !== undefined;
+}
+
 /** Returns every reset so far, this one last. */
 export async function noteReset(reset: Reset): Promise<Reset[]> {
   const cache = await open();
