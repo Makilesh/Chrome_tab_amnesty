@@ -6,7 +6,7 @@
  * them along.
  */
 import { db, deleteTrace, getMeta, setMeta } from '../collector/db';
-import { backupCard, backupNeverRemember, backupSnapshots, dropCardBackup, noteCreated, readBackup } from './backup';
+import { backupCard, backupNeverRemember, backupSnapshots, copyStarted, dropCardBackup, noteCreated } from './backup';
 import { normaliseDomain } from './forget';
 import type { RememberedName } from './naming';
 import type { ArchiveCard, SummariseJob } from './types';
@@ -121,8 +121,8 @@ export async function addNeverRemember(domain: string): Promise<string[]> {
   const d = normaliseDomain(domain);
   const list = await getNeverRemember();
   if (d && !list.includes(d)) list.push(d);
+  await backupNeverRemember(list); // first, like forgetting: an interrupted add must not be undone by a restore
   await setMeta('neverRemember', list);
-  await backupNeverRemember(list);
   return list;
 }
 
@@ -141,8 +141,7 @@ export async function removeNeverRemember(domain: string): Promise<string[]> {
  * so copy them over before anything can be lost. Afterwards every write keeps it current.
  */
 export async function seedBackup(): Promise<void> {
-  const backup = await readBackup();
-  if (!backup || backup.createdAt !== undefined) return;
+  if ((await copyStarted()) !== false) return; // already seeded, or no Cache Storage here
   for (const card of await getCards()) await backupCard(card);
   const never = await getMeta('neverRemember');
   if (never) await backupNeverRemember(never);
