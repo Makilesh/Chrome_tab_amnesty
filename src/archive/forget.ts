@@ -22,6 +22,12 @@ export function normaliseDomain(input: string): string {
   }
 }
 
+/** A never-remembered site named anywhere in a group name (its domain, or that domain's first word). */
+export function namesNeverSite(name: string, never: readonly string[]): boolean {
+  const n = name.toLowerCase();
+  return never.some((d) => d && (n.includes(d) || ((d.split('.')[0] ?? '').length >= 4 && n.includes(d.split('.')[0]!))));
+}
+
 /** True when the trace's site, or any parent of it, is on the list. */
 export function isNeverRemembered(t: Partial<Pick<TabTrace, 'host' | 'eTLD1'>>, list: readonly string[]): boolean {
   if (list.length === 0) return false;

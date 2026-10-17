@@ -10,8 +10,19 @@
  * restart because the card is in IndexedDB (§6.8); Forget is on every card and every tab (§6.10).
  */
 import { cardWhen, undoable } from '../../archive/card';
+import { copyFileName, copyToHtml, MAX_COPY_BYTES, readCopy } from '../../archive/copy';
 import { betterName, type NamedGroup, quickName, type RememberedName, rememberedName, rememberName } from '../../archive/naming';
-import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, getRememberedNames, removeNeverRemember, saveRememberedNames } from '../../archive/store';
+import {
+  addNeverRemember,
+  bringInCopy,
+  forgetCard,
+  forgetTab,
+  getCards,
+  getNeverRemember,
+  getRememberedNames,
+  removeNeverRemember,
+  saveRememberedNames,
+} from '../../archive/store';
 import { queryTerms, searchArchive } from '../../archive/search';
 import { archiveAndClose, bringBack, groupOnStrip, openCard, openOne, type StripPlace, ungroupOurs } from '../../archive/sweep';
 import type { ArchiveCard, ArchivedTab } from '../../archive/types';
@@ -398,6 +409,55 @@ function toast(text: string, cardId?: string): void {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Keep a copy
+// ---------------------------------------------------------------------------------------------
+
+/** A file from this page goes where the person's downloads go; no permission is needed for that. */
+function saveFile(name: string, text: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = el('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+async function onSaveCopy(): Promise<void> {
+  const now = Date.now();
+  const name = copyFileName(now);
+  saveFile(name, copyToHtml(await getCards(), await getNeverRemember(), now), 'text/html');
+  $('copy-status').textContent = `Saving “${name}” where your downloads go.`;
+}
+
+async function onBringInCopy(file: File): Promise<void> {
+  const status = $('copy-status');
+  if (file.size > MAX_COPY_BYTES) {
+    status.textContent = 'That file is too big to be a copy saved by Tab Amnesty.';
+    return;
+  }
+  const copy = readCopy(await file.text().catch(() => ''));
+  if (copy === 'newer') {
+    status.textContent = 'That copy was saved by a newer Tab Amnesty. Update this one, then bring it in.';
+    return;
+  }
+  if (!copy) {
+    status.textContent = 'That file is not a copy saved by Tab Amnesty.';
+    return;
+  }
+  status.textContent = 'Bringing it in…';
+  try {
+    const { added, neverAdded } = await bringInCopy(copy);
+    const parts = [added.length ? 'Done — what that copy had is under “Put away”.' : 'Nothing new to bring in from that copy.'];
+    if (neverAdded.length) parts.push(`As in the copy, these sites are never remembered here now: ${neverAdded.join(', ')}.`);
+    status.textContent = parts.join(' ');
+    if (neverAdded.length) renderNever(await getNeverRemember());
+    await renderArchive(true);
+  } catch (e) {
+    status.textContent = `That did not work: ${(e as Error).message}`;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Never remember
 // ---------------------------------------------------------------------------------------------
 
@@ -432,6 +492,14 @@ async function main(): Promise<void> {
   $('more-btn').addEventListener('click', () => {
     shown += VISIBLE;
     renderGroups();
+  });
+  $('copy-save').addEventListener('click', () => void onSaveCopy());
+  $('copy-open').addEventListener('click', () => $('copy-file').click());
+  $('copy-file').addEventListener('change', () => {
+    const input = $<HTMLInputElement>('copy-file');
+    const file = input.files?.[0];
+    input.value = ''; // so the same file can be chosen again
+    if (file) void onBringInCopy(file);
   });
   $('never-add').addEventListener('click', async () => {
     const input = $<HTMLInputElement>('never-input');

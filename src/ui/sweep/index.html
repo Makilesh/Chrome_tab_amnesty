@@ -52,11 +52,14 @@
       .loose ul { list-style: none; margin: 0; padding: 0; }
       .loose li { color: var(--muted); }
       details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-      .never { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; }
-      .never .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-      .never input { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); }
-      .never ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
-      .never li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px; }
+      .foot { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; }
+      .foot details + details { margin-top: 10px; }
+      .foot .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+      .foot input { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); }
+      .foot ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
+      .foot li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px; }
+      #copy-status { margin: 8px 0 0; color: var(--fg); }
+      #copy-status:empty { display: none; }
       .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; display: flex; gap: 12px; align-items: center; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
       .toast button { background: transparent; color: inherit; border-color: currentColor; }
       .empty { color: var(--muted); }
@@ -90,8 +93,18 @@
         <div class="more" id="cards-more" hidden><button class="quiet" id="cards-more-btn">More below</button></div>
       </section>
 
-      <section class="never">
-        <details>
+      <section class="foot">
+        <details id="keep">
+          <summary>Keep a copy</summary>
+          <p>Everything you put away, as one file where your downloads go. It opens in any browser, and it can be brought back in here — on this computer or another one. Bringing one in only adds what is missing; nothing here is changed.</p>
+          <div class="row">
+            <button id="copy-save">Save a copy</button>
+            <button id="copy-open">Bring in a copy…</button>
+            <input type="file" id="copy-file" accept=".html,.htm,.json,text/html,application/json" hidden />
+          </div>
+          <p id="copy-status" role="status"></p>
+        </details>
+        <details id="never">
           <summary>Sites never remembered</summary>
           <p>Tabs on these sites are still grouped, but nothing about them is kept — no titles, no page text, nothing after they close.</p>
           <div class="row">
