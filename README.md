@@ -84,3 +84,7 @@ each group and offers one action per group. The design rules it holds itself to 
 Issues and pull requests are welcome. `npm test` runs the unit tests. `npm run check` drives a real
 Chrome for Testing through recording, grouping, putting away, a restart, bringing back, search and
 copies (run `npm run check:setup` once first). More in [docs/RESEARCH.md](docs/RESEARCH.md).
+
+## License
+
+[MIT](LICENSE).

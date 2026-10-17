@@ -17,7 +17,7 @@ function onSearchPath(hostPath: string, p: string): boolean {
 }
 
 /** ambient.json: registrable domain; or the host or any subdomain of a listed host; or a search-results path. */
-export function isAmbient(t: TabTrace): boolean {
+export function isAmbient(t: Pick<TabTrace, 'host' | 'eTLD1' | 'pathTokens'>): boolean {
   const host = (t.host ?? '').toLowerCase();
   if (AMBIENT.etld1.has((t.eTLD1 ?? '').toLowerCase())) return true;
   for (const h of AMBIENT.hosts) if (host === h || host.endsWith('.' + h)) return true;

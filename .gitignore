@@ -12,6 +12,15 @@ fixtures/*.partition.json
 fixtures/*.python.partition.json
 fixtures/report.png
 fixtures/refit.betas.json
+# A real browser's exports are its owner's browsing: they stay on the machine they were made on
+# and are never committed (DECISIONS 2026-10-17). Only the made-up fixtures are.
+fixtures/*.json
+!fixtures/synthetic.json
+!fixtures/synthetic.chrome.json
+!fixtures/synthetic.labels.json
+!fixtures/walkthrough.json
+!fixtures/walkthrough.labels.json
+!fixtures/walkthrough.study.json
 
 Claude outputs/*
 .walkthrough/

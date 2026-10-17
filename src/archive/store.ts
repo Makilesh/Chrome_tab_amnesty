@@ -5,7 +5,7 @@
  * list are also kept in a second store (backup.ts) so a database Chrome replaces does not take
  * them along.
  */
-import { db, deleteTrace, getAllTraces, getMeta, restoreInto, setMeta, updateTrace } from '../collector/db';
+import { db, deleteTrace, getAllTraces, getMeta, getTracesClosedBefore, restoreInto, setMeta, updateTrace } from '../collector/db';
 import {
   backupCard,
   backupNeverRemember,
@@ -18,6 +18,7 @@ import {
   readBackup,
   restorePending,
 } from './backup';
+import { CLOSED_RECORD_DAYS, recordsToDrop } from './card';
 import { type Copy, cardsToBringIn } from './copy';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import { type RememberedName, withoutTabs } from './naming';
@@ -201,6 +202,22 @@ export async function removeNeverRemember(domain: string): Promise<string[]> {
   await setMeta('neverRemember', list);
   await backupNeverRemember(list);
   return list;
+}
+
+// --- closed records --------------------------------------------------------------------------
+
+/**
+ * Records of tabs closed more than CLOSED_RECORD_DAYS ago go, unless a card holds them. Nothing
+ * reads them — grouping reads open tabs, Bring back and Open all their own cards' records — and
+ * kept for ever they would be a log of every page ever opened (DECISIONS 2026-10-17). What was put
+ * away stays until the person forgets it. Returns how many went.
+ */
+export async function pruneClosedRecords(now = Date.now()): Promise<number> {
+  const old = await getTracesClosedBefore(now - CLOSED_RECORD_DAYS * 24 * 60 * 60_000);
+  if (old.length === 0) return 0;
+  const drop = recordsToDrop(old, await getCards());
+  for (const id of drop) await deleteTrace(id);
+  return drop.length;
 }
 
 // --- keep a copy -------------------------------------------------------------------------------
