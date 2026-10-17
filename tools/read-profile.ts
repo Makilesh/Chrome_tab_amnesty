@@ -4,7 +4,9 @@
  * profile, loads the same unpacked build from the same path (so the same extension id, so the same
  * storage origin), and reads every store from an extension page with Chrome's own IndexedDB code.
  *
- *   npm run build && npx tsx tools/read-profile.ts [--profile "<Chrome User Data>/Default"] [--name makilesh]
+ *   npx tsx tools/read-profile.ts --name <name> [--profile "<Chrome User Data>/Default"] [--force]
+ *
+ * It loads dist/ as it is — the build the owner's Chrome loads — and never rebuilds it (CLAUDE.md).
  *
  * Writes:
  *   .real/<name>.raw.json      every store as read, plus the read time (git-ignored: full URLs, page text);
@@ -23,10 +25,12 @@
  * Storage) and when it was last written — read from the files' keys, not opened by Chrome. None
  * means the worker running there predates the copy, so the extension needs a reload.
  */
+import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { globSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser } from 'puppeteer-core';
+import { isNeverRemembered, normaliseDomain } from '../src/archive/forget';
 import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../src/cluster/types';
 import { redactTraces } from '../src/collector/redact';
 
@@ -141,7 +145,20 @@ async function dump(browser: Browser, id: string): Promise<Dump> {
 async function main(): Promise<void> {
   const local = process.env.LOCALAPPDATA ?? join(process.env.USERPROFILE ?? '', 'AppData', 'Local');
   const source = arg('--profile', join(local, 'Google', 'Chrome', 'User Data', 'Default'));
-  const name = arg('--name', 'makilesh');
+  // No default: the old one, "makilesh", silently replaced the committed Phase 0 fixture its
+  // labels are keyed to. A committed fixture is replaced only on purpose.
+  const name = arg('--name', '');
+  if (!name) throw new Error('usage: npx tsx tools/read-profile.ts --name <name> [--profile <dir>] [--force]  -> fixtures/<name>.json');
+  const target = `fixtures/${name}.json`;
+  const committed = (() => {
+    try {
+      execFileSync('git', ['ls-files', '--error-unmatch', target], { stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  if (committed && !process.argv.includes('--force')) throw new Error(`${target} is committed — pick another --name, or pass --force to replace it`);
   // Only the throwaway profile is replaced — never all of .real/, which also keeps earlier reads and
   // research results (this line used to remove the whole folder, .real/compare/ included).
   rmSync(PROFILE, { recursive: true, force: true });
@@ -161,6 +178,10 @@ async function main(): Promise<void> {
   rmSync(to, { recursive: true, force: true });
   mkdirSync(to, { recursive: true });
   for (const f of readdirSync(from)) if (f !== 'LOCK') cpSync(join(from, f), join(to, f));
+  // The throwaway's own second copy (made by step 1's empty install) must not meet these records:
+  // if Chrome could not open the copied database, a restore from it would read as a reset of the
+  // real browser's database.
+  rmSync(join(PROFILE, 'Default', 'Service Worker', 'CacheStorage'), { recursive: true, force: true });
 
   // 3. Read it back through Chrome.
   const openedAt = Date.now();
@@ -174,25 +195,28 @@ async function main(): Promise<void> {
   writeFileSync(join(OUT, `${name}.raw.json`), raw);
   writeFileSync(join(OUT, `${name}.${stamp}.raw.json`), raw);
 
+  const meta = d.stores.meta;
+  const metaKeys = (meta?.keys ?? []) as string[];
   const all = (d.stores.traces?.values ?? []) as TabTrace[];
   const open = all
     .filter((t) => t.openedAt < openedAt) // minted by the throwaway browser for its own tabs
     .filter((t) => t.closedAt === null || t.closedAt >= openedAt)
     .map((t) => ({ ...t, closedAt: null }));
-  const times = open.map((t) => t.openedAt);
+  // The fixture is the shareable form, so a never-remember site is left out of it entirely (§6.10).
+  const never = ((meta?.values[metaKeys.indexOf('neverRemember')] ?? []) as string[]).map(normaliseDomain).filter(Boolean);
+  const shared = open.filter((t) => !isNeverRemembered(t, never));
+  const times = shared.map((t) => t.openedAt);
   const fixture: TraceFixture = {
     schemaVersion: SCHEMA_VERSION,
     exportedAt: openedAt,
     mode: 'shareable',
-    traceCount: open.length,
-    openedAtMin: Math.min(...times),
-    openedAtMax: Math.max(...times),
-    traces: redactTraces(open),
+    traceCount: shared.length,
+    openedAtMin: times.length ? Math.min(...times) : openedAt,
+    openedAtMax: times.length ? Math.max(...times) : openedAt,
+    traces: redactTraces(shared),
   };
-  writeFileSync(`fixtures/${name}.json`, JSON.stringify(fixture, null, 1) + '\n');
+  writeFileSync(target, JSON.stringify(fixture, null, 1) + '\n');
 
-  const meta = d.stores.meta;
-  const metaKeys = (meta?.keys ?? []) as string[];
   const cards = (d.stores.archive?.values ?? []) as { archivedAt: number; restoredAt: number | null; tabs: unknown[] }[];
   const snaps = ((meta?.values[metaKeys.indexOf('openSnapshots')] ?? []) as { at: number; open: number }[]).filter((x) => x.at < openedAt);
   console.log(`read ${source}`);
@@ -200,9 +224,15 @@ async function main(): Promise<void> {
   // which build last ran in the real browser. Only data the real browser wrote does.
   console.log(`  stores (after this build opened the copy): ${Object.keys(d.stores).join(', ')}`);
   console.log(`  traces stored ${all.length}; open in the real browser ${open.length}; closed (kept) ${all.length - open.length - all.filter((t) => t.openedAt >= openedAt).length}`);
-  const last = Math.max(...all.filter((t) => t.openedAt < openedAt).flatMap((t) => [t.openedAt, t.lastActiveAt ?? 0, t.digestAt ?? 0, t.closedAt && t.closedAt < openedAt ? t.closedAt : 0]));
+  const last = all
+    .filter((t) => t.openedAt < openedAt)
+    .flatMap((t) => [t.openedAt, t.lastActiveAt ?? 0, t.digestAt ?? 0, t.closedAt && t.closedAt < openedAt ? t.closedAt : 0])
+    .reduce((a, b) => Math.max(a, b), 0);
   console.log(`  archive cards ${cards.length}${cards.length ? ` (brought back ${cards.filter((c) => c.restoredAt).length})` : ''}; open-tab snapshots ${snaps.length}`);
-  console.log(`  last thing the real browser recorded: ${new Date(last).toISOString()}${openedAt - last > 86_400_000 ? '  <- over a day ago: is the extension still running? (reload it in chrome://extensions)' : ''}`);
+  console.log(
+    `  last thing the real browser recorded: ${last ? new Date(last).toISOString() : 'nothing yet'}` +
+      (openedAt - last > 86_400_000 ? '  <- over a day ago: is the extension still running? (reload it in chrome://extensions)' : ''),
+  );
   const resets = (meta?.values[metaKeys.indexOf('resets')] ?? []) as { at: number; dataLoss: string }[];
   console.log(
     `  database replaced by Chrome (and restored from the second copy): ${resets.length ? resets.map((r) => `${new Date(r.at).toISOString()} (${r.dataLoss})`).join(', ') : 'not since this build arrived'}`,
