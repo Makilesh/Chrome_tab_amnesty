@@ -11,11 +11,18 @@ import type { TabTrace } from './types';
 // Exclusion — not down-weighting. These belong to every project so they belong to none.
 // ---------------------------------------------------------------------------------------------
 
+/** Whole path segments: "google.com/search" covers google.com/search and below, not google.com/searchconsole. */
+function onSearchPath(hostPath: string, p: string): boolean {
+  return (hostPath + '/').startsWith(p.endsWith('/') ? p : p + '/');
+}
+
+/** ambient.json: registrable domain; or the host or any subdomain of a listed host; or a search-results path. */
 export function isAmbient(t: TabTrace): boolean {
   const host = (t.host ?? '').toLowerCase();
-  if (AMBIENT.hosts.has(host) || AMBIENT.etld1.has((t.eTLD1 ?? '').toLowerCase())) return true;
+  if (AMBIENT.etld1.has((t.eTLD1 ?? '').toLowerCase())) return true;
+  for (const h of AMBIENT.hosts) if (host === h || host.endsWith('.' + h)) return true;
   const hp = host + '/' + (t.pathTokens ?? []).join('/');
-  return AMBIENT.searchPaths.some((p) => hp.startsWith(p));
+  return AMBIENT.searchPaths.some((p) => onSearchPath(hp, p));
 }
 
 /** Excluded: pinned, ambient hosts, closed, and non-http URLs. */

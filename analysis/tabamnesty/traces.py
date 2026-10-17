@@ -45,13 +45,28 @@ def load_fixture(path: str | Path) -> list[Trace]:
 
 
 def load_labels(path: str | Path) -> dict[str, str | None]:
-    """traceId -> project name. null / '' means 'no project' and scores as its own singleton."""
+    """traceId -> project name. null means 'no project' and scores as its own singleton.
+
+    '' means 'not labelled yet' (tools/labels-template.ts) and is left out: scoring it as 'no
+    project' graded the clusterer against answers nobody gave. count_unlabelled() says how many.
+    """
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    return {k: (v or None) for k, v in raw.items() if not k.startswith("_")}
+    return {k: v for k, v in raw.items() if not k.startswith("_") and v != ""}
+
+
+def count_unlabelled(path: str | Path) -> int:
+    """Tabs the labels file leaves at '' (not labelled yet) — reported, never scored."""
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    return sum(1 for k, v in raw.items() if not k.startswith("_") and v == "")
 
 
 def load_chrome(path: str | Path) -> dict:
-    """{ method, capturedAt, groups: [{name, color, traceIds}], ungrouped: [] }"""
+    """{ method, capturedAt, groups: [{name, color, traceIds}], ungrouped: [], preexisting?: [] }
+
+    `preexisting`: tabs that sat in groups the person already had when the capture page opened.
+    Chrome's organiser did not place them, so they are left out of the comparison with Chrome
+    rather than scored as its singletons (comparison_universe).
+    """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if data.get("method") not in ("captured", "transcribed"):
         raise ValueError(f"{path}: method must be 'captured' or 'transcribed'")

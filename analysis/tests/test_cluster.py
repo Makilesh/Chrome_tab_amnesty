@@ -127,7 +127,7 @@ class TestSignals:
     def test_exclusion(self):
         ts = [tr("pin", pinned=True), tr("mail", host="mail.google.com", etld1="google.com"),
               tr("music", host="open.spotify.com", etld1="spotify.com"), tr("new", url="chrome://newtab/"),
-              tr("search", host="www.google.com", etld1="google.com", path=("search",)),
+              tr("search", host="google.com", etld1="google.com", path=("search",)),  # as recorded: no www.
               tr("ok", host="github.com")]
         kept, excluded = eligible(ts, load_ambient())
         assert [t["traceId"] for t in kept] == ["ok"]
