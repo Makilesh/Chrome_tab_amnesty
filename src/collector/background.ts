@@ -312,7 +312,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RECONCILE_ALARM) void rebindAll(true); // the browser is still running
   if (alarm.name === SUMMARISE_ALARM) void runSummariser();
-  if (alarm.name === STUDY_ALARM) void takeSnapshot();
+  if (__STUDY__ && alarm.name === STUDY_ALARM) void takeSnapshot();
 });
 
 chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
@@ -583,7 +583,9 @@ async function refreshBackfilled(): Promise<void> {
 // each time rewrote adopted tabs' timing from the newest visit to their url — from any tab — so
 // weeks-old tabs kept acquiring today's timing and joined today's session.
 chrome.runtime.onInstalled.addListener(() => {
-  void rebindAll().then(refreshBackfilled).then(takeSnapshot);
+  void rebindAll()
+    .then(refreshBackfilled)
+    .then(() => (__STUDY__ ? takeSnapshot() : undefined));
   void scrubAmbientText();
 });
 
@@ -618,11 +620,12 @@ async function injectIntoOpenTabs(): Promise<void> {
 // than recording nothing about them until the next restart (7 Oct: 13 hours).
 onDatabaseReset(() => void rebindAll());
 
-// Phase 1: the icon opens the sweep page. The x-ray page stays reachable by URL for the study.
+// Phase 1: the icon opens the sweep page. The x-ray page stays reachable by URL for the study
+// (not in the store build, which has no study).
 chrome.action.onClicked.addListener(() => {
   void chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/sweep/index.html') });
 });
 // Anything left in the queue from before the worker died gets picked up on start.
 void runSummariser();
-void ensureStudyAlarm();
+if (__STUDY__) void ensureStudyAlarm();
 void seedBackup();

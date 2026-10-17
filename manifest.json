@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Amnesty",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A browser memory. Close it, you'll still have it.",
   "permissions": [
     "tabs",
@@ -34,8 +34,18 @@
       "match_origin_as_fallback": true
     }
   ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "action": {
-    "default_title": "Tab Amnesty"
+    "default_title": "Tab Amnesty",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
   "incognito": "not_allowed",
   "minimum_chrome_version": "116"

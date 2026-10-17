@@ -1,170 +1,86 @@
-# Tab Amnesty
+<p align="center"><img src="public/icons/icon-128.png" width="88" alt=""></p>
 
-A browser memory, not a tab manager. **Close it, you'll still have it.**
+<h1 align="center">Tab Amnesty</h1>
 
-Phase 0 — the X-ray — is a measurement, not a product: does clustering open tabs by *behaviour*
-(which tab opened which, when, what gets switched between) recover someone's real projects better
-than Chrome's built-in "Organize tabs", which clusters by topic? Full brief in `docs/PROJECT.md`;
-checklist and gates in `docs/PHASES.md`.
+<p align="center"><b>Close it, you'll still have it.</b></p>
 
-## Pass condition (Phase 0 gate)
+<p align="center">A Chrome extension that remembers what your tabs were about, groups them by what you were
+doing, and lets you put a whole project away in one click — kept, searchable, and back whenever
+you want it. Everything stays on your computer.</p>
 
-On **five real browsers with 80+ open tabs**, hand-labelled by their owners:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/sweep-dark.png">
+  <img alt="Tab Amnesty's page: open tabs grouped as asyncio, kubectl rollout and Sourdough, each with one Archive &amp; close button" src="docs/images/sweep-light.png">
+</picture>
 
-1. Our partition's **Adjusted Rand Index** against the labels beats Chrome's organiser by
-   **≥ 0.15 absolute on at least 4 of the 5**, and
-2. zeroing the behavioural signals S1 (opener lineage), S2 (temporal proximity) and S8
-   (co-activation) together **drops our ARI by ≥ 0.10**.
+## Why
 
-Scoring convention, applied identically to both partitions: **each ungrouped / loose-end tab is
-its own singleton cluster.** Nothing is excluded from scoring and nothing is lumped into a junk
-bucket. ARI is reported on the full labelled set and separately on the subset both partitions
-placed in a group, so a win from "placed more tabs" is visible as such.
+People with dozens of tabs open are rarely disorganised: closing a tab feels like losing it, so it
+stays open
+([Chang et al., CHI 2021](https://www.cmu.edu/news/stories/archives/2021/may/overcoming-tab-overload.html)).
+Tab Amnesty makes closing safe. Before anything closes it writes down what each tab was, and it
+gives everything back — in one click, by search, or as a file you keep.
 
-Known limits, reported not hidden:
+## What it does
 
-- Co-activation and dwell only accrue after days of collection, so this gate mostly tests S1–S7
-  with history-backfilled timing. A marginal pass is more encouraging than it looks; a clear fail
-  is fatal. A failed gate is a real outcome.
-- The "zero S1/S2/S8" run leaves S3 (same session) standing, and S3 is cut from the same
-  timestamps S2 decays over — so that run under-states how much timing contributes.
-- On projects that interleave in time, the contemporaneity signals (S2, S4) can actively mislead:
-  on the lineage positive control, zeroing S2 *raises* ARI from 0.27 to 1.0. Weights were not
-  tuned on synthetic data; `npm run refit` on labelled real pairs is the intended fix, and only
-  its leave-one-browser-out column counts (weights fit on the gate browsers and scored on them
-  would be a harness tuned to pass).
-- After a browser restart, two tabs on the same URL can swap identities (the re-bind has nothing
-  stronger than URL to go on), so some lineage lands on the wrong twin.
-- Tabs that pre-date the install often have no real opening time: Chrome keeps 90 days of
-  history and session restore writes a `reload` visit, so their timestamp is the last restart.
-  Those count as timing-unknown (no S2, no S3) and cluster only by lineage, co-activation, strip
-  position and content — which is why testers must browse for days before exporting.
+- **Groups tabs by what you were doing, not by topic.** Tabs you opened from one another, in one
+  sitting, and switched between are one project, even across sites. Each group gets a name you'll
+  recognise ("asyncio", "Lisbon"), from Chrome's on-device model when your Chrome has it and from
+  the pages' own titles when it doesn't. You never have to name anything.
+- **One button per group: Archive & close.** It saves every page — address, title, what the page
+  said — and only then closes the tabs. Nothing closes unless you press it, one group at a time,
+  and a tab holding a half-written message stays open.
+- **Bring back** puts the whole group back on your tab strip, in its order, for a day — even after
+  a restart. After that, **Open all** brings it back whenever you like.
+- **Find anything you put away** by a word from its title, its text, its site, or the day.
+- **Keep a copy:** everything you put away as one file that opens in any browser, and can be
+  brought back in here or on another computer.
+- **Forget anything:** *Forget this* on every group and every page, and a list of sites it never
+  remembers.
 
-## Phase 1 — Amnesty (in progress)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/search-dark.png">
+  <img alt="Searching what was put away: 'fado' finds the Alfama page in the Lisbon group by its summary" src="docs/images/search-light.png">
+</picture>
 
-The icon now opens the **sweep page**: groups named on-device (Gemini Nano when Chrome offers it,
-otherwise a heuristic), one button per group — **Archive & close** — which writes an archive card
-to IndexedDB *before* closing anything. Below: everything put away, with **Bring back** for 24 h
-(survives a restart) and **Forget this** on every card and every tab. "Sites never remembered" is
-the only setting. `npm run check` now also groups the strip, archives a group, restarts Chrome,
-and brings it back. The Phase 0 gate is still open — see `docs/PHASES.md`.
+## Private by design
 
-Phase 1 gate, per tester: install, browse normally, nobody prompts them to press anything. Eight
-or more days after their first Archive & close, icon → "For the study: export and baseline" →
-**Export study summary** (times and numbers only), saved as `fixtures/<name>.study.json`, then
-`npm run phase1 <name…>`. Ask them separately whether any press was prompted.
+Everything Tab Amnesty records stays on your computer. It makes no network requests: no account,
+no server, no analytics. It never runs in incognito windows, and mail, chat and search pages keep
+no title or text. What it records, why, and what each permission is for: [PRIVACY.md](PRIVACY.md).
+Tab Amnesty's use of this information complies with the Chrome Web Store User Data Policy,
+including the Limited Use requirements.
 
-## Layout
+## Install
 
-```
-src/collector/   service worker + content script (records; never closes or groups anything)
-src/cluster/     the shipped clusterer — pure TS, zero chrome.*, runs in Node
-src/archive/     Phase 1: archive cards, naming, the sweep's actions
-src/ui/sweep/    the page from the extension icon (Phase 1)
-src/ui/xray/     the read-only x-ray page (Phase 0 study; linked from the sweep page)
-src/offscreen/   summarisation queue (Summarizer API), driven by chrome.alarms
-analysis/        Python research bench (networkx, sklearn, pandas) — where signals get changed
-tools/           cluster CLI, integration check, thin npm wrappers around Python
-fixtures/        exported traces, hand labels, Chrome baselines (see fixtures/README.md)
-docs/            PROJECT.md (brief), PHASES.md (checklist), DECISIONS.md (judgement calls),
-                 research-jev-laya.md (Jev/Laya impact study and staged plan)
-```
+**From a release** — Chrome, Edge or Brave, version 116 or later:
 
-The clusterer exists twice on purpose: Python is where signals are iterated; TS is what ships,
-and **the gate is measured on the TS partition** — `npm run score|ablate|report` run
-`tools/cluster-cli.ts` and print the parity result in every header. `npm run parity` fails if the
-two drift (every pair's signal must match to 1e-9; partitions must agree at ARI ≥ 0.98 — both run
-the same deterministic Louvain, so the observed value is 1.0). `--python` clusters in the bench
-instead, for experiments; its output is labelled as not a gate number.
+1. Download `tab-amnesty-<version>.zip` from
+   [Releases](https://github.com/Makilesh/Chrome_tab_amnesty/releases) and unzip it somewhere
+   you'll keep: Chrome runs the extension from that folder.
+2. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`), switch on
+   **Developer mode**, click **Load unpacked** and choose the unzipped folder.
+3. Pin Tab Amnesty from the puzzle-piece menu. Browse as you always do, and click its icon
+   whenever you like.
 
-## Running it
+To update, replace the folder's contents with the new zip's, then switch Tab Amnesty off and on
+again in `chrome://extensions`. A Chrome Web Store listing is on its way.
 
-Extension (no Python needed):
+**From source:** `npm ci && npm run build`, then load `dist/` the same way, and press **Reload** on
+the extension after every rebuild.
 
-```
-npm install
-npm run build            # dist/ — load unpacked in chrome://extensions, then press Reload there
-                         # after EVERY build: a rebuilt dist/ under a loaded extension stops it recording
-npm test                 # vitest: url features + clusterer
-npm run check:setup      # once: Chrome for Testing into ./chrome (branded Chrome ignores --load-extension)
-npm run check            # drives a real Chrome, prints what the collector recorded, restarts,
-                         # re-binds, audits the x-ray page, then runs parity (needs Python).
-                         # Builds into .check-build/ — never dist/, which is what your own Chrome loads
-```
+## How it works
 
-Measurement (Python 3.11+):
+As you browse, a content script and a service worker note which tab opened which, when, what you
+switch between, and a short digest of each page, in the extension's own storage. When you click
+the icon, Tab Amnesty clusters your open tabs from those records — a deterministic Louvain over
+lineage, timing, co-activation, strip position and page text, never by reading live tabs — names
+each group and offers one action per group. The design rules it holds itself to are in
+[CLAUDE.md](CLAUDE.md); the research behind it, and the measurement it still has to pass, are in
+[docs/RESEARCH.md](docs/RESEARCH.md).
 
-```
-uv pip install --python .venv/Scripts/python.exe -e "analysis[dev]"     # or: pip install -e analysis[dev]
-npm run pytest
-npm run synth            # synthetic fixtures for mechanics only — never count toward the gate:
-                         #   synthetic (easy) + synthetic_{lineage,coactive,temporal} (positive
-                         #   controls: projects separable by exactly one behavioural signal) +
-                         #   synthetic_multilingual (four scripts; only page text separates them)
-npm run cluster <name>   # TS clusterer -> fixtures/<name>.partition.json
-npm run labels <name>    # write/refresh fixtures/<name>.labels.json; keeps labels already filled in
-npm run phase1 <name...> # Phase 1 gate from fixtures/<name>.study.json: presses, open count before vs day 7
-npm run walkthrough      # the whole product on real sites in a visible Chrome for Testing (~6 min, scripted)
-npm run read-profile     # read YOUR profile's records from disk (copy -> throwaway Chrome); no clicks needed
-npm run package          # release/tab-amnesty-<version>.zip for testers (never touches dist/)
-npm run score <name>     # ARI / pairwise P-R-F1, ours (TS) vs Chrome vs labels, parity in header
-npm run ablate <name>    # ARI delta with each signal zeroed, plus S1+S2+S8 together (TS partitions)
-npm run report a b c d e # per-browser chart -> fixtures/report.png
-npm run refit a b c d e  # learn P(same project) from the signals, each browser held out in turn
-                         #   -> fixtures/refit.betas.json (a candidate; src/cluster/betas.json is never written)
-npm run judge-sim        # what a content model (Laya/Jev) could add: simulated judge x 5 designs,
-                         #   warm vs install-day browsers (docs/research-jev-laya.md §3)
-npm run laya-probe <name> # measure real Laya on a labelled fixture (opt-in: pip install -e "analysis[laya]",
-                         #   needs huggingface.co for the first ~1.7 GB download)
-npm run parity [name...] # TS vs Python agreement; no args = every fixture. Also part of npm run check
-```
+## Contributing
 
-## Installing it as a tester (no Node, no build)
-
-The owner runs `npm run package` and sends you `tab-amnesty-<version>.zip`. Then:
-
-1. Unzip it somewhere you'll keep, such as Documents. Chrome runs the extension from that folder,
-   so don't delete or move it.
-2. Open `chrome://extensions` (Edge: `edge://extensions`, Brave: `brave://extensions`), switch on
-   **Developer mode** at the top right, click **Load unpacked**, and choose the unzipped
-   `tab-amnesty-<version>` folder.
-3. Click the puzzle-piece icon in the toolbar and pin **Tab Amnesty**, so it's one click away.
-4. Browse as you normally do. Whenever you like, click the icon: it shows what you have open,
-   grouped by what you were doing, with one **Archive & close** per group. Anything put away can
-   be brought back. Everything stays on your computer.
-
-Works in Chrome, Edge and Brave, version 116 or later (checked in Chrome 153/154, Edge 154,
-Brave 154). To update: replace the folder's contents with the new zip's, then switch Tab Amnesty
-off and on again in `chrome://extensions`. If the page ever says it isn't keeping up with your
-tabs, that same off-and-on fixes it.
-
-## Getting a real fixture
-
-0. Check `chrome://settings/ai` shows a **Tab organizer** toggle *before* you start. Chrome only
-   offers it on some profiles (signed in, English-US UI, certain regions). Without it the browser
-   can still contribute to the ablation half of the gate but not the Chrome comparison — say so
-   when you hand the fixture over.
-
-1. Install the unpacked extension (`npm run build`, then load `dist/` in `chrome://extensions`;
-   click **Reload** there after every rebuild) and browse normally for a few days — lineage and
-   co-activation only accrue for tabs opened and switched between while it is installed.
-
-2. Click the icon → "For the study" → **Export traces** (shareable by default: no full URLs, no
-   query values, no page text). Save as `fixtures/<name>.json`.
-
-3. Run Chrome's **Organize tabs**, accept its groups, then **Capture Chrome's grouping**. Save as
-   `fixtures/<name>.chrome.json`. The groups are undone afterwards; saved groups may refuse and
-   the page says so.
-
-4. `npm run labels <name>` writes `fixtures/<name>.labels.json` with one line per open tab in
-   strip order. Fill in `traceId → project name` (`null` = no project). Re-run it after a newer
-   export; filled-in labels are kept. See `fixtures/README.md`.
-
-5. `npm run score <name>` and `npm run ablate <name>`.
-
-
-## Rules that do not bend
-
-Six platform non-negotiables and eleven human design rules — see `CLAUDE.md`. In short: never
-delete anything, never auto-close, never show a tab count as a problem, never make the user name
-anything, nothing leaves the machine.
+Issues and pull requests are welcome. `npm test` runs the unit tests. `npm run check` drives a real
+Chrome for Testing through recording, grouping, putting away, a restart, bringing back, search and
+copies (run `npm run check:setup` once first). More in [docs/RESEARCH.md](docs/RESEARCH.md).

@@ -147,7 +147,7 @@ export async function archiveAndClose(
   const card = buildCard(community, kept, keptName, when, keptHosts, Date.now(), crypto.randomUUID(), whenAt);
   if (kept.length > 0) {
     await putCard(card); // BEFORE closing anything
-    await notePress(card.archivedAt).catch(() => {}); // the study's count; never blocks putting things away
+    if (__STUDY__) await notePress(card.archivedAt).catch(() => {}); // the study's count; never blocks putting things away
     const jobs: SummariseJob[] = card.tabs
       .filter((t) => t.digest && (t.digest.description || t.digest.headings.length || t.digest.leadText))
       .map((t) => ({ jobId: crypto.randomUUID(), cardId: card.cardId, traceId: t.traceId, createdAt: Date.now(), attempts: 0, state: 'pending' }));
