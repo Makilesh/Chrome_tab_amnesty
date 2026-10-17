@@ -290,6 +290,117 @@ async function checkBringBack(browser: Browser, extId: string, card: ArchiveCard
   await page.close();
 }
 
+/** A word of one put-away tab's title that is not in the card's name, so a search finds that tab, not the card. */
+function wordOfOneTab(card: ArchiveCard): string {
+  const words = (s: string) => s.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4);
+  const inName = new Set(words(card.name));
+  for (const t of [...card.tabs].reverse()) {
+    const w = words(t.title).find((x) => !inName.has(x) && card.tabs.filter((u) => words(u.title).includes(x)).length === 1);
+    if (w) return w;
+  }
+  return words(card.tabs[0]?.title ?? '')[0] ?? 'deploy';
+}
+
+/**
+ * Phase 2: a search finds a put-away tab by a word of its title, and Open all brings the whole
+ * card back, in order, on its own records — here after its old tab ids were handed to a live
+ * tab, as a restart can do (§5.3).
+ */
+async function checkFindAndOpenAll(browser: Browser, extId: string, card: ArchiveCard): Promise<void> {
+  const ids = card.tabs.map((t) => t.traceId);
+  const ctl = await browser.newPage();
+  await ctl.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  await ctl.waitForFunction(() => typeof (window as any).__tabAmnestyTraces === 'function');
+  // Put the card away again: close what Bring back reopened.
+  await ctl.evaluate(async (ids: string[]) => {
+    const traces = await (window as any).__tabAmnestyTraces();
+    const tabIds = traces.filter((t: TabTrace) => t.closedAt === null && ids.includes(t.traceId)).map((t: TabTrace) => t.tabId);
+    if (tabIds.length) await chrome.tabs.remove(tabIds);
+  }, ids);
+  await sleep(1500);
+
+  const page = await browser.newPage();
+  await page.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
+  await page.waitForSelector('#cards .group', { timeout: 10_000 });
+  // A restart hands tab ids out again: give the card's records this page's own id.
+  await page.evaluate(
+    (ids: string[]) =>
+      new Promise<void>(async (resolve, reject) => {
+        const me = (await chrome.tabs.getCurrent())!.id!;
+        const r = indexedDB.open('tab-amnesty');
+        r.onerror = () => reject(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction('traces', 'readwrite');
+          const store = tx.objectStore('traces');
+          for (const id of ids) {
+            const g = store.get(id);
+            g.onsuccess = () => void (g.result && store.put({ ...g.result, tabId: me }));
+          }
+          tx.oncomplete = () => {
+            r.result.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    ids,
+  );
+
+  const word = wordOfOneTab(card);
+  await page.type('#find', word);
+  await sleep(600);
+  const found = await page.$$eval('#cards .group', (gs) =>
+    gs.map((g) => ({
+      name: g.querySelector('h2')?.textContent,
+      list: `${g.querySelector('details summary')?.textContent}${(g.querySelector('details') as HTMLDetailsElement | null)?.open ? ' (open)' : ''}`,
+      lines: [...g.querySelectorAll('li .t')].map((x) => x.textContent),
+      action: g.querySelector('header button')?.textContent,
+    })),
+  );
+  const text = await page.evaluate(() => document.body.innerText);
+
+  const liveTabs = () =>
+    ctl.evaluate(() => chrome.tabs.query({}).then((ts) => ts.map((t) => ({ id: t.id!, url: t.url || t.pendingUrl || '', index: t.index })))) as Promise<
+      { id: number; url: string; index: number }[]
+    >;
+  const clicked = await page.evaluate((name) => {
+    const g = [...document.querySelectorAll('#cards .group')].find((x) => x.querySelector('h2')?.textContent === name);
+    const b = [...(g?.querySelectorAll('header button') ?? [])].find((x) => x.textContent === 'Open all') as HTMLButtonElement | undefined;
+    b?.click();
+    return !!b;
+  }, card.name);
+  await sleep(3000);
+  const message = await page.$eval('.toast', (e) => e.textContent).catch(() => '(none)');
+  const live = await liveTabs();
+  const open = (await readTraces(browser, extId)).filter((t) => t.closedAt === null);
+  const back = ids.map((id) => open.find((t) => t.traceId === id)).filter((t): t is TabTrace => !!t);
+  const onOwnTab = back.filter((t) => live.some((l) => l.id === t.tabId && l.url === t.url));
+  const order = [...onOwnTab].sort((a, b) => live.find((l) => l.id === a.tabId)!.index - live.find((l) => l.id === b.tabId)!.index).map((t) => t.url);
+  const expected = [...card.tabs].sort((a, b) => a.order - b.order).map((t) => t.url);
+  const strays = open.filter((t) => live.some((l) => l.id === t.tabId && l.url !== t.url));
+
+  await page.click('#find', { clickCount: 3 });
+  await page.type('#find', 'zqxjv');
+  await sleep(600);
+  const none = await page.$eval('#cards', (e) => e.textContent);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('/');
+  const slash = await page.evaluate(() => document.activeElement?.id);
+
+  console.log(`
+find and open all: "${word}" found ${JSON.stringify(found)}`);
+  console.log(`  forbidden words on page: ${FORBIDDEN.test(text) ? 'YES — ' + text.match(FORBIDDEN)![0] : 'none'} | tab count shown as a number: ${COUNT_AS_PROBLEM.test(text) ? 'YES — ' + text.match(COUNT_AS_PROBLEM)![0] : 'none'}`);
+  console.log(
+    `  Open all: button ${clicked ? 'found' : 'MISSING'}; ${onOwnTab.length} of ${expected.length} tabs back on their own records, ` +
+      `order ${JSON.stringify(order) === JSON.stringify(expected) ? 'matches' : 'DIFFERS: ' + JSON.stringify(order)}; ` +
+      `records on a live tab that is not theirs: ${strays.length} (must be 0)${strays.length ? ' ' + JSON.stringify(strays.map((t) => t.url)) : ''}`,
+  );
+  console.log(`  message: ${message}`);
+  console.log(`  a search that finds nothing says: ${JSON.stringify(none)} | "/" moves to the search box: ${slash === 'find'}`);
+  await page.close();
+  await ctl.close();
+}
+
 /** Phase 1 study: the summary export carries times and counts only, and sees the archive. */
 async function checkStudyExport(browser: Browser, extId: string, userDataDir: string): Promise<void> {
   const page = await browser.newPage();
@@ -571,6 +682,7 @@ async function main(): Promise<void> {
       await sleep(2500);
       await checkBringBack(browser, extId, card);
       await checkStudyExport(browser, extId, userDataDir);
+      await checkFindAndOpenAll(browser, extId, card);
     } finally {
       await browser.close();
     }

@@ -1,7 +1,8 @@
 /**
  * The sweep page (Phase 1). Reads stored records — never live tabs — clusters them, names each
  * group, and offers exactly one action per group: Archive & close. Everything archived is listed
- * below with Bring back (24 h) and Forget on every record.
+ * below, searchable (Phase 2's return path), with Bring back for a day, then Open all, and Forget
+ * on every record.
  *
  * §6 on this page: the first thing on screen is a group the person recognises (§6.3); at most
  * five group actions are visible at once (§6.4); no counts of tabs anywhere (§6.1); nothing to
@@ -11,8 +12,9 @@
 import { cardWhen, undoable } from '../../archive/card';
 import { betterName, type NamedGroup, quickName, type RememberedName, rememberedName, rememberName } from '../../archive/naming';
 import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, getRememberedNames, removeNeverRemember, saveRememberedNames } from '../../archive/store';
-import { archiveAndClose, bringBack, groupOnStrip, openOne, type StripPlace, ungroupOurs } from '../../archive/sweep';
-import type { ArchiveCard } from '../../archive/types';
+import { queryTerms, searchArchive } from '../../archive/search';
+import { archiveAndClose, bringBack, groupOnStrip, openCard, openOne, type StripPlace, ungroupOurs } from '../../archive/sweep';
+import type { ArchiveCard, ArchivedTab } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
 import type { Community, TabTrace } from '../../cluster/types';
 import { getOpenTraces, getTraceByTabId } from '../../collector/db';
@@ -241,7 +243,7 @@ async function checkBuild(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Archive: bring back, open, forget
+// Archive: find, bring back, open, forget
 // ---------------------------------------------------------------------------------------------
 
 /** Bring a card back from either of its buttons; a refusal is said in a toast, where a re-render cannot wipe it. */
@@ -253,16 +255,38 @@ async function onBringBack(cardId: string, button: HTMLButtonElement): Promise<v
   await renderArchive(true);
 }
 
-function archiveCard(c: ArchiveCard, open: boolean): HTMLElement {
+/** Open a whole card again, any time after its day; the tabs land at the end of the strip, behind this page. */
+async function onOpenAll(c: ArchiveCard, button: HTMLButtonElement): Promise<void> {
+  button.disabled = true;
+  try {
+    await openCard(c);
+    toast(`“${c.name}” is open again, at the end of your tab strip.`);
+  } catch (e) {
+    toast(`That did not work: ${(e as Error).message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+/**
+ * One put-away card. `matched`: a search found these of its tabs (not the card itself), so the
+ * list is open and holds only them.
+ */
+function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[]): HTMLElement {
   const card = el('section', `group c-${c.color}`);
   card.dataset.card = c.cardId;
   const header = el('header');
   header.append(el('h2', undefined, c.name));
   const actions = el('div');
+  // One action per card (§6.4): the undo for its first day, then opening it again, as often as wanted.
   if (undoable(c)) {
     const back = el('button', undefined, 'Bring back');
     back.addEventListener('click', () => void onBringBack(c.cardId, back));
     actions.append(back);
+  } else {
+    const all = el('button', undefined, 'Open all');
+    all.addEventListener('click', () => void onOpenAll(c, all));
+    actions.append(all);
   }
   const forget = el('button', 'quiet', 'Forget this');
   forget.addEventListener('click', async () => {
@@ -276,10 +300,10 @@ function archiveCard(c: ArchiveCard, open: boolean): HTMLElement {
   const when = [cardWhen(c), c.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
   card.append(el('p', `when${c.restoredAt ? ' done' : ''}`, c.restoredAt ? `${when} · brought back` : when));
   const details = el('details');
-  details.open = open;
-  details.append(el('summary', undefined, 'What was in it'));
+  details.open = open || !!matched;
+  details.append(el('summary', undefined, matched ? 'What matched' : 'What was in it'));
   const ul = el('ul');
-  for (const t of c.tabs) {
+  for (const t of matched ?? c.tabs) {
     const li = line(t.title, t.host, t.url, t.summary);
     const openBtn = el('button', 'quiet', 'Open');
     openBtn.addEventListener('click', () => void openOne(t.url));
@@ -299,15 +323,26 @@ function archiveCard(c: ArchiveCard, open: boolean): HTMLElement {
 
 /** What the list last showed; the periodic refresh redraws only when this changes. */
 let archiveShown = '';
+/** What is typed in "Find something you put away". */
+let query = '';
+/** Put-away cards on screen: five more at a time, like the groups above (§6.4). */
+let cardsShown = VISIBLE;
 
 /**
- * Redraw "Put away". The 20-second refresh (summaries arrive in the background) only redraws
- * when something on it changed, and keeps open "What was in it" lists open — it used to snap
- * them shut and drop the focused button every time.
+ * Redraw "Put away" — every card, newest first, or what a search found, best first. The
+ * 20-second refresh (summaries arrive in the background) only redraws when something on it
+ * changed, and keeps open "What was in it" lists open — it used to snap them shut and drop the
+ * focused button every time.
  */
 async function renderArchive(force = false): Promise<void> {
   const cards = await getCards();
-  const shown = JSON.stringify(cards.map((c) => [c.cardId, c.name, c.restoredAt, undoable(c), cardWhen(c), c.tabs.map((t) => [t.traceId, t.summary])]));
+  // Read after the await: of two redraws in flight, both show what is typed now.
+  const searching = queryTerms(query).length > 0;
+  const shown = JSON.stringify([
+    searching ? query : '',
+    cardsShown,
+    cards.map((c) => [c.cardId, c.name, c.restoredAt, undoable(c), cardWhen(c), c.tabs.map((t) => [t.traceId, t.summary])]),
+  ]);
   if (!force && shown === archiveShown) return;
   archiveShown = shown;
   const section = $('archive');
@@ -315,7 +350,37 @@ async function renderArchive(force = false): Promise<void> {
   const open = new Set([...root.querySelectorAll<HTMLElement>('[data-card]')].filter((s) => s.querySelector('details')?.open).map((s) => s.dataset.card));
   root.replaceChildren();
   section.hidden = cards.length === 0;
-  for (const c of cards) root.append(archiveCard(c, open.has(c.cardId)));
+  const list = searching ? searchArchive(cards, query) : cards.map((card) => ({ card, tabs: card.tabs, whole: true }));
+  if (searching && list.length === 0) root.append(el('p', 'empty', 'Nothing put away matches that.'));
+  for (const h of list.slice(0, cardsShown)) root.append(archiveCard(h.card, open.has(h.card.cardId), h.whole ? undefined : h.tabs));
+  $('cards-more').hidden = list.length <= cardsShown;
+}
+
+/** A search box behaves like one: results as you type, "/" to get to it from anywhere on the page. */
+function wireSearch(): void {
+  const find = $<HTMLInputElement>('find');
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  const onFind = () => {
+    clearTimeout(pending);
+    pending = setTimeout(() => {
+      query = find.value;
+      cardsShown = VISIBLE;
+      void renderArchive(true);
+    }, 120);
+  };
+  find.addEventListener('input', onFind);
+  find.addEventListener('search', onFind); // Escape and the clear button
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || $('archive').hidden) return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    e.preventDefault();
+    find.focus();
+  });
+  $('cards-more-btn').addEventListener('click', () => {
+    cardsShown += VISIBLE;
+    void renderArchive(true);
+  });
 }
 
 function toast(text: string, cardId?: string): void {
@@ -351,6 +416,7 @@ function renderNever(list: string[]): void {
 // ---------------------------------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  wireSearch();
   try {
     await load();
   } catch (e) {
