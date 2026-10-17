@@ -154,7 +154,8 @@ tabs, that same off-and-on fixes it.
    co-activation only accrue for tabs opened and switched between while it is installed.
 
 2. Click the icon → "For the study" → **Export traces** (shareable by default: no full URLs, no
-   query values, no page text). Save as `fixtures/<name>.json`.
+   query values, no page text). Save as `fixtures/<name>.json` — git ignores it: a real browser's
+   files never leave the machine they were made on.
 
 3. Run Chrome's **Organize tabs**, accept its groups, then **Capture Chrome's grouping**. Save as
    `fixtures/<name>.chrome.json`. The groups are undone afterwards; saved groups may refuse and

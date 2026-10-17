@@ -95,6 +95,18 @@ export function cardHosts(card: Pick<ArchiveCard, 'hosts' | 'tabs'>): string[] {
   return card.hosts.filter((h) => card.tabs.some((t) => t.host === h || t.host.endsWith('.' + h)));
 }
 
+/** How long the record of a tab closed without being put away is kept. */
+export const CLOSED_RECORD_DAYS = 30;
+
+/**
+ * Of records closed long enough ago, those no card holds: Bring back and Open all read their own
+ * cards' records, and nothing else reads a closed one.
+ */
+export function recordsToDrop(closed: readonly Pick<TabTrace, 'traceId'>[], cards: readonly Pick<ArchiveCard, 'tabs'>[]): string[] {
+  const held = new Set(cards.flatMap((c) => c.tabs.map((t) => t.traceId)));
+  return closed.map((t) => t.traceId).filter((id) => !held.has(id));
+}
+
 /** URLs in the order they should be recreated. */
 export function restoreOrder(card: ArchiveCard): ArchivedTab[] {
   return [...card.tabs].sort((a, b) => a.order - b.order);

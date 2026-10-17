@@ -2,6 +2,7 @@
   "name": "tab-amnesty",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "A browser memory, not a tab manager. Close it, you'll still have it.",
   "type": "module",
   "scripts": {

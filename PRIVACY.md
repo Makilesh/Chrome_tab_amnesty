@@ -25,7 +25,8 @@ whole project away in one click and find it again later. For that, for each tab 
   that Archive & close never closes a tab with a half-written message.
 
 Tabs on mail, chat, calendar and search-results pages are never grouped, so for those it keeps
-the address and timing only — no title and no page text.
+only the site and page path of the address — not a search's words, not a message's id — and the
+timing: no title, no page text.
 
 When you put a group away, it keeps a card for it: the group's name, when it was, its sites, and
 for each tab the address, title, digest and, if Chrome's on-device model wrote one, a summary.
@@ -47,6 +48,9 @@ In the extension's own storage inside your Chrome profile (its IndexedDB databas
 copy of what you put away in its Cache Storage, so a database Chrome replaces does not take your
 archive along). Only Tab Amnesty can read it — web pages cannot. Uninstalling Tab Amnesty
 removes all of it.
+
+What you put away is kept until you forget it. The record of a tab you closed yourself, without
+putting it away, is removed 30 days after it closed.
 
 ## Your controls
 

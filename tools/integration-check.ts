@@ -477,6 +477,71 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
   await page.close();
 }
 
+/** Write records and cards straight into the extension's database, from one of its pages. */
+function putRecords(page: Page, traces: object[], cards: object[] = [], drop: { traces?: string[]; cards?: string[] } = {}): Promise<void> {
+  return page.evaluate(
+    (traces, cards, drop) =>
+      new Promise<void>((resolve, reject) => {
+        const r = indexedDB.open('tab-amnesty');
+        r.onerror = () => reject(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction(['traces', 'archive'], 'readwrite');
+          for (const t of traces) tx.objectStore('traces').put(t);
+          for (const c of cards) tx.objectStore('archive').put(c);
+          for (const id of drop.traces ?? []) tx.objectStore('traces').delete(id);
+          for (const id of drop.cards ?? []) tx.objectStore('archive').delete(id);
+          tx.oncomplete = () => {
+            r.result.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    traces,
+    cards,
+    drop,
+  );
+}
+
+/**
+ * Records of tabs closed over 30 days ago go unless a card holds them (DECISIONS 2026-10-17). The
+ * worker does it once a day on an alarm; an extension page can bring that alarm forward, which is
+ * how this runs it. Leaves nothing behind.
+ */
+async function checkRetention(browser: Browser, extId: string): Promise<void> {
+  const DAY = 86_400_000;
+  const now = Date.now();
+  const base = {
+    tabId: -1, windowId: 1, index: 0, openerTraceId: null, transition: 'link', backfilled: false, lastActiveAt: null, activationCount: 0,
+    dwellMs: 0, coActive: {}, pathTokens: [], queryKeys: {}, digest: null, digestAt: null, pinned: false, discarded: false,
+  };
+  const rec = (traceId: string, url: string, title: string, closedDaysAgo: number) => {
+    const host = new URL(url).hostname;
+    return { ...base, traceId, url, host, eTLD1: host, title, openedAt: now - (closedDaysAgo + 1) * DAY, closedAt: now - closedDaysAgo * DAY };
+  };
+  const page = await browser.newPage();
+  await page.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);
+  const card = {
+    cardId: 'ret-card', name: 'Held', color: 'blue', tier: 'heuristic', when: '', whenAt: null, hosts: ['held.example'], archivedAt: now - 40 * DAY,
+    undoUntil: now - 39 * DAY, restoredAt: null, sourceCommunity: 0,
+    tabs: [{ traceId: 'ret-held', url: 'https://held.example/b', title: 'Held page', host: 'held.example', order: 0, digest: null, summary: null, openedAt: now - 41 * DAY }],
+  };
+  await putRecords(page, [rec('ret-old', 'https://old.example/a', 'Old page', 40), rec('ret-held', 'https://held.example/b', 'Held page', 40), rec('ret-recent', 'https://recent.example/c', 'Recent page', 2)], [card]);
+  await page.evaluate(() => chrome.alarms.create('prune-closed-records', { delayInMinutes: 0.5 }));
+  let byId = new Map<string, TabTrace>();
+  for (let i = 0; i < 12; i++) {
+    await sleep(5000);
+    byId = new Map((await readTraces(browser, extId)).map((t) => [t.traceId, t]));
+    if (!byId.has('ret-old')) break;
+  }
+  console.log(
+    `\nretention: closed 40 days ago, no card: ${byId.has('ret-old') ? 'KEPT (must go)' : 'gone'}; held by a card: ${byId.has('ret-held') ? 'kept' : 'GONE (must stay)'}; ` +
+      `closed 2 days ago: ${byId.has('ret-recent') ? 'kept' : 'GONE (must stay)'}`,
+  );
+  await putRecords(page, [], [], { traces: ['ret-old', 'ret-held', 'ret-recent'], cards: ['ret-card'] });
+  await page.close();
+}
+
 /** Phase 1 study: the summary export carries times and counts only, and sees the archive. */
 async function checkStudyExport(browser: Browser, extId: string, userDataDir: string): Promise<void> {
   const page = await browser.newPage();
@@ -760,6 +825,7 @@ async function main(): Promise<void> {
       await checkStudyExport(browser, extId, userDataDir);
       await checkFindAndOpenAll(browser, extId, card);
       await checkKeepACopy(browser, extId, card, userDataDir);
+      await checkRetention(browser, extId);
     } finally {
       await browser.close();
     }

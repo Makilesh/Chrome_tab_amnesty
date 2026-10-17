@@ -294,8 +294,9 @@ now says instead of naming a date that has passed.
 - [x] Icon; public build without the study (`npm run package`), testers' build (`-- --study`); 0.1.0
 - [x] README for newcomers (research notes now `docs/RESEARCH.md`); `PRIVACY.md`; store listing pack
       `docs/store/LISTING.md`
-- [ ] Owner: a license · the Web Store account and fee · the personal fixtures in the public
-      repository · the Phase 0 gate rule before submitting (CLAUDE.md)
+- [x] MIT license; the owner's fixtures out of the public history (17 Oct); release 0.1.0 on GitHub
+- [x] Search, mail and chat records keep no query or fragment; closed records go after 30 days
+- [ ] Owner: the Web Store account and fee · the Phase 0 gate rule before submitting (CLAUDE.md)
 
 ### Done when
 - [ ] Someone can find a thing archived three weeks ago without remembering when

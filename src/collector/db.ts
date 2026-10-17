@@ -229,6 +229,11 @@ export async function getOpenTracesByUrl(url: string): Promise<TabTrace[]> {
   return all.filter((t) => t.closedAt === null);
 }
 
+/** Records of tabs closed before `at`, through the closedAt index (an open record has no key there). */
+export async function getTracesClosedBefore(at: number): Promise<TabTrace[]> {
+  return (await db()).getAllFromIndex('traces', 'byClosedAt', IDBKeyRange.upperBound(at, true));
+}
+
 export async function getAllTraces(): Promise<TabTrace[]> {
   return (await db()).getAll('traces');
 }

@@ -76,7 +76,7 @@ vi.mock('./db', () => ({
   },
   onDatabaseReset: () => {},
 }));
-vi.mock('../archive/store', () => ({ getNeverRemember: async () => [...h.never], seedBackup: async () => {} }));
+vi.mock('../archive/store', () => ({ getNeverRemember: async () => [...h.never], seedBackup: async () => {}, pruneClosedRecords: async () => 0 }));
 vi.mock('./history', () => ({
   lastVisit: async (url: string) => h.visits.get(url) ?? null,
   transitionNear: async () => 'unknown',
@@ -313,6 +313,9 @@ describe('collector', () => {
     await settle();
     expect(openOn(20).map((t) => t.title)).toEqual(['']);
     expect(openOn(21).map((t) => t.title)).toEqual(['']);
+    // The address keeps its site and path: not the search's words, not the message's id.
+    expect(openOn(20)[0]).toMatchObject({ url: 'https://www.google.com/search', queryKeys: {} });
+    expect(openOn(21)[0]!.url).toBe('https://mail.google.com/mail/u/0/');
     chromeMock.tabs.onUpdated.fire(21, { title: 'Re: the lease - me@example.com - Gmail' }, { ...liveTabs[1]!, title: 'Re: the lease - me@example.com - Gmail' });
     const respond = vi.fn();
     const digest = { description: '', headings: ['Re: the lease'], leadText: 'Dear landlord' };
@@ -325,11 +328,25 @@ describe('collector', () => {
     chromeMock.runtime.onMessage.fire({ type: 'digest', url: 'https://www.bing.com/search?q=private', title: 'private - Search', digest, reason: 'complete' }, { tab: { id: 22 }, frameId: 0, documentLifecycle: 'active' }, respond);
     await settle();
     expect(h.store.get('docs')).toMatchObject({ title: '', digest: null });
-    // Written before the rule: cleared on install or update.
+    // Written before the rules: cleared on install or update — text, query and fragment.
     h.store.set('old', trace({ traceId: 'old', tabId: 30, url: 'https://web.whatsapp.com/', host: 'web.whatsapp.com', eTLD1: 'whatsapp.com', title: 'WhatsApp - (2) Mum', closedAt: NOW - DAY }));
+    h.store.set('oldsearch', trace({
+      traceId: 'oldsearch', tabId: 31, url: 'https://duckduckgo.com/?q=private+words&ia=web', host: 'duckduckgo.com', eTLD1: 'duckduckgo.com',
+      queryKeys: { q: 'private words', ia: 'web' }, title: 'private words at DuckDuckGo', closedAt: NOW - DAY,
+    }));
     chromeMock.runtime.onInstalled.fire({ reason: 'update' });
     await settle(400);
     expect(h.store.get('old')).toMatchObject({ title: '', digest: null });
+    expect(h.store.get('oldsearch')).toMatchObject({ url: 'https://duckduckgo.com/', queryKeys: {}, title: '' });
+  });
+
+  it('a search tab restored after a restart finds its record, though the record keeps no search words', async () => {
+    h.store.set('s', trace({ traceId: 's', tabId: 99, url: 'https://www.google.com/search', host: 'google.com', eTLD1: 'google.com', pathTokens: ['search'] }));
+    liveTabs = [tab(40, 0, 'https://www.google.com/search?q=lisbon+trams')];
+    chromeMock.tabs.onCreated.fire({ ...liveTabs[0]! });
+    await settle();
+    expect(openOn(40).map((t) => t.traceId)).toEqual(['s']);
+    expect(h.store.get('s')!.url).toBe('https://www.google.com/search');
   });
 
   it('a tab opened from another tab is new, even at the url of a record waiting to be closed', async () => {

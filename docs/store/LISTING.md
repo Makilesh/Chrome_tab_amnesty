@@ -79,7 +79,9 @@ tile `docs/store/promo-440x280.png`.
 **Data usage** — all of it is stored and processed on the user's computer only, never transmitted:
 
 - [x] **Web browsing activity** — addresses of open tabs, which tab opened which, when tabs were
-  switched to and for how long; visit types from Chrome's history.
+  switched to and for how long; visit types from Chrome's history. Records of tabs closed without
+  being put away are removed after 30 days; search, mail and chat pages keep only the site and
+  path of their address.
 - [x] **Website content** — page titles, descriptions, headings and opening text; summaries made
   on-device.
 - [x] **User activity** — only whether a text box the user typed into is empty (yes/no; never

@@ -24,11 +24,11 @@ import {
 } from './db';
 import { isNeverRemembered } from '../archive/forget';
 import { isAmbient } from '../cluster/affinity';
-import { getNeverRemember, seedBackup } from '../archive/store';
+import { getNeverRemember, pruneClosedRecords, seedBackup } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
 import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
 import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
-import { urlFeatures } from './url';
+import { reduceUrl, urlFeatures } from './url';
 
 /** Never re-capture a digest for the same URL inside this window. */
 const DIGEST_MIN_INTERVAL_MS = 10 * 60_000;
@@ -51,8 +51,8 @@ function baseTrace(tab: chrome.tabs.Tab, url: string): Omit<
     activationCount: 0,
     dwellMs: 0,
     coActive: {},
-    url,
-    ...urlFeatures(url),
+    url: storedUrl(url),
+    ...urlFeatures(storedUrl(url)),
     title: tab.title ?? '',
     digest: null,
     digestAt: null,
@@ -70,6 +70,17 @@ function baseTrace(tab: chrome.tabs.Tab, url: string): Omit<
  */
 function textless(t: TabTrace, never: readonly string[]): boolean {
   return isNeverRemembered(t, never) || isAmbient(t);
+}
+
+/**
+ * What a record keeps of an address. A mail, chat, calendar or search-results address (the
+ * ambient list) keeps its site and path only — a search's words are in its query, a message's id
+ * in its fragment — and every other address is kept whole: grouping reads it. Applied wherever an
+ * address is stored, and to every address compared with a stored one, so a search tab restored
+ * after a restart still finds its record.
+ */
+function storedUrl(url: string): string {
+  return isAmbient(urlFeatures(url)) ? reduceUrl(url) || url : url;
 }
 
 function scrubbed(t: TabTrace, never: readonly string[]): TabTrace {
@@ -94,7 +105,7 @@ async function liveTabIds(): Promise<Set<number>> {
  */
 async function findOrphanFor(tab: chrome.tabs.Tab, url: string, live: Set<number>): Promise<TabTrace | undefined> {
   if (!url) return undefined;
-  const candidates = (await getOpenTracesByUrl(url)).filter((t) => !live.has(t.tabId));
+  const candidates = (await getOpenTracesByUrl(storedUrl(url))).filter((t) => !live.has(t.tabId));
   if (candidates.length === 0) return undefined;
   const score = (t: TabTrace) => (t.windowId === tab.windowId ? 0 : 1_000_000) + Math.abs(t.index - tab.index);
   return candidates.sort((a, b) => score(a) - score(b))[0];
@@ -238,7 +249,8 @@ async function onUpdated(
     await bindOrAdopt(tab);
     return;
   }
-  const urlChanged = changeInfo.url !== undefined && changeInfo.url !== existing.url;
+  const newUrl = changeInfo.url === undefined ? undefined : storedUrl(changeInfo.url);
+  const urlChanged = newUrl !== undefined && newUrl !== existing.url;
   const now = Date.now();
   const never = await getNeverRemember();
   const updated = await updateTrace(existing.traceId, (t) => {
@@ -254,10 +266,10 @@ async function onUpdated(
       // Chrome reports one, when the tab has moved to another page, or when there is none yet.
       title: changeInfo.title ?? (urlChanged || !t.title ? (tab.title || t.title) : t.title),
     };
-    if (urlChanged && changeInfo.url) {
+    if (urlChanged && newUrl) {
       // One trace per tab for its lifetime; a navigation refreshes what the tab is about but
       // keeps openedAt / transition / lineage as they were at creation.
-      next = { ...next, url: changeInfo.url, ...urlFeatures(changeInfo.url), digest: null, digestAt: null, typing: false };
+      next = { ...next, url: newUrl, ...urlFeatures(newUrl), digest: null, digestAt: null, typing: false };
     }
     if (textless(next, never)) next = { ...next, title: '', digest: null, digestAt: null };
     return next;
@@ -313,6 +325,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RECONCILE_ALARM) void rebindAll(true); // the browser is still running
   if (alarm.name === SUMMARISE_ALARM) void runSummariser();
   if (__STUDY__ && alarm.name === STUDY_ALARM) void takeSnapshot();
+  if (alarm.name === PRUNE_ALARM) void pruneClosedRecords();
 });
 
 chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
@@ -431,10 +444,11 @@ async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
   const now = Date.now();
   const never = await getNeverRemember();
   await updateTraceByTabId(tabId, (t) => {
-    const sameUrl = t.url === msg.url;
+    const msgUrl = storedUrl(msg.url);
+    const sameUrl = t.url === msgUrl;
     // The content script's location is authoritative for what was digested; this also stops a
     // racing onUpdated from wiping a digest that belongs to the new URL.
-    const urlPatch = sameUrl ? {} : { url: msg.url, ...urlFeatures(msg.url) };
+    const urlPatch = sameUrl ? {} : { url: msgUrl, ...urlFeatures(msgUrl) };
     // A never-remember site or an ambient tab keeps no title or page content (textless) — judged
     // by the page this digest is of, not the one the record held a moment ago.
     if (textless({ ...t, ...urlPatch }, never)) return t.title || t.digest ? { ...t, title: '', digest: null, digestAt: null } : null;
@@ -528,7 +542,7 @@ async function rebindAll(keepActivity = false): Promise<void> {
   const claims = new Map<string, number>();
   const awaitingBind = async (url: string, tabsNow: chrome.tabs.Tab[]): Promise<boolean> => {
     let unbound = 0;
-    for (const x of tabsNow) if (tabUrl(x) === url && !(await getTraceByTabId(x.id!))) unbound++;
+    for (const x of tabsNow) if (storedUrl(tabUrl(x)) === url && !(await getTraceByTabId(x.id!))) unbound++;
     const used = claims.get(url) ?? 0;
     if (used >= unbound) return false;
     claims.set(url, used + 1);
@@ -586,15 +600,25 @@ chrome.runtime.onInstalled.addListener(() => {
   void rebindAll()
     .then(refreshBackfilled)
     .then(() => (__STUDY__ ? takeSnapshot() : undefined));
-  void scrubAmbientText();
+  void scrubAmbient().then(() => pruneClosedRecords());
 });
 
-/** Records of ambient tabs written before they became textless lose their titles and page text, once, on update. */
-async function scrubAmbientText(): Promise<void> {
+/**
+ * Records of ambient tabs written before the rules above lose their title, page text and the
+ * query and fragment of their address — once, on install or update.
+ */
+async function scrubAmbient(): Promise<void> {
+  const clean = (x: TabTrace): TabTrace => ({ ...x, url: storedUrl(x.url), ...urlFeatures(storedUrl(x.url)), title: '', digest: null, digestAt: null });
+  const dirty = (x: TabTrace) => isAmbient(x) && (!!x.title || !!x.digest || storedUrl(x.url) !== x.url);
   for (const t of await getAllTraces()) {
-    if (!(t.title || t.digest) || !isAmbient(t)) continue;
-    await updateTrace(t.traceId, (x) => (isAmbient(x) && (x.title || x.digest) ? { ...x, title: '', digest: null, digestAt: null } : null));
+    if (dirty(t)) await updateTrace(t.traceId, (x) => (dirty(x) ? clean(x) : null));
   }
+}
+
+/** Once a day: records of tabs closed long ago that no card holds go (store.pruneClosedRecords). */
+const PRUNE_ALARM = 'prune-closed-records';
+async function ensurePruneAlarm(): Promise<void> {
+  if (!(await chrome.alarms.get(PRUNE_ALARM))) await chrome.alarms.create(PRUNE_ALARM, { delayInMinutes: 10, periodInMinutes: 24 * 60 });
 }
 chrome.runtime.onStartup.addListener(() => void rebindAll());
 
@@ -628,4 +652,5 @@ chrome.action.onClicked.addListener(() => {
 // Anything left in the queue from before the worker died gets picked up on start.
 void runSummariser();
 if (__STUDY__) void ensureStudyAlarm();
+void ensurePruneAlarm();
 void seedBackup();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TabTrace, Transition } from '../cluster/types';
 import { whenLabel } from '../cluster/describe';
-import { buildCard, cardWhen, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
+import { buildCard, cardWhen, colorFor, dominantHost, inStripOrder, recordsToDrop, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import { inputLanguages, languagesToTry } from './language';
 import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, ownTitle, rememberedName, rememberName, sharedTitleName, withoutTabs } from './naming';
@@ -246,6 +246,14 @@ describe('naming', () => {
     expect(e).toContain('switched back and forth');
     expect(e).toContain('- ACME-1 deploy failing');
     expect(e).not.toMatch(/hours on|wasted|messy/i);
+  });
+});
+
+describe('closed records', () => {
+  it('a record a card holds is never dropped; the rest of the old closed ones are', () => {
+    const card = { tabs: [{ traceId: 'kept-by-card' }] } as unknown as ArchiveCard;
+    expect(recordsToDrop([{ traceId: 'kept-by-card' }, { traceId: 'closed-long-ago' }], [card])).toEqual(['closed-long-ago']);
+    expect(recordsToDrop([], [card])).toEqual([]);
   });
 });
 

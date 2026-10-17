@@ -1,6 +1,8 @@
 # Fixtures
 
-One real browser = three files, named after the person (or a nickname):
+One real browser = three files, named after the person (or a nickname). They are that person's
+browsing, so they stay on the machine they were made on: git ignores every fixture here except the
+made-up `synthetic` and `walkthrough` ones (DECISIONS 2026-10-17).
 
 | file | source | what |
 |---|---|---|
