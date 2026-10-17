@@ -9,7 +9,7 @@
  * name (§6.7); nothing closes without a click on its own group (§6.9); Bring back survives a
  * restart because the card is in IndexedDB (§6.8); Forget is on every card and every tab (§6.10).
  */
-import { cardWhen, undoable } from '../../archive/card';
+import { cardHosts, cardWhen, undoable } from '../../archive/card';
 import { copyFileName, copyToHtml, MAX_COPY_BYTES, readCopy } from '../../archive/copy';
 import { betterName, type NamedGroup, quickName, type RememberedName, rememberedName, rememberName } from '../../archive/naming';
 import {
@@ -308,7 +308,7 @@ function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[]): HT
   actions.append(forget);
   header.append(actions);
   card.append(header);
-  const when = [cardWhen(c), c.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
+  const when = [cardWhen(c), cardHosts(c).slice(0, 3).join(', ')].filter(Boolean).join(' · ');
   card.append(el('p', `when${c.restoredAt ? ' done' : ''}`, c.restoredAt ? `${when} · brought back` : when));
   const details = el('details');
   details.open = open || !!matched;
@@ -367,7 +367,7 @@ async function renderArchive(force = false): Promise<void> {
   $('cards-more').hidden = list.length <= cardsShown;
 }
 
-/** A search box behaves like one: results as you type, "/" to get to it from anywhere on the page. */
+/** A search box behaves like one: results as you type. (No single-key shortcut to reach it: WCAG 2.1.4.) */
 function wireSearch(): void {
   const find = $<HTMLInputElement>('find');
   let pending: ReturnType<typeof setTimeout> | undefined;
@@ -381,13 +381,6 @@ function wireSearch(): void {
   };
   find.addEventListener('input', onFind);
   find.addEventListener('search', onFind); // Escape and the clear button
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || $('archive').hidden) return;
-    const t = e.target as HTMLElement | null;
-    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-    e.preventDefault();
-    find.focus();
-  });
   $('cards-more-btn').addEventListener('click', () => {
     cardsShown += VISIBLE;
     void renderArchive(true);
@@ -423,38 +416,65 @@ function saveFile(name: string, text: string, type: string): void {
 }
 
 async function onSaveCopy(): Promise<void> {
-  const now = Date.now();
-  const name = copyFileName(now);
-  saveFile(name, copyToHtml(await getCards(), await getNeverRemember(), now), 'text/html');
-  $('copy-status').textContent = `Saving “${name}” where your downloads go.`;
-}
-
-async function onBringInCopy(file: File): Promise<void> {
   const status = $('copy-status');
-  if (file.size > MAX_COPY_BYTES) {
-    status.textContent = 'That file is too big to be a copy saved by Tab Amnesty.';
-    return;
-  }
-  const copy = readCopy(await file.text().catch(() => ''));
-  if (copy === 'newer') {
-    status.textContent = 'That copy was saved by a newer Tab Amnesty. Update this one, then bring it in.';
-    return;
-  }
-  if (!copy) {
-    status.textContent = 'That file is not a copy saved by Tab Amnesty.';
-    return;
-  }
-  status.textContent = 'Bringing it in…';
   try {
-    const { added, neverAdded } = await bringInCopy(copy);
-    const parts = [added.length ? 'Done — what that copy had is under “Put away”.' : 'Nothing new to bring in from that copy.'];
-    if (neverAdded.length) parts.push(`As in the copy, these sites are never remembered here now: ${neverAdded.join(', ')}.`);
-    status.textContent = parts.join(' ');
-    if (neverAdded.length) renderNever(await getNeverRemember());
-    await renderArchive(true);
+    const now = Date.now();
+    const name = copyFileName(now);
+    saveFile(name, copyToHtml(await getCards(), await getNeverRemember(), now), 'text/html');
+    status.textContent = `Saving “${name}” where your downloads go.`;
   } catch (e) {
     status.textContent = `That did not work: ${(e as Error).message}`;
   }
+}
+
+/** One copy at a time: two at once would each add the same cards. */
+let bringingIn = false;
+
+async function onBringInCopy(file: File): Promise<void> {
+  if (bringingIn) return;
+  bringingIn = true;
+  const status = $('copy-status');
+  try {
+    if (file.size > MAX_COPY_BYTES) {
+      status.textContent = 'That file is too big to be a copy saved by Tab Amnesty.';
+      return;
+    }
+    const copy = readCopy(await file.text().catch(() => ''));
+    if (copy === 'newer') {
+      status.textContent = 'That copy was saved by a newer Tab Amnesty. Update this one, then bring it in.';
+      return;
+    }
+    if (!copy) {
+      status.textContent = 'That file is not a copy saved by Tab Amnesty.';
+      return;
+    }
+    status.textContent = 'Bringing it in…';
+    const { added, neverOffered } = await bringInCopy(copy);
+    status.replaceChildren(added.length ? 'Done — what that copy had is under “Put away”.' : 'Nothing new to bring in from that copy.');
+    if (neverOffered.length) offerNever(status, neverOffered);
+    await renderArchive(true);
+  } catch (e) {
+    status.textContent = `That did not work: ${(e as Error).message}`;
+  } finally {
+    bringingIn = false;
+  }
+}
+
+/**
+ * The copy's never-remember sites that this browser still remembers, offered and never applied
+ * unasked: adding a site forgets what is kept about it here, and a copy brought in changes nothing.
+ */
+function offerNever(status: HTMLElement, sites: string[]): void {
+  const yes = el('button', 'quiet', 'Never remember them here too');
+  yes.addEventListener('click', async () => {
+    yes.disabled = true;
+    let list = await getNeverRemember();
+    for (const d of sites) list = await addNeverRemember(d);
+    renderNever(list);
+    await renderArchive(true);
+    status.replaceChildren(`Never remembered here now: ${sites.join(', ')}.`);
+  });
+  status.append(` Sites never remembered in that copy but remembered here: ${sites.join(', ')}.`, ' ', yes);
 }
 
 // ---------------------------------------------------------------------------------------------

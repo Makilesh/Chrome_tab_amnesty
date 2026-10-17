@@ -4,9 +4,9 @@ import { whenLabel } from '../cluster/describe';
 import { buildCard, cardWhen, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import { inputLanguages, languagesToTry } from './language';
-import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, ownTitle, rememberedName, rememberName, sharedTitleName } from './naming';
+import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, ownTitle, rememberedName, rememberName, sharedTitleName, withoutTabs } from './naming';
 import { appendSnapshot, readGate, studySummary } from './study';
-import { GROUP_COLORS, UNDO_WINDOW_MS } from './types';
+import { type ArchiveCard, type ArchivedTab, GROUP_COLORS, UNDO_WINDOW_MS } from './types';
 
 const MIN = 60_000;
 
@@ -180,6 +180,16 @@ describe('naming', () => {
       expect(heuristicName(g, none, g).name).toBe('Job search');
     });
 
+    it('does not call a deploy a job search: CI job pages and "Steve Jobs" are not postings', () => {
+      const ci = [
+        tr('1', { host: 'ci.acme.dev', eTLD1: 'acme.dev', title: 'deploy #142 [Jenkins]', pathTokens: ['job', 'deploy', '142'] }),
+        tr('2', { host: 'github.com', eTLD1: 'github.com', title: 'Fix rollout · acme/web@3f2a1b9', pathTokens: ['acme', 'web', 'actions', 'runs', '7', 'job', '9'] }),
+        tr('3', { host: 'gitlab.com', eTLD1: 'gitlab.com', title: 'Job 31 · acme/web · GitLab', pathTokens: ['acme', 'web', '-', 'jobs', '31'] }),
+        tr('4', { host: 'en.wikipedia.org', eTLD1: 'wikipedia.org', title: 'Steve Jobs - Wikipedia', pathTokens: ['wiki', 'Steve_Jobs'] }),
+      ];
+      expect(heuristicName(ci, none, ci).name).not.toBe('Job search');
+    });
+
     it('prefers a pair of words the titles share, and never shows a bare address', () => {
       const ev = [
         t('1', 'wemakedevs.org', 'First Commit | Bharat Builds Tour | WeMakeDevs'),
@@ -236,6 +246,41 @@ describe('naming', () => {
     expect(e).toContain('switched back and forth');
     expect(e).toContain('- ACME-1 deploy failing');
     expect(e).not.toMatch(/hours on|wasted|messy/i);
+  });
+});
+
+describe('forgetting part of a card (§6.10)', () => {
+  const line = (id: string, title: string, url: string, order: number): ArchivedTab => ({
+    traceId: id, title, url, host: new URL(url).hostname.replace(/^www\./, ''), order, digest: null, summary: null, openedAt: order,
+  });
+  const card = (name: string, tabs: ArchivedTab[]): ArchiveCard => ({
+    cardId: 'c', name, color: 'blue', tier: 'heuristic', when: '', whenAt: null, hosts: [...new Set(tabs.map((t) => t.host))],
+    archivedAt: 0, undoUntil: 0, tabs, restoredAt: null, sourceCommunity: 0,
+  });
+
+  it("takes a forgotten line's site off the card, and a name that came from it", () => {
+    const gpu = card('Lenovo Cart', [
+      line('1', 'Lenovo Cart | Lenovo India', 'https://www.lenovo.com/cart', 0),
+      line('2', 'CUDA Toolkit 13.4.2 Downloads | NVIDIA Developer', 'https://developer.nvidia.com/cuda-downloads', 1),
+      line('3', 'CUDA on WSL | NVIDIA Docs', 'https://docs.nvidia.com/cuda/wsl', 2),
+    ]);
+    const left = withoutTabs(gpu, new Set(['1']));
+    expect(left.tabs.map((t) => t.traceId)).toEqual(['2', '3']);
+    expect(left.hosts).toEqual(['developer.nvidia.com', 'docs.nvidia.com']);
+    expect(left.name).toBe('CUDA');
+  });
+
+  it('keeps a name the remaining lines still carry, and changes nothing when nothing goes', () => {
+    const trip = card('Lisbon', [line('1', 'Lisbon - Wikipedia', 'https://en.wikipedia.org/wiki/Lisbon', 0), line('2', 'Lisbon – Travel guide at Wikivoyage', 'https://en.wikivoyage.org/wiki/Lisbon', 1)]);
+    expect(withoutTabs(trip, new Set(['1']))).toMatchObject({ name: 'Lisbon', hosts: ['en.wikivoyage.org'] });
+    expect(withoutTabs(trip, new Set(['nope']))).toBe(trip);
+  });
+
+  it('renames a card named after a site that is never remembered now', () => {
+    const tabs = [line('1', 'r/rust', 'https://www.reddit.com/r/rust', 0), line('2', 'The Rust Book', 'https://doc.rust-lang.org/book/', 1), line('3', 'Rust by Example', 'https://doc.rust-lang.org/rust-by-example/', 2)];
+    const left = withoutTabs(card('Reddit threads', tabs), new Set(['1']), ['reddit.com']);
+    expect(left.name).toBe('Rust');
+    expect(left.hosts).toEqual(['doc.rust-lang.org']);
   });
 });
 

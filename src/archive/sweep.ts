@@ -196,21 +196,34 @@ export async function openCard(card: ArchiveCard): Promise<void> {
 }
 
 /**
- * The archived traces are reopened BEFORE the tabs are created, so the collector re-binds each new
- * tab to its own trace by url (§5.3) and the tabs come back with their lineage, timing and
- * co-activation instead of fusing with whatever is open now. A forgotten trace is simply absent.
+ * Each archived record is reopened just BEFORE its tab is created, so the collector re-binds the
+ * new tab to it by url (§5.3) and the tab comes back with its lineage, timing and co-activation
+ * instead of fusing with whatever is open now. A forgotten record is simply absent.
  *
  * Reopened on no tab (-1), not the one it had: after a restart that id may belong to a live tab
  * (§5.3), and an open record on a live tab's id is not an orphan to re-bind — it stayed open and
- * unbound, a second record for that tab that Archive & close would have closed with it.
+ * unbound, a second record for that tab that Archive & close would have closed with it. And only
+ * while it still describes the card's page: a record whose tab went on to another address before
+ * it closed would wait there for a tab that is not coming — open on no tab, listed in a group of
+ * tabs that do not exist. That tab gets a record of its own instead.
  */
 async function reopenTabs(card: ArchiveCard): Promise<void> {
-  for (const t of card.tabs) await updateTrace(t.traceId, (tr) => (tr.closedAt === null ? null : { ...tr, closedAt: null, tabId: -1 }));
   const current = await chrome.windows.getCurrent();
   const created: number[] = [];
   for (const t of restoreOrder(card)) {
-    const tab = await chrome.tabs.create({ url: t.url, windowId: current.id, active: false });
-    if (tab.id !== undefined) created.push(tab.id);
+    let reopened: boolean = false;
+    await updateTrace(t.traceId, (tr) => {
+      if (tr.closedAt === null || tr.url !== t.url) return null;
+      reopened = true;
+      return { ...tr, closedAt: null, tabId: -1 };
+    });
+    try {
+      const tab = await chrome.tabs.create({ url: t.url, windowId: current.id, active: false });
+      if (tab.id !== undefined) created.push(tab.id);
+    } catch {
+      // No tab is coming for it: closed again, as it was.
+      if (reopened) await updateTrace(t.traceId, (tr) => (tr.closedAt === null && tr.tabId === -1 ? { ...tr, closedAt: Date.now() } : null));
+    }
   }
   if (created.length) {
     try {

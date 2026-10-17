@@ -9,9 +9,11 @@
  *
  * `evidence()` and `heuristicName()` are pure and unit-tested; `nanoName()` touches the browser.
  */
-import { colorFor } from './card';
+import { urlFeatures } from '../collector/url';
+import { colorFor, restoreOrder } from './card';
+import { namesNeverSite } from './forget';
 import { inputLanguages, languagesToTry } from './language';
-import { GROUP_COLORS, type GroupColor, type GroupName, MAX_NAME_CHARS } from './types';
+import { type ArchiveCard, type ArchivedTab, GROUP_COLORS, type GroupColor, type GroupName, MAX_NAME_CHARS } from './types';
 import { describe, type Description } from '../cluster/describe';
 import { STOP } from '../cluster/lexical';
 import { timingKnown } from '../cluster/segment';
@@ -59,8 +61,9 @@ export function evidence(members: TabTrace[], byId: Map<string, TabTrace>): stri
 
 // --- heuristic tier --------------------------------------------------------------------------
 
+/** First letter of each word up, in any script ("école" -> "École", not "éCole"). */
 function titleCase(s: string): string {
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+  return s.replace(/(^|[^\p{L}\p{M}\p{N}'’])(\p{L})/gu, (_, before: string, c: string) => before + c.toLocaleUpperCase());
 }
 
 export function clampName(s: string): string {
@@ -214,14 +217,20 @@ function dominantPlatform(members: TabTrace[]): string | null {
 
 const JOB_HOSTS =
   /(^|\.)(greenhouse\.io|lever\.co|smartrecruiters\.com|myworkdayjobs\.com|eightfold\.ai|ashbyhq\.com|workable\.com|naukri\.com|wellfound\.com|instahyre\.com|cutshort\.io|foundit\.in|amazon\.jobs|iimjobs\.com|hirist\.tech|indeed\.[a-z.]+|glassdoor\.[a-z.]+)$/;
-/** A job posting or application, by its site, path or title. */
+/**
+ * A job posting or application: a job board, a careers or jobs site, a site's own /jobs or
+ * /careers pages, or a title that says so in so many words. A lone "job" or "jobs" is not enough:
+ * Jenkins (/job/deploy), GitHub Actions (/runs/1/job/2), GitLab (/-/jobs/3) and "Steve Jobs" all
+ * have one, and naming someone's deploy "Job search" characterises it (§6.6).
+ */
 function looksLikeJob(t: TabTrace): boolean {
   const host = (t.host ?? '').toLowerCase();
+  const first = (t.pathTokens ?? [])[0]?.toLowerCase() ?? '';
   return (
     JOB_HOSTS.test(host) ||
-    /^(careers?|jobs?)\./.test(host) ||
-    (t.pathTokens ?? []).some((p) => /^(jobs?|careers?)$/i.test(p)) ||
-    /\b(careers?|jobs?|hiring|job application)\b/i.test(t.title)
+    /^(careers?|jobs)\./.test(host) ||
+    /^(careers?|jobs)$/.test(first) ||
+    /\b(careers at|job application|(is|are|we're|we are) hiring)\b/i.test(t.title)
   );
 }
 
@@ -431,3 +440,36 @@ export function rememberName(memory: readonly RememberedName[], members: readonl
   return [...rest, { members: [...members], name, at: now }].sort((a, b) => b.at - a.at).slice(0, NAME_MEMORY_MAX);
 }
 
+/** An archived line as the namer reads a record: its address's features, its title and page text. */
+function asTrace(t: ArchivedTab): TabTrace {
+  return {
+    traceId: t.traceId, tabId: -1, windowId: 0, index: t.order, openerTraceId: null, openedAt: t.openedAt,
+    transition: 'unknown', backfilled: false, lastActiveAt: null, activationCount: 0, dwellMs: 0, coActive: {},
+    url: t.url, ...urlFeatures(t.url), title: t.title, digest: t.digest, digestAt: null,
+    pinned: false, discarded: false, closedAt: null,
+  };
+}
+
+/**
+ * A card once some of its lines are forgotten (§6.10): the lines go, a site left with no line
+ * goes from its sites, and a name that came from what was forgotten — the forgotten page's own
+ * title, its site's name, a site never remembered now — is proposed again from what is left
+ * (§6.7). A name the remaining lines still carry stays.
+ */
+export function withoutTabs(card: ArchiveCard, gone: ReadonlySet<string>, never: readonly string[] = []): ArchiveCard {
+  const tabs = card.tabs.filter((t) => !gone.has(t.traceId));
+  const lost = card.tabs.filter((t) => gone.has(t.traceId));
+  if (lost.length === 0) return card;
+  const hosts = card.hosts.filter((h) => tabs.some((t) => t.host === h || t.host.endsWith('.' + h)));
+  const n = card.name.toLowerCase();
+  const carries = (t: ArchivedTab) => t.title.toLowerCase().includes(n) || t.host.toLowerCase().includes(n);
+  const fromLost = lost.some(carries) && !tabs.some(carries);
+  let name = card.name;
+  if (tabs.length && (fromLost || namesNeverSite(card.name, never))) {
+    const members = restoreOrder({ ...card, tabs }).map(asTrace);
+    const byId = new Map(members.map((m) => [m.traceId, m]));
+    const d = describe({ id: 0, traceIds: members.map((m) => m.traceId) }, byId, members);
+    name = heuristicName(members, d, members).name;
+  }
+  return { ...card, tabs, hosts, name };
+}

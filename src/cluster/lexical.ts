@@ -36,7 +36,8 @@ export const STOP = new Set(
 
 export type Vector = Map<string, number>;
 
-function isUnsegmented(ch: string): boolean {
+/** Exported for the archive search; the S7 arithmetic is unchanged. */
+export function isUnsegmented(ch: string): boolean {
   const cp = ch.codePointAt(0)!;
   return UNSEGMENTED.some(([lo, hi]) => lo <= cp && cp <= hi);
 }

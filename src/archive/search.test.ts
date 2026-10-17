@@ -76,6 +76,19 @@ describe('search across everything put away', () => {
     expect(searchArchive([a, card('c', 'Three', [tr('c1', 'River map', 'https://c.example/z')], at(15, 9))], 'river', now).map((h) => h.card.cardId)).toEqual(['c', 'a']);
   });
 
+  it('finds a word inside text written without spaces (Japanese, Chinese, Thai)', () => {
+    const jp = card('jp', '東京', [tr('j1', '東京旅行ガイド', 'https://example.jp/guide')], at(15, 9));
+    expect(searchArchive([jp], '旅行', now).map((h) => [h.card.cardId, h.whole])).toEqual([['jp', false]]);
+    expect(searchArchive([jp], 'ガイド', now).map((h) => h.card.cardId)).toEqual(['jp']);
+    expect(searchArchive([jp], 'ide', now)).toEqual([]); // inside a word of a spaced script: still word starts only
+  });
+
+  it("a forgotten line's site is not found on its card any more", () => {
+    const c = card('f', 'Notes', [tr('f1', 'Rollback steps', 'https://wiki.acme.dev/ops/rollback')], at(15, 9));
+    c.hosts = ['wiki.acme.dev', 'forgotten.example']; // a card forgotten from before sites went with their lines
+    expect(searchArchive([c], 'forgotten', now)).toEqual([]);
+  });
+
   it('nothing typed, nothing found', () => {
     expect(searchArchive(cards, '   ', now)).toEqual([]);
     expect(searchArchive(cards, '—', now)).toEqual([]);
