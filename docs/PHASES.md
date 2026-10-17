@@ -290,6 +290,13 @@ now says instead of naming a date that has passed.
 - [ ] Resurfacing on the **new-tab page** — ambient, never a notification, never a nag
       (not approved by the owner as of 17 Oct; DECISIONS 2026-10-17)
 
+### Public release (17 Oct, on the owner's instruction)
+- [x] Icon; public build without the study (`npm run package`), testers' build (`-- --study`); 0.1.0
+- [x] README for newcomers (research notes now `docs/RESEARCH.md`); `PRIVACY.md`; store listing pack
+      `docs/store/LISTING.md`
+- [ ] Owner: a license · the Web Store account and fee · the personal fixtures in the public
+      repository · the Phase 0 gate rule before submitting (CLAUDE.md)
+
 ### Done when
 - [ ] Someone can find a thing archived three weeks ago without remembering when
 - [ ] The new-tab surface has shown them something useful they did not ask for

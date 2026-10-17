@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Tab Amnesty: a tab going into a box it can come back out of. Source for the PNGs (npm run icons). -->
+  <rect width="128" height="128" rx="28" fill="#4a6fa5"/>
+  <path d="M34 60 L41 27 Q42.5 21 48.5 21 L79.5 21 Q85.5 21 87 27 L94 60 Z" fill="#fbfaf7"/>
+  <rect x="18" y="66" width="92" height="42" rx="10" fill="#fbfaf7"/>
+  <rect x="48" y="80" width="32" height="8" rx="4" fill="#4a6fa5"/>
+</svg>
