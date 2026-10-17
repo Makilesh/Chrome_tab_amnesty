@@ -5,15 +5,25 @@
  */
 import type { TabTrace } from '../cluster/types';
 
-/** Normalise what a person types: "www.Example.co.uk/" -> "example.co.uk". */
+/**
+ * Normalise what a person types or pastes into the host a trace records: "www.Example.co.uk/" ->
+ * "example.co.uk". Parsed as a url, so a port, a login, a path or a query goes, and a Unicode name
+ * becomes the punycode Chrome records ("bücher.de" -> "xn--bcher-kva.de") — before, such an entry
+ * was listed but matched nothing, and the site went on being recorded.
+ */
 export function normaliseDomain(input: string): string {
-  let s = input.trim().toLowerCase();
-  s = s.replace(/^[a-z]+:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
-  return s;
+  const s = input.trim().toLowerCase();
+  if (!s) return '';
+  try {
+    const host = new URL(/^[a-z][a-z0-9+.-]*:\/\//.test(s) ? s : `http://${s}`).hostname;
+    return host.replace(/^www\./, '').replace(/\.$/, '');
+  } catch {
+    return s.replace(/^[a-z]+:\/\//, '').replace(/[/?#:].*$/, '').replace(/^www\./, '');
+  }
 }
 
 /** True when the trace's site, or any parent of it, is on the list. */
-export function isNeverRemembered(t: Pick<TabTrace, 'host' | 'eTLD1'>, list: readonly string[]): boolean {
+export function isNeverRemembered(t: Partial<Pick<TabTrace, 'host' | 'eTLD1'>>, list: readonly string[]): boolean {
   if (list.length === 0) return false;
   const host = (t.host ?? '').toLowerCase();
   const etld1 = (t.eTLD1 ?? '').toLowerCase();

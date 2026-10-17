@@ -8,10 +8,10 @@
  * name (§6.7); nothing closes without a click on its own group (§6.9); Bring back survives a
  * restart because the card is in IndexedDB (§6.8); Forget is on every card and every tab (§6.10).
  */
-import { undoable } from '../../archive/card';
-import { betterName, type NamedGroup, quickName, rememberedName, rememberName } from '../../archive/naming';
+import { cardWhen, undoable } from '../../archive/card';
+import { betterName, type NamedGroup, quickName, type RememberedName, rememberedName, rememberName } from '../../archive/naming';
 import { addNeverRemember, forgetCard, forgetTab, getCards, getNeverRemember, getRememberedNames, removeNeverRemember, saveRememberedNames } from '../../archive/store';
-import { archiveAndClose, bringBack, groupOnStrip, openOne, ungroupOurs } from '../../archive/sweep';
+import { archiveAndClose, bringBack, groupOnStrip, openOne, type StripPlace, ungroupOurs } from '../../archive/sweep';
 import type { ArchiveCard } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
 import type { Community, TabTrace } from '../../cluster/types';
@@ -90,17 +90,29 @@ async function load(): Promise<void> {
   for (const t of looseTraces) list.append(line(t.title, t.host, t.url));
 }
 
+/**
+ * Change the remembered names from what is stored NOW: the model takes seconds per group, and
+ * writing back a copy read before it answered brought back names the person had just forgotten
+ * (§6.10).
+ */
+async function updateNames(fn: (memory: RememberedName[]) => RememberedName[]): Promise<void> {
+  const fresh = await getRememberedNames().catch(() => null);
+  if (fresh) await saveRememberedNames(fn(fresh)).catch(() => {});
+}
+
 async function upgradeNames(byId: Map<string, TabTrace>, taken: string[]): Promise<void> {
   // `taken`: names already on screen from memory, plus each new one the model gives in this sweep.
-  let memory = await getRememberedNames().catch(() => []);
-  for (const g of groups) if (g.remembered) memory = rememberName(memory, g.community.traceIds, g.name.name);
+  // Groups named from memory are saved with their tabs as they are now, at once — a project's
+  // memory follows its tabs even on a sweep where no group gets a new name (it used to drift
+  // until the project was renamed).
+  const known = groups.filter((g) => g.remembered);
+  if (known.length) await updateNames((m) => known.reduce((acc, g) => rememberName(acc, g.community.traceIds, g.name.name), m));
   for (const g of [...groups]) {
     if (g.remembered) continue;
     const better = await betterName(g.community, byId, g.name, taken);
     if (!better || !groups.includes(g)) continue;
     taken.push(better.name);
-    memory = rememberName(memory, g.community.traceIds, better.name);
-    await saveRememberedNames(memory).catch(() => {});
+    await updateNames((m) => rememberName(m, g.community.traceIds, better.name));
     g.name = better;
     const h = g.el?.querySelector('h2');
     if (h) {
@@ -148,7 +160,7 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
   btn.textContent = 'Putting away…';
   try {
     const d = g.name.description;
-    const { card: saved, keptOpen } = await archiveAndClose(g.community, g.members, g.name, d.when, d.hosts);
+    const { card: saved, keptOpen } = await archiveAndClose(g.community, g.members, g.name, d.when, d.hosts, d.whenAt);
     groups = groups.filter((x) => x !== g);
     card.remove();
     renderGroups();
@@ -174,21 +186,27 @@ async function onStrip(): Promise<void> {
   status.replaceChildren('Grouping…');
   let locked = 0;
   let leftInPlace = 0;
+  let error = '';
   const made: number[] = [];
+  const moved: StripPlace[] = [];
   for (const g of groups) {
-    const r = await groupOnStrip(g.members, g.name);
+    // groupOnStrip reports instead of throwing, so Undo still covers what was done before a refusal.
+    const r = await groupOnStrip(g.members, g.name).catch((e: Error) => ({ groupIds: [], locked: false, leftInPlace: 0, moved: [], error: e.message }));
     if (r.locked) locked++;
     leftInPlace += r.leftInPlace;
-    if (r.groupId !== null) made.push(r.groupId);
+    made.push(...r.groupIds);
+    moved.push(...r.moved);
+    error ||= r.error ?? '';
   }
-  const parts = ['Done — these groups are on your tab strip. Nothing was closed.'];
+  const parts = [error ? 'Chrome did not let every group onto your tab strip. Nothing was closed.' : 'Done — these groups are on your tab strip. Nothing was closed.'];
   if (leftInPlace) parts.push('Tabs you had already grouped were left where they were.');
   if (locked) parts.push(`Chrome keeps ${locked === 1 ? 'one of these' : 'some of these'} locked as a saved group.`);
   status.replaceChildren(parts.join(' '));
   if (made.length) {
     const undo = el('button', 'quiet', 'Undo');
     undo.addEventListener('click', async () => {
-      await ungroupOurs(made);
+      undo.disabled = true;
+      await ungroupOurs(made, moved);
       status.replaceChildren('Undone — your tab strip is back to how it was.');
     });
     status.append(' ', undo);
@@ -226,44 +244,52 @@ async function checkBuild(): Promise<void> {
 // Archive: bring back, open, forget
 // ---------------------------------------------------------------------------------------------
 
-function archiveCard(c: ArchiveCard): HTMLElement {
+/** Bring a card back from either of its buttons; a refusal is said in a toast, where a re-render cannot wipe it. */
+async function onBringBack(cardId: string, button: HTMLButtonElement): Promise<void> {
+  button.disabled = true;
+  const r = await bringBack(cardId);
+  if (!r.ok && r.reason) toast(r.reason);
+  else document.querySelector('.toast')?.remove();
+  await renderArchive(true);
+}
+
+function archiveCard(c: ArchiveCard, open: boolean): HTMLElement {
   const card = el('section', `group c-${c.color}`);
+  card.dataset.card = c.cardId;
   const header = el('header');
   header.append(el('h2', undefined, c.name));
   const actions = el('div');
   if (undoable(c)) {
     const back = el('button', undefined, 'Bring back');
-    back.addEventListener('click', async () => {
-      back.disabled = true;
-      const r = await bringBack(c.cardId);
-      if (!r.ok) card.append(el('p', 'note', r.reason ?? ''));
-      await renderArchive();
-    });
+    back.addEventListener('click', () => void onBringBack(c.cardId, back));
     actions.append(back);
   }
   const forget = el('button', 'quiet', 'Forget this');
   forget.addEventListener('click', async () => {
+    forget.disabled = true;
     await forgetCard(c.cardId);
-    await renderArchive();
+    await renderArchive(true);
   });
   actions.append(forget);
   header.append(actions);
   card.append(header);
-  const when = [c.when, c.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
+  const when = [cardWhen(c), c.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
   card.append(el('p', `when${c.restoredAt ? ' done' : ''}`, c.restoredAt ? `${when} · brought back` : when));
   const details = el('details');
+  details.open = open;
   details.append(el('summary', undefined, 'What was in it'));
   const ul = el('ul');
   for (const t of c.tabs) {
     const li = line(t.title, t.host, t.url, t.summary);
-    const open = el('button', 'quiet', 'Open');
-    open.addEventListener('click', () => void openOne(t.url));
+    const openBtn = el('button', 'quiet', 'Open');
+    openBtn.addEventListener('click', () => void openOne(t.url));
     const fg = el('button', 'quiet', 'Forget this');
     fg.addEventListener('click', async () => {
+      fg.disabled = true;
       await forgetTab(c.cardId, t.traceId);
-      await renderArchive();
+      await renderArchive(true);
     });
-    li.append(open, fg);
+    li.append(openBtn, fg);
     ul.append(li);
   }
   details.append(ul);
@@ -271,13 +297,25 @@ function archiveCard(c: ArchiveCard): HTMLElement {
   return card;
 }
 
-async function renderArchive(): Promise<void> {
+/** What the list last showed; the periodic refresh redraws only when this changes. */
+let archiveShown = '';
+
+/**
+ * Redraw "Put away". The 20-second refresh (summaries arrive in the background) only redraws
+ * when something on it changed, and keeps open "What was in it" lists open — it used to snap
+ * them shut and drop the focused button every time.
+ */
+async function renderArchive(force = false): Promise<void> {
   const cards = await getCards();
+  const shown = JSON.stringify(cards.map((c) => [c.cardId, c.name, c.restoredAt, undoable(c), cardWhen(c), c.tabs.map((t) => [t.traceId, t.summary])]));
+  if (!force && shown === archiveShown) return;
+  archiveShown = shown;
   const section = $('archive');
   const root = $('cards');
+  const open = new Set([...root.querySelectorAll<HTMLElement>('[data-card]')].filter((s) => s.querySelector('details')?.open).map((s) => s.dataset.card));
   root.replaceChildren();
   section.hidden = cards.length === 0;
-  for (const c of cards) root.append(archiveCard(c));
+  for (const c of cards) root.append(archiveCard(c, open.has(c.cardId)));
 }
 
 function toast(text: string, cardId?: string): void {
@@ -286,11 +324,7 @@ function toast(text: string, cardId?: string): void {
   t.setAttribute('role', 'status'); // announced by screen readers without stealing focus
   if (cardId) {
     const back = el('button', undefined, 'Bring back');
-    back.addEventListener('click', async () => {
-      await bringBack(cardId);
-      t.remove();
-      await renderArchive();
-    });
+    back.addEventListener('click', () => void onBringBack(cardId, back));
     t.append(back);
   }
   document.body.append(t);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TabTrace, Transition } from '../cluster/types';
-import { buildCard, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
+import { whenLabel } from '../cluster/describe';
+import { buildCard, cardWhen, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import { inputLanguages, languagesToTry } from './language';
 import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, rememberedName, rememberName, sharedTitleName } from './naming';
@@ -66,10 +67,42 @@ describe('card', () => {
   });
 });
 
+describe('when', () => {
+  const at = (day: number, h: number, m = 0) => new Date(2026, 9, day, h, m).getTime(); // October 2026, local time
+
+  it('an archived card says its time relative to now, not as it read when archived (§6.5)', () => {
+    const card = { when: 'this afternoon', whenAt: at(12, 14) };
+    expect(cardWhen(card, at(12, 15, 30))).toBe('this afternoon');
+    expect(cardWhen(card, at(13, 10))).toBe('yesterday afternoon');
+    const later = cardWhen(card, at(15, 10));
+    expect(later).toMatch(/ afternoon$/);
+    expect(later).not.toMatch(/^(this|yesterday) /);
+    // A card from before the moment was kept keeps the words it was archived with.
+    expect(cardWhen({ when: 'this afternoon' }, at(15, 10))).toBe('this afternoon');
+  });
+
+  it('says late nights and the small hours the way people do', () => {
+    expect(whenLabel(at(12, 23), at(12, 23, 20))).toBe('tonight');
+    expect(whenLabel(at(12, 2), at(12, 3))).toBe('early this morning');
+    expect(whenLabel(at(12, 23), at(13, 9))).toBe('last night');
+    expect(whenLabel(at(12, 2), at(13, 9))).toBe('early yesterday morning');
+  });
+});
+
 describe('forget', () => {
   it('normalises what a person types', () => {
     expect(normaliseDomain(' https://www.Example.co.uk/path ')).toBe('example.co.uk');
     expect(normaliseDomain('reddit.com')).toBe('reddit.com');
+  });
+  it('normalises to the host a trace records: no port, login or query; Unicode as punycode', () => {
+    expect(normaliseDomain('http://localhost:3000/app')).toBe('localhost');
+    expect(normaliseDomain('intranet.corp:8443')).toBe('intranet.corp');
+    expect(normaliseDomain('https://user@example.com/')).toBe('example.com');
+    expect(normaliseDomain('example.com?x=1')).toBe('example.com');
+    expect(normaliseDomain('bücher.de')).toBe('xn--bcher-kva.de');
+    expect(normaliseDomain('   ')).toBe('');
+    // ...and so they match what the collector records (url.ts takes new URL().hostname).
+    expect(isNeverRemembered({ host: 'localhost', eTLD1: 'localhost' }, [normaliseDomain('http://localhost:3000/app')])).toBe(true);
   });
   it('matches the site and its subdomains, not lookalikes', () => {
     const list = ['reddit.com'];
@@ -96,7 +129,7 @@ describe('naming', () => {
     ];
     const group = corpus.slice(0, 3);
     expect(sharedTitleName(group, corpus)).toBe('AWS');
-    const n = heuristicName(group, { heading: 'builder · center', hosts: ['a.com'], when: '' }, corpus);
+    const n = heuristicName(group, { heading: 'builder · center', hosts: ['a.com'], when: '', whenAt: null }, corpus);
     expect(n).toEqual({ name: 'AWS', color: colorFor(group), tier: 'heuristic' });
   });
 
@@ -104,8 +137,8 @@ describe('naming', () => {
     const members = [tr('1', { host: 'github.com', title: 'acme/x | GitHub' }), tr('2', { host: 'github.com', title: 'acme/y | GitHub' })];
     expect(sharedTitleName(members, members)).toBe('acme');
     const bare = [tr('1', { host: 'www.acme.com' }), tr('2', { host: 'www.acme.com' })];
-    expect(heuristicName(bare, { heading: 'deploy · rollout', hosts: ['www.acme.com'], when: '' }).name).toBe('Deploy');
-    expect(heuristicName(bare, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '' }).name).toBe('acme.com');
+    expect(heuristicName(bare, { heading: 'deploy · rollout', hosts: ['www.acme.com'], when: '', whenAt: null }).name).toBe('Deploy');
+    expect(heuristicName(bare, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '', whenAt: null }).name).toBe('acme.com');
   });
 
   it('the naming prompt asks for what most tabs share, and to tell a group apart from names already given', () => {
@@ -181,6 +214,15 @@ describe('phase 1 study', () => {
     expect(bounced.lowerAtDay7).toBe(false);
 
     expect(readGate(studySummary(snaps(0, 9 * D, () => 100), [])).pressed).toBe(false);
+  });
+
+  it('a press still counts after its card is forgotten: the study keeps the time, nothing else', () => {
+    const first = 10 * D;
+    const s = studySummary(snaps(first - 3 * D, first + 9 * D, (t) => (t < first ? 120 : 70)), [], 99, [first]);
+    expect(readGate(s)).toMatchObject({ presses: 1, pressed: true, firstPress: first, lowerAtDay7: true });
+    expect(s.archives).toEqual([{ archivedAt: first, tabs: 0, tier: 'heuristic', restoredAt: null, forgotten: true }]);
+    // A press whose card is still there is counted once.
+    expect(studySummary([], [card(first)], 99, [first]).archives).toHaveLength(1);
   });
 
   it('says when waiting cannot help: snapshots run past day 8 but none fell in days 6-8', () => {

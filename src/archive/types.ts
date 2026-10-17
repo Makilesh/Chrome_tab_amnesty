@@ -39,8 +39,13 @@ export interface ArchiveCard {
   name: string;
   color: GroupColor;
   tier: NamingTier;
-  /** Event label, e.g. "Tuesday afternoon" (§6.5). Empty when the group had no real timing. */
+  /** Event label, e.g. "Tuesday afternoon" (§6.5), as it read when archived. Empty when the group had no real timing. */
   when: string;
+  /**
+   * The moment that label describes. Lists say it again relative to now (cardWhen), because
+   * "this afternoon" stored on Monday is false by Thursday. Missing on cards from before 17 Oct.
+   */
+  whenAt?: number | null;
   hosts: string[];
   archivedAt: number;
   /** Undo stays reachable until this time (§6.8: 24 h, survives restart). */
@@ -59,7 +64,7 @@ export interface SummariseJob {
   traceId: string;
   createdAt: number;
   attempts: number;
-  /** 'done' and 'unavailable' are terminal. */
+  /** 'done' and 'failed' are terminal; 'unavailable' waits until the Summarizer can run here. */
   state: 'pending' | 'done' | 'unavailable' | 'failed';
 }
 

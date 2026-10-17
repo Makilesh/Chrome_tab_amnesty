@@ -5,7 +5,7 @@
  * Records are keyed on traceId, never tabId (§5.3). tabId is an index for live lookups only.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { noteCreated, noteReset, readBackup, type Reset } from '../archive/backup';
+import { type Backup, markRestorePending, mergePresses, mergeSnapshots, noteCreated, noteReset, readBackup, type Reset } from '../archive/backup';
 import type { RememberedName } from '../archive/naming';
 import type { OpenSnapshot } from '../archive/study';
 import type { ArchiveCard, SummariseJob } from '../archive/types';
@@ -33,10 +33,17 @@ interface MetaRecords {
   neverRemember: string[];
   /** Phase 1 study only: open-tab count every few hours. Never shown in the product (§6.1). */
   openSnapshots: OpenSnapshot[];
+  /**
+   * Phase 1 study only: when Archive & close was pressed — times, nothing else. Kept when the card
+   * is forgotten, so forgetting a card does not un-press it in the study (it used to).
+   */
+  presses: number[];
   /** Model names remembered per group, so a project keeps its name across sweeps (naming.ts). */
   groupNames: RememberedName[];
   /** Each time Chrome replaced this database with an empty one (copied from backup.ts). */
   resets: Reset[];
+  /** When the Summarizer last turned out unavailable here; jobs set aside then are retried daily. */
+  summariserCheckedAt: number;
 }
 
 interface TabAmnestyDB extends DBSchema {
@@ -62,6 +69,8 @@ interface TabAmnestyDB extends DBSchema {
 }
 
 let dbPromise: Promise<IDBPDatabase<TabAmnestyDB>> | null = null;
+/** Not before this moment may this context open the database again (see the versionchange handler). */
+let reopenAt = 0;
 let onReset: (() => void) | null = null;
 
 /**
@@ -86,23 +95,42 @@ async function afterCreate(d: IDBPDatabase<TabAmnestyDB>, dataLoss: string): Pro
     const now = Date.now();
     // Anything in the copy means there was a database before this one — even if the copy was
     // still being filled in (pages write to it before a new worker has seeded it).
-    const hadOne = backup.createdAt !== undefined || backup.cards.length > 0 || backup.neverRemember !== undefined || backup.openSnapshots !== undefined;
+    const hadOne =
+      backup.createdAt !== undefined || backup.cards.length > 0 || backup.neverRemember !== undefined || backup.openSnapshots !== undefined || backup.presses !== undefined;
     if (!hadOne) {
       await noteCreated(now);
       return;
     }
     const resets = await noteReset({ at: now, dataLoss });
-    const tx = d.transaction(['archive', 'meta'], 'readwrite');
-    for (const card of backup.cards) await tx.objectStore('archive').put(card);
-    if (backup.neverRemember) await tx.objectStore('meta').put(backup.neverRemember, 'neverRemember');
-    if (backup.openSnapshots) await tx.objectStore('meta').put(backup.openSnapshots, 'openSnapshots');
-    await tx.objectStore('meta').put(resets, 'resets');
-    await tx.done;
+    await markRestorePending(true); // cleared only once the restore has gone through
+    await restoreInto(d, backup, resets);
+    await markRestorePending(false);
     if (onReset) onReset();
     else await chrome.runtime.sendMessage({ type: 'database-reset' }).catch(() => {});
   } catch {
-    // Recording matters more than restoring: the copy stays where it is for the next start.
+    // Recording matters more than restoring. The restore stays pending: the worker tries it again
+    // on its next start (store.ts seedBackup), and until then the copy is only ever added to.
   }
+}
+
+/**
+ * Put the second copy back into a database. Safe to repeat: a card already there is left as it
+ * is, lists are merged. Forgetting changes the copy first (backup.ts), so nothing forgotten in the
+ * meantime comes back through a retry.
+ */
+export async function restoreInto(d: IDBPDatabase<TabAmnestyDB>, backup: Backup, resets?: Reset[]): Promise<void> {
+  const tx = d.transaction(['archive', 'meta'], 'readwrite');
+  const archive = tx.objectStore('archive');
+  const meta = tx.objectStore('meta');
+  for (const card of backup.cards) if (!(await archive.get(card.cardId))) await archive.put(card);
+  if (backup.neverRemember) {
+    const now = ((await meta.get('neverRemember')) as string[] | undefined) ?? [];
+    await meta.put([...new Set([...now, ...backup.neverRemember])], 'neverRemember');
+  }
+  if (backup.openSnapshots) await meta.put(mergeSnapshots(((await meta.get('openSnapshots')) as OpenSnapshot[] | undefined) ?? [], backup.openSnapshots), 'openSnapshots');
+  if (backup.presses) await meta.put(mergePresses(((await meta.get('presses')) as number[] | undefined) ?? [], backup.presses), 'presses');
+  if (resets) await meta.put(resets, 'resets');
+  await tx.done;
 }
 
 /**
@@ -116,12 +144,14 @@ async function afterCreate(d: IDBPDatabase<TabAmnestyDB>, dataLoss: string): Pro
  */
 export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
   if (!dbPromise) {
-    const giveWay = (d: IDBPDatabase<TabAmnestyDB>) => () => {
-      d.close();
-      dbPromise = null;
+    // Only this connection's own events may drop the cached promise, never a newer one's.
+    const drop = () => {
+      if (dbPromise === opening) dbPromise = null;
     };
     const fresh = { created: false, dataLoss: 'none' };
-    dbPromise = openDB<TabAmnestyDB>(DB_NAME, DB_VERSION, {
+    const wait = reopenAt - Date.now();
+    const opening: Promise<IDBPDatabase<TabAmnestyDB>> = (wait > 0 ? new Promise<void>((r) => setTimeout(r, wait)) : Promise.resolve())
+      .then(() => openDB<TabAmnestyDB>(DB_NAME, DB_VERSION, {
       upgrade(d, oldVersion, _newVersion, _tx, event) {
         if (oldVersion < 1) {
           fresh.created = true;
@@ -138,20 +168,33 @@ export function db(): Promise<IDBPDatabase<TabAmnestyDB>> {
           d.createObjectStore('jobs', { keyPath: 'jobId' }).createIndex('byState', 'state');
         }
       },
-    })
+    }))
       .catch(async (e: unknown) => {
         if ((e as { name?: string })?.name !== 'VersionError') throw e;
         return openDB<TabAmnestyDB>(DB_NAME);
       })
       .then(async (d) => {
-        d.addEventListener('versionchange', giveWay(d));
+        d.addEventListener('versionchange', () => {
+          d.close();
+          drop();
+          // Not straight back in: an open request sent in the same moment as this close could
+          // hang for good — never upgrading, never blocked, never failing — with every later
+          // request, the upgrade we gave way to included, queued behind it. One run in three of
+          // `npm run check` step 9; none in 30 with this pause (DECISIONS 2026-10-17).
+          reopenAt = Date.now() + 250;
+        });
+        // Chrome closes a connection itself on an I/O error, corruption or cleared site data:
+        // the 'close' event, never 'versionchange'. Keeping that handle failed every later write
+        // until the worker happened to restart.
+        d.addEventListener('close', drop);
         if (fresh.created) await afterCreate(d, fresh.dataLoss);
         return d;
       })
       .catch((e: unknown) => {
-        dbPromise = null; // the next call tries again instead of failing forever
+        drop(); // the next call tries again instead of failing forever
         throw e;
       });
+    dbPromise = opening;
   }
   return dbPromise;
 }
@@ -177,6 +220,12 @@ export async function getTraceByTabId(tabId: number): Promise<TabTrace | undefin
 
 export async function getOpenTraces(): Promise<TabTrace[]> {
   const all = await (await db()).getAll('traces');
+  return all.filter((t) => t.closedAt === null);
+}
+
+/** Open traces at exactly this url, through the url index (every new tab asks; the store only grows). */
+export async function getOpenTracesByUrl(url: string): Promise<TabTrace[]> {
+  const all = await (await db()).getAllFromIndex('traces', 'byUrl', url);
   return all.filter((t) => t.closedAt === null);
 }
 

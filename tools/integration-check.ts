@@ -7,7 +7,7 @@
  * It SHOWS what was recorded rather than asserting it — the point is to see openerTraceId and
  * transition land for new tabs. Exit code is non-zero only if the run itself fails.
  *
- *   npm run build && npm run check
+ *   npm run check          (builds .check-build/ itself; never dist/, the owner's live install)
  *
  * Branded Google Chrome ignores --load-extension since 137, so this needs Chrome for Testing:
  *   npx @puppeteer/browsers install chrome@stable      (lands in ./chrome/, git-ignored)
@@ -354,11 +354,14 @@ async function checkBaselineCapture(browser: Browser, extId: string, userDataDir
   await sleep(1500);
   const status = await page.$eval('#status', (e) => e.textContent ?? '');
   const file = existsSync(downloads) ? readdirSync(downloads).find((f) => f.endsWith('.chrome.json')) : undefined;
-  const captured = file ? (JSON.parse(readFileSync(join(downloads, file), 'utf8')).groups as { name: string }[]).map((g) => g.name) : [];
+  const base = file ? (JSON.parse(readFileSync(join(downloads, file), 'utf8')) as { groups: { name: string }[]; ungrouped: string[]; preexisting?: string[] }) : null;
+  const captured = base ? base.groups.map((g) => g.name) : [];
   const after = (await ctl.evaluate(() => chrome.tabGroups.query({}).then((gs) => gs.map((g) => g.title ?? '')))) as string[];
+  const mineTrace = (await readTraces(browser, extId)).find((t) => t.tabId === mineTab && t.closedAt === null)?.traceId;
   console.log(
     `\nbaseline capture: captured ${JSON.stringify(captured)} (must be ["organizer"]); groups left on the strip ${JSON.stringify(after)} ` +
-      `(must still include "mine"); status: ${status}`,
+      `(must still include "mine"); the tab in "mine" listed as the person's own: ${!!mineTrace && !!base?.preexisting?.includes(mineTrace)}, ` +
+      `not as ungrouped: ${!!mineTrace && !base?.ungrouped.includes(mineTrace)} (both must be true); status: ${status}`,
   );
   await ctl.evaluate(async (g) => {
     const ids = (await chrome.tabs.query({ groupId: g })).map((t) => t.id!);

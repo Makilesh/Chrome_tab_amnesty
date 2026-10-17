@@ -233,6 +233,15 @@ Search · any MCP · any cloud default · any auto-close · settings beyond the 
       Chrome for Testing: a restart does not replace the worker, a new manifest version does not
       either, off-and-on does. The owner's Chrome ran the 5 Oct worker until at least 16 Oct
       (DECISIONS 2026-10-17)
+- [x] Full review (17 Oct): 32 problems confirmed by independent verifiers, none caught by the
+      existing checks. Fixed: unsent typing is asked of every tab and frame at the click and the
+      content script reaches tabs open before an install or Reload; never-remember holds on every
+      path and backwards; one record per tab through every reconcile race; prerendered pages and
+      forced connection closes; a stalled database reopen (step 9 blocked one run in three — none
+      in 45 since); the ambient list; restores retried; Show on strip per window; Bring back once;
+      labels said as of now; the study keeps presses after Forget; scoring leaves out unlabelled
+      tabs. `npm test` now runs the worker itself (src/collector/background.test.ts). Open: scoring
+      redacted fixtures can move S6/S7 (DECISIONS 2026-10-17)
 
 ### Done when
 - [ ] A real 100+ tab browser can be swept, grouped, named, archived group-by-group (needs the owner's

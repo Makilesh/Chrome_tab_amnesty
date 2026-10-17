@@ -9,7 +9,12 @@
     "alarms",
     "tabGroups",
     "offscreen",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "src/collector/background.ts",
@@ -24,7 +29,9 @@
       "js": [
         "src/collector/content.ts"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_origin_as_fallback": true
     }
   ],
   "action": {
