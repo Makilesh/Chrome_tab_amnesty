@@ -2,6 +2,7 @@
  * Pure helpers for archive cards: building one from a community, the colour a project keeps
  * across sweeps, and what "bring it back" has to recreate. No `chrome.*`, unit-tested.
  */
+import { whenLabel } from '../cluster/describe';
 import type { Community, TabTrace } from '../cluster/types';
 import { GROUP_COLORS, type ArchiveCard, type ArchivedTab, type GroupColor, type GroupName, UNDO_WINDOW_MS } from './types';
 
@@ -48,6 +49,7 @@ export function buildCard(
   hosts: string[],
   now = Date.now(),
   id: string = crypto.randomUUID(),
+  whenAt: number | null = null,
 ): ArchiveCard {
   const tabs: ArchivedTab[] = inStripOrder(members).map((t, order) => ({
     traceId: t.traceId,
@@ -65,6 +67,7 @@ export function buildCard(
     color: name.color,
     tier: name.tier,
     when,
+    whenAt,
     hosts,
     archivedAt: now,
     undoUntil: now + UNDO_WINDOW_MS,
@@ -72,6 +75,11 @@ export function buildCard(
     restoredAt: null,
     sourceCommunity: community.id,
   };
+}
+
+/** A card's event label as of now (§6.5); a card without the moment keeps the words it was archived with. */
+export function cardWhen(card: Pick<ArchiveCard, 'when' | 'whenAt'>, now = Date.now()): string {
+  return typeof card.whenAt === 'number' ? whenLabel(card.whenAt, now) : card.when;
 }
 
 export function undoable(card: ArchiveCard, now = Date.now()): boolean {

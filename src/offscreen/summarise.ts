@@ -8,7 +8,7 @@
  * until something new is queued. Nothing leaves the machine.
  */
 import { inputLanguages, languagesToTry } from '../archive/language';
-import { pendingJobs, putJob, updateCard } from '../archive/store';
+import { jobsInState, pendingJobs, putJob, updateCard } from '../archive/store';
 import type { SummariseJob } from '../archive/types';
 
 const BATCH = 4;
@@ -59,6 +59,8 @@ async function drain(): Promise<'empty' | 'unavailable'> {
     for (const j of await pendingJobs(1000)) await putJob({ ...j, state: 'unavailable' });
     return 'unavailable';
   }
+  // Available now — after the model arrived, say: what was set aside while it was not gets its turn.
+  for (const j of await jobsInState('unavailable', 1000)) await putJob({ ...j, state: 'pending' });
   const s = await Summarizer!.create(summaryOptions(lang));
   try {
     for (;;) {
@@ -85,8 +87,18 @@ async function drain(): Promise<'empty' | 'unavailable'> {
   }
 }
 
+/**
+ * One drain at a time. The worker asks on every start and on every alarm, and overlapping drains
+ * summarised the same pages twice, let a failing one mark a done job failed, and let the first to
+ * finish close this document under the other. A second ask waits for the drain already running.
+ */
+let draining: Promise<'empty' | 'unavailable'> | null = null;
+
 chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
   if ((msg as { type?: string })?.type !== 'summarise-run') return false;
-  void drain().then((r) => sendResponse({ result: r }), (e: Error) => sendResponse({ result: 'error', message: e.message }));
+  draining ??= drain().finally(() => {
+    draining = null;
+  });
+  draining.then((r) => sendResponse({ result: r }), (e: Error) => sendResponse({ result: 'error', message: e.message }));
   return true;
 });

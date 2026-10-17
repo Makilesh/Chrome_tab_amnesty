@@ -12,6 +12,8 @@ import {
   deleteTrace,
   getMeta,
   getOpenTraces,
+  getOpenTracesByUrl,
+  getTrace,
   getTraceByTabId,
   onDatabaseReset,
   putTrace,
@@ -58,6 +60,11 @@ function baseTrace(tab: chrome.tabs.Tab, url: string): Omit<
   };
 }
 
+/** §6.10: a never-remember site keeps only what grouping needs (url, timing, lineage) — no title, no page content. */
+function scrubbed(t: TabTrace, never: readonly string[]): TabTrace {
+  return isNeverRemembered(t, never) && (t.title || t.digest) ? { ...t, title: '', digest: null, digestAt: null } : t;
+}
+
 /** Best URL we can see for a tab right now. Pending URLs are visible with the "tabs" permission. */
 function tabUrl(tab: chrome.tabs.Tab): string {
   return tab.url || tab.pendingUrl || '';
@@ -75,7 +82,8 @@ async function liveTabIds(): Promise<Set<number>> {
  * url-only is a valid match.
  */
 async function findOrphanFor(tab: chrome.tabs.Tab, url: string, live: Set<number>): Promise<TabTrace | undefined> {
-  const candidates = (await getOpenTraces()).filter((t) => t.url === url && !live.has(t.tabId));
+  if (!url) return undefined;
+  const candidates = (await getOpenTracesByUrl(url)).filter((t) => !live.has(t.tabId));
   if (candidates.length === 0) return undefined;
   const score = (t: TabTrace) => (t.windowId === tab.windowId ? 0 : 1_000_000) + Math.abs(t.index - tab.index);
   return candidates.sort((a, b) => score(a) - score(b))[0];
@@ -92,29 +100,36 @@ async function findOrphanFor(tab: chrome.tabs.Tab, url: string, live: Set<number
 async function bindOrAdopt(tab: chrome.tabs.Tab, live?: Set<number>): Promise<TabTrace> {
   const url = tabUrl(tab);
   const orphan = await findOrphanFor(tab, url, live ?? (await liveTabIds()));
+  const never = await getNeverRemember();
   if (orphan) {
-    const bound: TabTrace = {
-      ...orphan,
-      tabId: tab.id ?? -1,
-      windowId: tab.windowId,
-      index: tab.index,
-      pinned: tab.pinned,
-      discarded: tab.discarded ?? false,
-      // A tab created by Bring back has title "" until its page loads; the stored one is right.
-      title: tab.title || orphan.title,
-    };
+    const bound = scrubbed(
+      {
+        ...orphan,
+        tabId: tab.id ?? -1,
+        windowId: tab.windowId,
+        index: tab.index,
+        pinned: tab.pinned,
+        discarded: tab.discarded ?? false,
+        // A tab created by Bring back has title "" until its page loads; the stored one is right.
+        title: tab.title || orphan.title,
+      },
+      never,
+    );
     await putTrace(bound);
     return bound;
   }
   const visit = await lastVisit(url);
-  const trace: TabTrace = {
-    traceId: crypto.randomUUID(),
-    openerTraceId: null,
-    openedAt: visit?.visitTime ?? Date.now(),
-    transition: visit?.transition ?? 'unknown',
-    backfilled: true,
-    ...baseTrace(tab, url),
-  };
+  const trace = scrubbed(
+    {
+      traceId: crypto.randomUUID(),
+      openerTraceId: null,
+      openedAt: visit?.visitTime ?? Date.now(),
+      transition: visit?.transition ?? 'unknown',
+      backfilled: true,
+      ...baseTrace(tab, url),
+    },
+    never,
+  );
   await putTrace(trace);
   return trace;
 }
@@ -172,23 +187,28 @@ chrome.tabs.onCreated.addListener((tab) => {
 
 async function onCreated(tab: chrome.tabs.Tab, openedAt: number): Promise<void> {
   const url = tabUrl(tab);
-  // Session restore can surface a tab through onCreated; if an orphaned trace already describes
-  // it, re-bind rather than minting a second identity for the same tab.
-  if (/^https?:/.test(url) && (await findOrphanFor(tab, url, await liveTabIds()))) {
+  // Session restore (and Bring back) can surface a tab through onCreated; if an orphaned trace
+  // already describes it, re-bind rather than minting a second identity for the same tab. A tab
+  // opened FROM another tab is new whatever its url — a window closed a minute ago still has
+  // orphans waiting for the reconcile alarm, and binding to one of them lost this tab's opener.
+  if (tab.openerTabId === undefined && /^https?:/.test(url) && (await findOrphanFor(tab, url, await liveTabIds()))) {
     await bindOrAdopt(tab);
     return;
   }
   // §5.1: openerTabId exists only now. Resolve it to a traceId immediately or lose it.
   const opener =
     tab.openerTabId !== undefined ? await getTraceByTabId(tab.openerTabId) : undefined;
-  const trace: TabTrace = {
-    traceId: crypto.randomUUID(),
-    openerTraceId: opener?.traceId ?? null,
-    openedAt,
-    transition: 'unknown',
-    backfilled: false,
-    ...baseTrace(tab, url),
-  };
+  const trace = scrubbed(
+    {
+      traceId: crypto.randomUUID(),
+      openerTraceId: opener?.traceId ?? null,
+      openedAt,
+      transition: 'unknown',
+      backfilled: false,
+      ...baseTrace(tab, url),
+    },
+    await getNeverRemember(),
+  );
   await putTrace(trace);
   if (url) await resolveTransition(trace.traceId, url, openedAt);
 }
@@ -279,7 +299,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === RECONCILE_ALARM) void rebindAll();
+  if (alarm.name === RECONCILE_ALARM) void rebindAll(true); // the browser is still running
   if (alarm.name === SUMMARISE_ALARM) void runSummariser();
   if (alarm.name === STUDY_ALARM) void takeSnapshot();
 });
@@ -313,8 +333,23 @@ async function accrueDwell(active: { traceId: string; since: number }, now: numb
   await updateTrace(active.traceId, (t) => ({ ...t, dwellMs: t.dwellMs + inc }));
 }
 
+/**
+ * The trace of a tab that may have been created a moment ago. onCreated runs in the tab's lane,
+ * onActivated in the activity lane, so a tab opened in the foreground (a link with target=_blank,
+ * Ctrl+T) is activated before its trace exists. The activity lane must not wait on a tab lane
+ * (see serial), so it looks again for a moment instead. Without this every such tab lost its
+ * first activation and the opener↔child switch never reached coActive (S8).
+ */
+async function traceSoon(tabId: number): Promise<TabTrace | undefined> {
+  for (let i = 0; ; i++) {
+    const t = await getTraceByTabId(tabId);
+    if (t || i >= 10) return t;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+
 async function foreground(tabId: number, now: number): Promise<void> {
-  const trace = await getTraceByTabId(tabId);
+  const trace = await traceSoon(tabId);
   const active = await getMeta('activeNow');
   if (active && active.traceId !== trace?.traceId) await accrueDwell(active, now);
   if (!trace) {
@@ -401,6 +436,11 @@ async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
   });
 }
 
+/** A document the tab is actually showing — not one prerendering for it or parked in the back/forward cache. */
+function showing(sender: chrome.runtime.MessageSender): boolean {
+  return sender.documentLifecycle === undefined || sender.documentLifecycle === 'active';
+}
+
 chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
   const m = msg as Partial<DigestMessage> | undefined;
   // An extension page was the first to open a database Chrome had replaced (db.ts afterCreate).
@@ -419,13 +459,19 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     return false;
   }
   const typed = msg as { type?: string; typing?: boolean } | undefined;
-  if (typed?.type === 'typing' && sender.tab?.id !== undefined && sender.frameId === 0) {
+  if (typed?.type === 'typing' && sender.tab?.id !== undefined && showing(sender)) {
     const tabId = sender.tab.id;
     const value = typed.typing === true;
+    // Any frame can say a draft is there (editors live in iframes); only the top frame can say it
+    // is gone. This flag is the fallback — Archive & close asks every frame at the click.
+    if (!value && sender.frameId !== 0) return false;
     void serial(tabId, () => updateTraceByTabId(tabId, (t) => (!!t.typing === value ? null : { ...t, typing: value })));
     return false;
   }
-  if (m?.type === 'digest' && sender.tab?.id !== undefined && m.digest && m.url) {
+  // The top frame of the page the tab is showing only: a prerendered page (speculation rules)
+  // reports with the tab's id from another frame, and would rewrite the trace to a page the
+  // person never opened.
+  if (m?.type === 'digest' && sender.tab?.id !== undefined && sender.frameId === 0 && showing(sender) && m.digest && m.url) {
     const tabId = sender.tab.id;
     serial(tabId, () => handleDigest(tabId, m as DigestMessage)).then(
       () => sendResponse({ ok: true }),
@@ -440,26 +486,69 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
 // Startup re-bind (§5.3): tab ids are reassigned across restarts, traces are not
 // ---------------------------------------------------------------------------------------------
 
-async function rebindAll(): Promise<void> {
+/**
+ * `keepActivity`: the browser kept running (the reconcile after a window closed), so the tab in
+ * front is still in front — its dwell is banked and counting goes on. At startup, install and a
+ * database reset the stored activity describes a past that is gone, and is cleared.
+ */
+async function rebindAll(keepActivity = false): Promise<void> {
   const now = Date.now();
   const tabs = (await chrome.tabs.query({})).filter((t) => t.id !== undefined);
-  const live = new Set(tabs.map((t) => t.id!));
 
   for (const tab of tabs) {
     // Through the per-tab lane so this cannot interleave with an onUpdated for the same tab.
     await serial(tab.id!, async () => {
-      const bound = await getTraceByTabId(tab.id!);
-      if (bound && bound.url === tabUrl(tab)) return;
-      await bindOrAdopt(tab, live);
+      // A trace bound to this live tab is its record, whatever url it holds this instant: a
+      // navigation in flight reaches it through onUpdated, queued behind us in this lane.
+      // (Comparing with the url from the snapshot above minted a second record for the tab.)
+      if (await getTraceByTabId(tab.id!)) return;
+      const fresh = await chrome.tabs.get(tab.id!).catch(() => undefined);
+      // Live tabs asked again too: a trace of a tab opened during this loop is not an orphan.
+      if (fresh) await bindOrAdopt(fresh);
     });
   }
 
   // Whatever is still open in the store but bound to no live tab was closed while we were away.
+  // Asked again now: a tab opened while the loop ran is live, not closed (and keeps its lineage).
+  // A live tab at a record's url with no record of its own yet is about to be bound to it (a
+  // restored tab that appeared after the list above was taken): closing the record now would hand
+  // that tab a fresh one without its lineage. Counted per url, so two dead records and one
+  // restored tab still close one of them.
+  const claims = new Map<string, number>();
+  const awaitingBind = async (url: string, tabsNow: chrome.tabs.Tab[]): Promise<boolean> => {
+    let unbound = 0;
+    for (const x of tabsNow) if (tabUrl(x) === url && !(await getTraceByTabId(x.id!))) unbound++;
+    const used = claims.get(url) ?? 0;
+    if (used >= unbound) return false;
+    claims.set(url, used + 1);
+    return true;
+  };
+  const never = await getNeverRemember();
   for (const t of await getOpenTraces()) {
-    if (!live.has(t.tabId)) await putTrace({ ...t, closedAt: now });
+    const tabsNow = (await chrome.tabs.query({})).filter((x) => x.id !== undefined);
+    if (tabsNow.some((x) => x.id === t.tabId)) continue;
+    if (await awaitingBind(t.url, tabsNow)) continue;
+    // Checked again inside the write: a restored tab re-bound to this record since it was read
+    // (onCreated) must not be put back on the dead tab id and closed.
+    const stillDead = (cur: TabTrace) => cur.closedAt === null && cur.tabId === t.tabId;
+    if (isNeverRemembered(t, never)) {
+      const cur = await getTrace(t.traceId);
+      if (cur && stillDead(cur)) await deleteTrace(t.traceId); // §6.10, as a single-tab close does
+    } else {
+      await updateTrace(t.traceId, (cur) => (stillDead(cur) ? { ...cur, closedAt: now } : null));
+    }
   }
 
   await serial(ACTIVITY_LANE, async () => {
+    if (keepActivity) {
+      const active = await getMeta('activeNow');
+      if (active) {
+        const at = Date.now();
+        await accrueDwell(active, at);
+        await setMeta('activeNow', { ...active, since: at });
+      }
+      return;
+    }
     await setMeta('activeNow', null);
     await setMeta('recentActivations', []);
   });
@@ -479,10 +568,30 @@ async function refreshBackfilled(): Promise<void> {
   }
 }
 
+// Install and update only (DECISIONS 2026-09-12). It used to run on every worker start too, and
+// each time rewrote adopted tabs' timing from the newest visit to their url — from any tab — so
+// weeks-old tabs kept acquiring today's timing and joined today's session.
 chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfilled).then(takeSnapshot));
-// Also on every worker start: idempotent, cheap, and independent of whether onInstalled fired.
-void refreshBackfilled();
 chrome.runtime.onStartup.addListener(() => void rebindAll());
+
+/**
+ * Tabs that were already open when this version started — a first install, a Reload, switching
+ * it back on — never get the manifest's content script (MV3 injects only as pages load), so
+ * nothing could see typing or take a digest in them until they navigated: Archive & close closed
+ * drafts typed into them. The worker's own `install` event fires exactly then (a new
+ * registration), never on the every-few-minutes restarts. Discarded tabs have no page and are
+ * left alone (§5.4: never reload a tab to read it).
+ */
+async function injectIntoOpenTabs(): Promise<void> {
+  const files = chrome.runtime.getManifest().content_scripts?.flatMap((c) => c.js ?? []) ?? [];
+  if (files.length === 0) return;
+  for (const tab of await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] })) {
+    if (tab.id === undefined || tab.discarded) continue;
+    chrome.scripting.executeScript({ target: { tabId: tab.id, allFrames: true }, files }).catch(() => {});
+  }
+}
+// (Optional call: only a worker's global is an event target, not the test runner's.)
+(globalThis as unknown as Partial<EventTarget>).addEventListener?.('install', () => void injectIntoOpenTabs());
 // Chrome replaced the database with an empty one (db.ts): adopt every open tab again now, rather
 // than recording nothing about them until the next restart (7 Oct: 13 hours).
 onDatabaseReset(() => void rebindAll());

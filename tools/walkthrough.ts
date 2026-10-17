@@ -13,7 +13,7 @@
  * Then: sweep page (names, §6 audit), Show on strip, Export traces, Archive & close one group,
  * restart Chrome, Bring back, Export study summary. The browser is left open for the person.
  *
- *   npm run build && npm run walkthrough
+ *   npm run walkthrough    (builds .check-build/ itself; never dist/, the owner's live install)
  *
  * Output lands in .walkthrough/ (git-ignored): profile, downloads, screenshots. This is a
  * SCRIPTED browser: its export is a mechanics check and never counts toward any gate.

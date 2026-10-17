@@ -10,7 +10,8 @@ import { cluster } from '../../cluster/cluster';
 import { describe } from '../../cluster/describe';
 import { SCHEMA_VERSION, type TabTrace, type TraceFixture } from '../../cluster/types';
 import { studySummary } from '../../archive/study';
-import { getCards } from '../../archive/store';
+import { isNeverRemembered } from '../../archive/forget';
+import { getCards, getNeverRemember } from '../../archive/store';
 import { getMeta, getOpenTraces } from '../../collector/db';
 import { redactTraces } from '../../collector/redact';
 
@@ -144,8 +145,12 @@ async function captureBaseline(traces: TabTrace[]): Promise<string> {
     traceIds: tabs.filter((t) => t.groupId === g.id && t.id !== undefined).map((t) => byTabId.get(t.id!)).filter((x): x is string => !!x),
   }));
   const grouped = new Set(groups.flatMap((g) => g.traceIds));
-  const ungrouped = traces.map((t) => t.traceId).filter((id) => !grouped.has(id));
-  download(`${nameOr('browser')}.chrome.json`, { method: 'captured', capturedAt: Date.now(), groups, ungrouped, preexistingGroupsIgnored: leftAlone });
+  // Tabs in the person's own groups were not Chrome's to place: listed apart, so the scorer leaves
+  // them out of the comparison instead of counting them as tabs Chrome chose to leave alone.
+  const preexisting = tabs.filter((t) => before.has(t.groupId) && t.id !== undefined).map((t) => byTabId.get(t.id!)).filter((x): x is string => !!x);
+  const mine = new Set(preexisting);
+  const ungrouped = traces.map((t) => t.traceId).filter((id) => !grouped.has(id) && !mine.has(id));
+  download(`${nameOr('browser')}.chrome.json`, { method: 'captured', capturedAt: Date.now(), groups, ungrouped, preexisting, preexistingGroupsIgnored: leftAlone });
 
   // Put the strip back — only the groups Organize tabs just made. Saved groups refuse (§5.6); say so.
   const locked: string[] = [];
@@ -185,14 +190,17 @@ async function main(): Promise<void> {
   document.querySelectorAll('input[name=mode]').forEach((r) => r.addEventListener('change', updateConsent));
   updateConsent();
 
-  $('export').addEventListener('click', () => {
+  $('export').addEventListener('click', async () => {
     const m = mode();
-    download(`${nameOr('browser')}${m === 'full' ? '.full' : ''}.json`, fixture(traces, m));
+    // A shareable file leaves the machine: nothing from a never-remember site goes in it (§6.10),
+    // not even the host and path of a tab still open there. The full export stays on this machine.
+    const never = m === 'shareable' ? await getNeverRemember() : [];
+    download(`${nameOr('browser')}${m === 'full' ? '.full' : ''}.json`, fixture(traces.filter((t) => !isNeverRemembered(t, never)), m));
     $('status').textContent = `Exported (${m}).`;
   });
 
   $('study-export').addEventListener('click', async () => {
-    const summary = studySummary((await getMeta('openSnapshots')) ?? [], await getCards());
+    const summary = studySummary((await getMeta('openSnapshots')) ?? [], await getCards(), Date.now(), (await getMeta('presses')) ?? []);
     download(`${nameOr('browser')}.study.json`, summary);
     $('status').textContent = 'Exported the study summary.';
   });

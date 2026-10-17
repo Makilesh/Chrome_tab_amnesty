@@ -14,6 +14,8 @@ export interface Description {
   hosts: string[];
   /** "Tuesday afternoon" — when the burst started; secondary, never the label */
   when: string;
+  /** The moment `when` describes, so a label kept for later can be said again relative to then. */
+  whenAt: number | null;
 }
 
 const STOPPY = new Set(['github', 'docs', 'google', 'wiki', 'wikipedia', 'stackoverflow', 'reddit', 'youtube']);
@@ -22,11 +24,16 @@ export function whenLabel(ms: number, now = Date.now()): string {
   const d = new Date(ms);
   const day = d.toLocaleDateString(undefined, { weekday: 'long' });
   const h = d.getHours();
-  const part = h < 5 ? 'night' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 22 ? 'evening' : 'night';
+  const part = h < 5 ? 'small hours' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 22 ? 'evening' : 'night';
   const ageDays = (now - ms) / 86_400_000;
-  if (ageDays < 1 && new Date(now).getDate() === d.getDate()) return `this ${part}`;
-  if (ageDays < 2 && new Date(now - 86_400_000).getDate() === d.getDate()) return `yesterday ${part}`;
-  if (ageDays < 7) return `${day} ${part}`;
+  // The small hours are said as the morning they belong to; a late night as "tonight" / "last night".
+  if (ageDays < 1 && new Date(now).getDate() === d.getDate()) {
+    return part === 'small hours' ? 'early this morning' : part === 'night' ? 'tonight' : `this ${part}`;
+  }
+  if (ageDays < 2 && new Date(now - 86_400_000).getDate() === d.getDate()) {
+    return part === 'small hours' ? 'early yesterday morning' : part === 'night' ? 'last night' : `yesterday ${part}`;
+  }
+  if (ageDays < 7) return part === 'small hours' ? `early ${day} morning` : `${day} ${part}`;
   if (ageDays < 14) return `last ${day}`;
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
 }
@@ -70,6 +77,7 @@ export function describe(community: Community, byId: Map<string, TabTrace>, corp
   const heading = ranked.length ? ranked.join(' · ') : (hosts[0] ?? '');
   // §6.5: label by event. A restore-time timestamp is not an event, so it never labels a group.
   const timed = members.filter(timingKnown);
-  const when = timed.length ? whenLabel(Math.min(...timed.map((t) => t.openedAt))) : '';
-  return { heading, hosts, when };
+  const whenAt = timed.length ? Math.min(...timed.map((t) => t.openedAt)) : null;
+  const when = whenAt === null ? '' : whenLabel(whenAt);
+  return { heading, hosts, when, whenAt };
 }

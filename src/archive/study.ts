@@ -21,6 +21,8 @@ export interface StudyArchive {
   tabs: number;
   tier: NamingTier;
   restoredAt: number | null;
+  /** A press whose card was later forgotten: only its time is left (tabs 0). It still counts. */
+  forgotten?: true;
 }
 
 export interface StudySummary {
@@ -40,16 +42,21 @@ export function appendSnapshot(list: OpenSnapshot[], s: OpenSnapshot): OpenSnaps
   return [...list, s].slice(-MAX_SNAPSHOTS);
 }
 
-/** What leaves the machine for the study: times and counts only — no names, no URLs. */
-export function studySummary(snapshots: OpenSnapshot[], cards: ArchiveCard[], now = Date.now()): StudySummary {
+/**
+ * What leaves the machine for the study: times and counts only — no names, no URLs. `presses`
+ * (store.ts) adds the presses whose cards were forgotten since; without them, forgetting a card
+ * erased the press and could move the first-press date the gate is read from.
+ */
+export function studySummary(snapshots: OpenSnapshot[], cards: ArchiveCard[], now = Date.now(), presses: number[] = []): StudySummary {
+  const fromCards: StudyArchive[] = cards.map((c) => ({ archivedAt: c.archivedAt, tabs: c.tabs.length, tier: c.tier, restoredAt: c.restoredAt }));
+  const kept = new Set(cards.map((c) => c.archivedAt));
+  const forgotten: StudyArchive[] = presses.filter((at) => !kept.has(at)).map((at) => ({ archivedAt: at, tabs: 0, tier: 'heuristic', restoredAt: null, forgotten: true }));
   return {
     kind: 'tab-amnesty-phase1-study',
     schemaVersion: 1,
     exportedAt: now,
     snapshots,
-    archives: cards
-      .map((c) => ({ archivedAt: c.archivedAt, tabs: c.tabs.length, tier: c.tier, restoredAt: c.restoredAt }))
-      .sort((a, b) => a.archivedAt - b.archivedAt),
+    archives: [...fromCards, ...forgotten].sort((a, b) => a.archivedAt - b.archivedAt),
   };
 }
 

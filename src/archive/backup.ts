@@ -14,7 +14,7 @@
  * Traces are not copied: they change on every tab switch, and after a reset the collector adopts
  * the open tabs again (what is lost is where they came from and what they were switched with).
  */
-import type { OpenSnapshot } from './study';
+import { MAX_SNAPSHOTS, type OpenSnapshot } from './study';
 import type { ArchiveCard } from './types';
 
 const CACHE = 'tab-amnesty-backup';
@@ -33,6 +33,8 @@ export interface Backup {
   cards: ArchiveCard[];
   neverRemember?: string[];
   openSnapshots?: OpenSnapshot[];
+  /** When Archive & close was pressed (study; times only). */
+  presses?: number[];
   /** When this install's database was first created, or when this copy was first made. */
   createdAt?: number;
   /** Each time Chrome handed back an empty database after that. */
@@ -63,12 +65,56 @@ export async function dropCardBackup(cardId: string): Promise<void> {
   await (await open())?.delete(KEY + cardKey(cardId));
 }
 
+// While a restore is pending the database holds less than this copy, so the lists below are merged
+// into the copy instead of replacing it — before, the first snapshot after a failed restore cut the
+// copy's study snapshots down to that one (and a never-remember add, the list to that one site).
+
 export async function backupNeverRemember(list: string[]): Promise<void> {
+  const cache = await open();
+  if (cache && (await pending(cache))) list = [...new Set([...((await get<string[]>(cache, 'neverRemember')) ?? []), ...list])];
   await put('neverRemember', list);
 }
 
 export async function backupSnapshots(list: OpenSnapshot[]): Promise<void> {
+  const cache = await open();
+  if (cache && (await pending(cache))) list = mergeSnapshots((await get<OpenSnapshot[]>(cache, 'openSnapshots')) ?? [], list);
   await put('openSnapshots', list);
+}
+
+export async function backupPresses(list: number[]): Promise<void> {
+  const cache = await open();
+  if (cache && (await pending(cache))) list = mergePresses((await get<number[]>(cache, 'presses')) ?? [], list);
+  await put('presses', list);
+}
+
+/** Snapshots from both, one per moment, oldest first, as many as the study keeps. */
+export function mergeSnapshots(a: OpenSnapshot[], b: OpenSnapshot[]): OpenSnapshot[] {
+  return [...new Map([...a, ...b].map((s) => [s.at, s])).values()].sort((x, y) => x.at - y.at).slice(-MAX_SNAPSHOTS);
+}
+
+export function mergePresses(a: number[], b: number[]): number[] {
+  return [...new Set([...a, ...b])].sort((x, y) => x - y);
+}
+
+async function pending(cache: Cache): Promise<boolean> {
+  return (await cache.match(KEY + 'restorePending')) !== undefined;
+}
+
+/**
+ * Set before a restore starts and cleared when it has finished, so a restore that fails (a full
+ * disk on the day Chrome replaced the database, say) is tried again on every worker start
+ * (store.ts seedBackup) instead of never.
+ */
+export async function markRestorePending(on: boolean): Promise<void> {
+  const cache = await open();
+  if (!cache) return;
+  if (on) await put('restorePending', Date.now());
+  else await cache.delete(KEY + 'restorePending');
+}
+
+export async function restorePending(): Promise<boolean> {
+  const cache = await open();
+  return !!cache && (await pending(cache));
 }
 
 export async function readBackup(): Promise<Backup | null> {
@@ -84,6 +130,7 @@ export async function readBackup(): Promise<Backup | null> {
     cards,
     neverRemember: await get<string[]>(cache, 'neverRemember'),
     openSnapshots: await get<OpenSnapshot[]>(cache, 'openSnapshots'),
+    presses: await get<number[]>(cache, 'presses'),
     createdAt: await get<number>(cache, 'createdAt'),
     resets: await get<Reset[]>(cache, 'resets'),
   };

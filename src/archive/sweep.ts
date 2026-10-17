@@ -6,17 +6,28 @@
  */
 import type { Community, TabTrace } from '../cluster/types';
 import { deleteTrace, getTrace, updateTrace } from '../collector/db';
-import { buildCard, inStripOrder, restoreOrder, undoable } from './card';
+import { buildCard, dominantHost, inStripOrder, restoreOrder, undoable } from './card';
 import { isNeverRemembered } from './forget';
-import { enqueue, getCard, getNeverRemember, putCard, updateCard } from './store';
+import { enqueue, getNeverRemember, notePress, putCard, updateCard } from './store';
 import type { ArchiveCard, GroupName, SummariseJob } from './types';
 
+/** Where a tab was before "show on strip" pulled it into a group, so Undo can put it back. */
+export interface StripPlace {
+  tabId: number;
+  windowId: number;
+  index: number;
+}
+
 export interface GroupResult {
-  groupId: number | null;
+  /** Groups made, one per window the group's tabs are in. */
+  groupIds: number[];
   /** §5.6: a saved/synced group refused the edit. The clustering stands; the strip was not changed. */
   locked: boolean;
   /** Tabs that were already in a group of the person's (or another tool's) and were left there. */
   leftInPlace: number;
+  moved: StripPlace[];
+  /** Chrome refused something else; what was done so far is still in groupIds / moved. */
+  error?: string;
 }
 
 export interface ArchiveResult {
@@ -36,32 +47,70 @@ function isSavedGroupError(e: unknown): boolean {
 }
 
 /**
- * Write one community to the tab strip as a named, coloured group. Tabs that are already in a
- * group stay where they are: that group is the person's own, a saved one, or another tool's, and
+ * Write one community to the tab strip as a named, coloured group — one group per window, made
+ * in that window: without a window, chrome.tabs.group moves every tab to the window of the page
+ * that asked, emptying (and closing) the person's other windows. Tabs that are already in a group
+ * stay where they are: that group is the person's own, a saved one, or another tool's, and
  * pulling tabs out of it would undo their organising (and saved groups refuse anyway, §5.6).
  */
 export async function groupOnStrip(members: TabTrace[], name: GroupName): Promise<GroupResult> {
   const live = new Map((await chrome.tabs.query({})).map((t) => [t.id, t]));
   const ids = inStripOrder(members).map((t) => t.tabId).filter((id) => live.has(id));
   const free = ids.filter((id) => (live.get(id)!.groupId ?? -1) === -1);
-  const leftInPlace = ids.length - free.length;
-  if (free.length === 0) return { groupId: null, locked: false, leftInPlace };
-  try {
-    const groupId = await chrome.tabs.group({ tabIds: free });
-    await chrome.tabGroups.update(groupId, { title: name.name, color: name.color });
-    return { groupId, locked: false, leftInPlace };
-  } catch (e) {
-    if (isSavedGroupError(e)) return { groupId: null, locked: true, leftInPlace };
-    throw e;
+  const result: GroupResult = { groupIds: [], locked: false, leftInPlace: ids.length - free.length, moved: [] };
+  const byWindow = new Map<number, number[]>();
+  for (const id of free) {
+    const w = live.get(id)!.windowId;
+    byWindow.set(w, [...(byWindow.get(w) ?? []), id]);
   }
+  for (const [windowId, tabIds] of byWindow) {
+    const places = tabIds.map((tabId) => ({ tabId, windowId, index: live.get(tabId)!.index }));
+    try {
+      const groupId = await chrome.tabs.group({ tabIds, createProperties: { windowId } });
+      result.groupIds.push(groupId);
+      result.moved.push(...places); // grouping pulls the tabs together
+      await chrome.tabGroups.update(groupId, { title: name.name, color: name.color });
+    } catch (e) {
+      if (isSavedGroupError(e)) result.locked = true;
+      else result.error = (e as Error)?.message ?? String(e);
+    }
+  }
+  return result;
 }
 
-/** Undo "show on strip": ungroup exactly the groups it made, if they still exist. */
-export async function ungroupOurs(groupIds: number[]): Promise<void> {
+/** Undo "show on strip": ungroup exactly the groups it made, then put their tabs back where they were. */
+export async function ungroupOurs(groupIds: number[], moved: StripPlace[] = []): Promise<void> {
   for (const g of groupIds) {
     const ids = (await chrome.tabs.query({ groupId: g })).map((t) => t.id).filter((id): id is number => id !== undefined);
     if (ids.length) await chrome.tabs.ungroup(ids).catch(() => {});
   }
+  // From the right: each move then lands among tabs that are already back in place.
+  for (const p of [...moved].sort((a, b) => b.index - a.index)) {
+    await chrome.tabs.move(p.tabId, { windowId: p.windowId, index: p.index }).catch(() => {});
+  }
+}
+
+/**
+ * Ask a tab, at the moment of the click, whether a field the person typed into still holds text
+ * (content.ts answers for every frame). null when it cannot answer: discarded, frozen, or no live
+ * content script.
+ */
+async function unsentIn(tabId: number): Promise<boolean | null> {
+  try {
+    const r = (await Promise.race([
+      chrome.tabs.sendMessage(tabId, { type: 'unsent?' }),
+      new Promise((resolve) => setTimeout(() => resolve(undefined), 2000)),
+    ])) as { unsent?: unknown } | undefined;
+    return typeof r?.unsent === 'boolean' ? r.unsent : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A never-remembered site named anywhere in a group name (its domain, or that domain's first word). */
+function namesNeverSite(name: string, never: readonly string[]): boolean {
+  const n = name.toLowerCase();
+  return never.some((d) => d && (n.includes(d) || ((d.split('.')[0] ?? '').length >= 4 && n.includes(d.split('.')[0]!))));
 }
 
 /**
@@ -76,18 +125,35 @@ export async function archiveAndClose(
   name: GroupName,
   when: string,
   hosts: string[],
+  whenAt: number | null = null,
 ): Promise<ArchiveResult> {
-  // Re-read each record now: the person may have started typing after the page was drawn.
+  // Re-read each record now: the person may have started typing after the page was drawn. Then
+  // ask each tab itself. Either one saying there is a draft keeps the tab open: the stored flag
+  // misses drafts (it never saw shadow roots or iframes), and a script injected after a Reload
+  // never saw the typing done before it — but the flag the old script stored did.
   const fresh = await Promise.all(members.map(async (t) => (await getTrace(t.traceId)) ?? t));
-  const keptOpen = fresh.filter((t) => t.typing === true);
-  const closable = fresh.filter((t) => t.typing !== true);
+  const tabs = new Map((await chrome.tabs.query({})).map((t) => [t.id, t]));
+  const holdsTyping = await Promise.all(
+    fresh.map(async (t) => {
+      const tab = tabs.get(t.tabId);
+      if (!tab) return false; // already gone
+      if (t.typing === true) return true;
+      return tab.discarded ? false : (await unsentIn(t.tabId)) === true;
+    }),
+  );
+  const keptOpen = fresh.filter((_, i) => holdsTyping[i]);
+  const closable = fresh.filter((_, i) => !holdsTyping[i]);
   const never = await getNeverRemember();
   const kept = closable.filter((t) => !isNeverRemembered(t, never));
   const dropped = closable.filter((t) => isNeverRemembered(t, never));
 
-  const card = buildCard(community, kept, name, when, hosts);
+  // Nothing about a never-remember site goes on the card: not its host, not a name taken from it.
+  const keptHosts = hosts.filter((h) => !isNeverRemembered({ host: h, eTLD1: h }, never));
+  const keptName = namesNeverSite(name.name, never) ? { ...name, name: dominantHost(kept) || 'Put away' } : name;
+  const card = buildCard(community, kept, keptName, when, keptHosts, Date.now(), crypto.randomUUID(), whenAt);
   if (kept.length > 0) {
     await putCard(card); // BEFORE closing anything
+    await notePress(card.archivedAt).catch(() => {}); // the study's count; never blocks putting things away
     const jobs: SummariseJob[] = card.tabs
       .filter((t) => t.digest && (t.digest.description || t.digest.headings.length || t.digest.leadText))
       .map((t) => ({ jobId: crypto.randomUUID(), cardId: card.cardId, traceId: t.traceId, createdAt: Date.now(), attempts: 0, state: 'pending' }));
@@ -114,9 +180,18 @@ export async function archiveAndClose(
  * open now. A trace that was forgotten is simply absent and its tab gets a fresh one.
  */
 export async function bringBack(cardId: string): Promise<{ ok: boolean; reason?: string }> {
-  const card = await getCard(cardId);
+  // Claim the card first, in one transaction: a second click — the toast's Bring back and the
+  // card's, or a double click — then finds it already brought back instead of recreating every
+  // tab a second time.
+  const now = Date.now();
+  let claimed = false;
+  const card = await updateCard(cardId, (c) => {
+    if (!undoable(c, now)) return null;
+    claimed = true;
+    return { ...c, restoredAt: now };
+  });
   if (!card) return { ok: false, reason: 'That one is gone.' };
-  if (!undoable(card)) return { ok: false, reason: card.restoredAt ? 'Already brought back.' : 'That one is older than a day; open its tabs from the card instead.' };
+  if (!claimed) return { ok: false, reason: card.restoredAt ? 'Already brought back.' : 'That one is older than a day; open its tabs from the card instead.' };
 
   for (const t of card.tabs) await updateTrace(t.traceId, (tr) => (tr.closedAt === null ? null : { ...tr, closedAt: null }));
   const current = await chrome.windows.getCurrent();
@@ -133,7 +208,6 @@ export async function bringBack(cardId: string): Promise<{ ok: boolean; reason?:
       /* grouping is cosmetic here; the tabs are back either way */
     }
   }
-  await updateCard(cardId, (c) => ({ ...c, restoredAt: Date.now() }));
   return { ok: true };
 }
 
