@@ -4,7 +4,7 @@ import { whenLabel } from '../cluster/describe';
 import { buildCard, cardWhen, colorFor, dominantHost, inStripOrder, restoreOrder, stableHash, undoable } from './card';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import { inputLanguages, languagesToTry } from './language';
-import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, rememberedName, rememberName, sharedTitleName } from './naming';
+import { clampName, evidence, heuristicName, languageHints, NAME_MEMORY_MAX, namePrompt, NAME_SYSTEM, ownTitle, rememberedName, rememberName, sharedTitleName } from './naming';
 import { appendSnapshot, readGate, studySummary } from './study';
 import { GROUP_COLORS, UNDO_WINDOW_MS } from './types';
 
@@ -138,7 +138,63 @@ describe('naming', () => {
     expect(sharedTitleName(members, members)).toBe('acme');
     const bare = [tr('1', { host: 'www.acme.com' }), tr('2', { host: 'www.acme.com' })];
     expect(heuristicName(bare, { heading: 'deploy · rollout', hosts: ['www.acme.com'], when: '', whenAt: null }).name).toBe('Deploy');
-    expect(heuristicName(bare, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '', whenAt: null }).name).toBe('acme.com');
+    // The site's name, never a bare address.
+    expect(heuristicName(bare, { heading: 'www.acme.com', hosts: ['www.acme.com'], when: '', whenAt: null }).name).toBe('Acme');
+  });
+
+  describe('names without Gemini Nano (17 Oct: most machines)', () => {
+    const none = { heading: 'x.y', hosts: [], when: '', whenAt: null };
+    const t = (id: string, host: string, title: string, openedAt = 0, etld1 = host) => tr(id, { host, eTLD1: etld1, title, openedAt });
+
+    it("leaves the site's name out of titles: a Wikivoyage trip is Lisbon, not Travel", () => {
+      const g = [
+        t('1', 'en.wikivoyage.org', 'Sintra – Travel guide at Wikivoyage', 0, 'wikivoyage.org'),
+        t('2', 'en.wikipedia.org', 'Lisbon - Wikipedia', 1, 'wikipedia.org'),
+        t('3', 'en.wikivoyage.org', 'Lisbon – Travel guide at Wikivoyage', 2, 'wikivoyage.org'),
+        t('4', 'en.wikipedia.org', 'Alfama - Wikipedia', 3, 'wikipedia.org'),
+      ];
+      expect(ownTitle(g[0]!, g)).toBe('Sintra');
+      expect(heuristicName(g, none, g).name).toBe('Lisbon');
+    });
+
+    it("names a group after its platform when nearly all of it is there and nothing else covers half", () => {
+      const claude = [
+        t('1', 'claude.ai', 'Claude Code'),
+        t('2', 'claude.ai', 'New session - Claude'),
+        t('3', 'claude.ai', 'New session - Claude'),
+        t('4', 'claude.ai', 'Sign in - Claude'),
+        t('5', 'claude.com', 'Claude in Chrome | Claude by Anthropic'),
+        t('6', 'claude.ai', 'Claude in Chrome'),
+        t('7', 'claude.ai', 'Claude Code'),
+      ];
+      expect(heuristicName(claude, none, claude).name).toBe('Claude');
+      const gpt = [t('1', 'chatgpt.com', 'ChatGPT'), t('2', 'chatgpt.com', 'ChatGPT'), t('3', 'chatgpt.com', 'ChatGPT'), t('4', 'x.com', 'a post')];
+      expect(heuristicName(gpt, none, gpt).name).toBe('ChatGPT'); // as the titles spell it
+    });
+
+    it('calls a group of job postings what it is', () => {
+      const g = [
+        tr('1', { host: 'linkedin.com', eTLD1: 'linkedin.com', title: 'QA Engineer – Associate | PwC', pathTokens: ['jobs', 'view'] }),
+        tr('2', { host: 'paypal.eightfold.ai', eTLD1: 'eightfold.ai', title: 'Careers at PayPal' }),
+      ];
+      expect(heuristicName(g, none, g).name).toBe('Job search');
+    });
+
+    it('prefers a pair of words the titles share, and never shows a bare address', () => {
+      const ev = [
+        t('1', 'wemakedevs.org', 'First Commit | Bharat Builds Tour | WeMakeDevs'),
+        t('2', 'luma.com', 'First Commit IRL: Meet the Team · Luma'),
+        t('3', 'luma.com', 'Events · Luma'),
+      ];
+      expect(heuristicName(ev, none, ev).name).toBe('First Commit');
+      const gpu = [
+        t('1', 'developer.nvidia.com', 'CUDA Toolkit 13.4.2 Downloads | NVIDIA Developer', 0, 'nvidia.com'),
+        t('2', 'amazon.in', 'Amazon.in : rtx 5070 ti', 1),
+        t('3', 'lenovo.com', 'Lenovo Cart | Lenovo India', 2),
+      ];
+      const n = heuristicName(gpu, { heading: 'developer.nvidia.com', hosts: ['developer.nvidia.com'], when: '', whenAt: null }, gpu).name;
+      expect(n).toBe('CUDA Toolkit 13.4.2'); // the tab the group started from, not "developer.nvidia.com"
+    });
   });
 
   it('the naming prompt asks for what most tabs share, and to tell a group apart from names already given', () => {
