@@ -138,9 +138,9 @@ study data — restart from the Reload at 12:55: 65 open tabs adopted without li
 so their groups will look worse for a while.
 
 **The sweep page on the owner's own Chrome (05 Oct 15:53, owner's screenshots):** six groups as
-above, plus `amazon.jobs` pulled into "Phinite" and the PayPal/PwC pair named "Software". The most
+above, plus `jobs.example` pulled into "Phinite" and the Globex/Initech pair named "Software". The most
 telling miss is the **job hunt, scattered across four groups**: Freshworks careers in "AWS", the
-Cognite application in "session", amazon.jobs in "Phinite", PayPal + PwC in "Software". Each job
+Hooli application in "session", jobs.example in "Phinite", Globex + Initech in "Software". Each job
 tab sits with whatever it was opened next to. That is the documented interleaving weakness
 (contemporaneity misleads when a project is done in the gaps between others) showing up on real
 data; a topic grouper would very likely have kept the job pages together, so on this browser, for
@@ -294,7 +294,9 @@ now says instead of naming a date that has passed.
 - [x] Icon; public build without the study (`npm run package`), testers' build (`-- --study`); 0.1.0
 - [x] README for newcomers (research notes now `docs/RESEARCH.md`); `PRIVACY.md`; store listing pack
       `docs/store/LISTING.md`
-- [x] MIT license; the owner's fixtures out of the public history (17 Oct); release 0.1.0 on GitHub
+- [x] MIT license; the owner's fixtures and job applications out of the current tree (17 Oct)
+- [ ] The same out of every earlier commit (history rewrite + force-push, on the owner's
+      go-ahead), then release 0.1.0 on GitHub (`release/tab-amnesty-0.1.0.zip` is built)
 - [x] Search, mail and chat records keep no query or fragment; closed records go after 30 days
 - [ ] Owner: the Web Store account and fee · the Phase 0 gate rule before submitting (CLAUDE.md)
 

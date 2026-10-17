@@ -174,8 +174,8 @@ describe('naming', () => {
 
     it('calls a group of job postings what it is', () => {
       const g = [
-        tr('1', { host: 'linkedin.com', eTLD1: 'linkedin.com', title: 'QA Engineer – Associate | PwC', pathTokens: ['jobs', 'view'] }),
-        tr('2', { host: 'paypal.eightfold.ai', eTLD1: 'eightfold.ai', title: 'Careers at PayPal' }),
+        tr('1', { host: 'linkedin.com', eTLD1: 'linkedin.com', title: 'QA Engineer – Associate | Initech', pathTokens: ['jobs', 'view'] }),
+        tr('2', { host: 'globex.eightfold.ai', eTLD1: 'eightfold.ai', title: 'Careers at Globex' }),
       ];
       expect(heuristicName(g, none, g).name).toBe('Job search');
     });
@@ -345,12 +345,12 @@ describe('phase 1 study', () => {
 
 describe('name memory', () => {
   it('a group that is still mostly the same tabs keeps its name; a different group does not', () => {
-    let mem = rememberName([], ['a', 'b', 'c', 'd'], 'PayPal Job Search', 1);
-    expect(rememberedName(['a', 'b', 'c', 'e'], mem)).toBe('PayPal Job Search'); // 3 of 5 shared
+    let mem = rememberName([], ['a', 'b', 'c', 'd'], 'Globex Job Search', 1);
+    expect(rememberedName(['a', 'b', 'c', 'e'], mem)).toBe('Globex Job Search'); // 3 of 5 shared
     expect(rememberedName(['a', 'x', 'y', 'z'], mem)).toBeNull(); // 1 of 7 shared
-    expect(rememberedName(['a', 'b', 'c', 'd'], mem, ['paypal job search'])).toBeNull(); // already on screen
-    mem = rememberName(mem, ['a', 'b', 'c', 'e'], 'PayPal Applications', 2); // same group, renamed: replaces
-    expect(mem.map((m) => m.name)).toEqual(['PayPal Applications']);
+    expect(rememberedName(['a', 'b', 'c', 'd'], mem, ['globex job search'])).toBeNull(); // already on screen
+    mem = rememberName(mem, ['a', 'b', 'c', 'e'], 'Globex Applications', 2); // same group, renamed: replaces
+    expect(mem.map((m) => m.name)).toEqual(['Globex Applications']);
   });
 
   it('keeps the newest entries only', () => {

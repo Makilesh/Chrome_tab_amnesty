@@ -257,10 +257,10 @@ Time per question: Laya 100–150 ms (torch CPU), Nano ~500–600 ms (fresh sess
 |---|---|---|---|
 | 11 — hackathons, Luma, AWS Builder | AWS | planning or managing work | **AWS Buildathon 2026** |
 | 10 — GitHub repos, gitfut | VoidAlgo | building or fixing software | Agent Development |
-| 8 — Claude in Chrome setup + one job application | session | entertainment ✗ | Academy Engineer Prep ✗ (named after the one stray tab) |
+| 8 — Claude in Chrome setup + one job application | session | entertainment ✗ | Junior Engineer Prep ✗ (named after the one stray tab) |
 | 8 — GPU/CUDA/PC setup + Cloud billing | Billing | building or fixing software | **GPU Setup & Billing** |
 | 3 — Phinite | Phinite | studying or learning ✗ | AI Agent Workflow |
-| 2 — PayPal, PwC | Job | looking for a job | **Job Applications** |
+| 2 — Globex, Initech | Job | looking for a job | **Job Applications** |
 
 On the simulated browsers Nano's names read like a person's ("Pricing Redesign", "Flat Hunting",
 "Pandas Debugging", "Outage Investigation", "Lisbon Trip Planning", "Attention Benchmarking");

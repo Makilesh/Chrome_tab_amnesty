@@ -19,7 +19,7 @@ describe('shareable redaction', () => {
   });
 
   it('knows an id when it sees one, and a word when it sees one', () => {
-    for (const id of ['zr31rrrnjmnph20f12xqh5r19c', '3d2e0ff3425b80919e8ecc9ec6e98296', '274922421881', '8REHIWx', 'KYNmcBaXqWvT', 'connor9994']) {
+    for (const id of ['a1b2c3d4e5f6g7h8i9j0k1l2m3', '0123456789abcdef0123456789abcdef', '274922421881', '8REHIWx', 'KYNmcBaXqWvT', 'connor9994']) {
       expect(looksLikeId(id)).toBe(true);
     }
     for (const w of ['buildathon', 'careers', 'p', 'c3', 'pricing', 'workspace']) expect(looksLikeId(w)).toBe(false);
@@ -27,11 +27,11 @@ describe('shareable redaction', () => {
 
   it('swaps ids for stand-ins: same value, same stand-in, in url, path tokens and across tabs', () => {
     const [a, b, c] = redactTraces([
-      tr('a', 'https://www.ilovepdf.com/download/zr31rrrnjmnph20f12xqh5r19c?x=1'),
-      tr('b', 'https://app.notion.com/p/Buildathon-3d2e0ff3425b80919e8ecc9ec6e98296'),
-      tr('c', 'https://app.notion.com/p/3d2e0ff3425b80919e8ecc9ec6e98296'),
+      tr('a', 'https://www.ilovepdf.com/download/a1b2c3d4e5f6g7h8i9j0k1l2m3?x=1'),
+      tr('b', 'https://app.notion.com/p/Buildathon-0123456789abcdef0123456789abcdef'),
+      tr('c', 'https://app.notion.com/p/0123456789abcdef0123456789abcdef'),
     ]) as [TabTrace, TabTrace, TabTrace];
-    expect(JSON.stringify([a, b, c])).not.toMatch(/zr31rrrnjmnph20f12xqh5r19c|3d2e0ff3425b80919e8ecc9ec6e98296/);
+    expect(JSON.stringify([a, b, c])).not.toMatch(/a1b2c3d4e5f6g7h8i9j0k1l2m3|0123456789abcdef0123456789abcdef/);
     expect(a.url).toMatch(/^https:\/\/www\.ilovepdf\.com\/download\/id[0-9a-f]{12}$/);
     expect(a.queryKeys).toEqual({ x: '' });
     expect(b.pathTokens.at(-1)).toBe(c.pathTokens.at(-1));
@@ -62,9 +62,9 @@ describe('shareable redaction', () => {
 
   it('does not change what the clusterer sees: same partition before and after', () => {
     const ts = [
-      tr('a1', 'https://app.notion.com/p/Plan-3d2e0ff3425b80919e8ecc9ec6e98296', { title: 'Plan launch', openedAt: 0, transition: 'typed' }),
+      tr('a1', 'https://app.notion.com/p/Plan-0123456789abcdef0123456789abcdef', { title: 'Plan launch', openedAt: 0, transition: 'typed' }),
       tr('a2', 'https://docs.acme.io/d/9f8e7d6c5b4a39281706f5e4d3c2b1a0/edit', { title: 'Launch checklist', openedAt: 60_000, openerTraceId: 'a1' }),
-      tr('a3', 'https://app.notion.com/p/3d2e0ff3425b80919e8ecc9ec6e98296', { title: 'Plan launch notes', openedAt: 90_000, openerTraceId: 'a1' }),
+      tr('a3', 'https://app.notion.com/p/0123456789abcdef0123456789abcdef', { title: 'Plan launch notes', openedAt: 90_000, openerTraceId: 'a1' }),
       tr('b1', 'https://en.wikipedia.org/wiki/Lisbon', { title: 'Lisbon', openedAt: 40 * 60_000, transition: 'typed' }),
       tr('b2', 'https://en.wikipedia.org/wiki/Alfama', { title: 'Alfama', openedAt: 41 * 60_000, openerTraceId: 'b1' }),
       tr('b3', 'https://www.booking.com/hotel/pt/casa-123456.html', { title: 'Casa Lisbon hotel', openedAt: 42 * 60_000, openerTraceId: 'b1' }),
