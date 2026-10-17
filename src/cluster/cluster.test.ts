@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   Context,
   eligible,
+  isAmbient,
   s1Lineage,
   s2Temporal,
   s4Strip,
@@ -16,6 +17,7 @@ import { cosine, tfidfVectors, tokens } from './lexical';
 import { BETAS, SIGNALS } from './params';
 import { lineageParent, segment, timingKnown } from './segment';
 import type { TabTrace, Transition } from './types';
+import { urlFeatures } from '../collector/url';
 
 const MIN = 60_000;
 
@@ -51,6 +53,41 @@ function tr(traceId: string, o: Partial<TabTrace> & { path?: string[] } = {}): T
 }
 
 const ids = (s: TabTrace[][]) => s.map((x) => x.map((t) => t.traceId));
+
+describe('ambient', () => {
+  // Features exactly as the collector records them (url.ts), so the list is tested against real hosts.
+  const ambient = (url: string) => isAmbient({ url, ...urlFeatures(url) } as TabTrace);
+
+  it('excludes mail, calendar, chat, meetings and music wherever they live (review of 17 Oct)', () => {
+    for (const url of [
+      'https://myteam.slack.com/archives/C123', // slack.com is a public suffix: each workspace is its own domain
+      'https://app.slack.com/client/T1/C2',
+      'https://teams.microsoft.com/v2/',
+      'https://teams.cloud.microsoft/',
+      'https://web.whatsapp.com/',
+      'https://calendar.google.com/calendar/u/0/r',
+      'https://outlook.live.com/mail/0/',
+      'https://mail.yahoo.com/d/folders/1',
+      'https://keep.google.com/',
+      'https://music.youtube.com/watch?v=x',
+      'https://www.startpage.com/sp/search?query=x',
+      'https://www.google.com/search?q=deploy',
+      'https://duckduckgo.com/?q=deploy',
+    ]) expect(ambient(url), url).toBe(true);
+  });
+
+  it('keeps the rest of google.com and bing.com, which are projects like any site', () => {
+    for (const url of [
+      'https://www.google.com/maps/place/Lisbon',
+      'https://www.google.com/travel/flights',
+      'https://www.google.com/finance/quote/GOOG:NASDAQ',
+      'https://www.bing.com/maps?q=lisbon',
+      'https://search.google.com/search-console',
+      'https://www.google.com/searchconsole',
+      'https://github.com/acme/deploy',
+    ]) expect(ambient(url), url).toBe(false);
+  });
+});
 
 describe('segment', () => {
   it('cuts on a gap', () => {
@@ -127,7 +164,7 @@ describe('signals', () => {
       tr('mail', { host: 'mail.google.com', eTLD1: 'google.com' }),
       tr('music', { host: 'open.spotify.com', eTLD1: 'spotify.com' }),
       tr('new', { url: 'chrome://newtab/' }),
-      tr('search', { host: 'www.google.com', eTLD1: 'google.com', path: ['search'] }),
+      tr('search', { host: 'google.com', eTLD1: 'google.com', path: ['search'] }), // as recorded: url.ts drops www.
       tr('ok', { host: 'github.com' }),
     ];
     const { kept, excluded } = eligible(ts);

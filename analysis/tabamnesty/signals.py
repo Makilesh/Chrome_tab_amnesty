@@ -17,12 +17,20 @@ from .traces import Trace
 # Exclusion — not down-weighting. These belong to every project so they belong to none.
 # ---------------------------------------------------------------------------------------------
 
+def _on_search_path(host_path: str, p: str) -> bool:
+    """Whole path segments: "google.com/search" covers google.com/search and below, not google.com/searchconsole."""
+    return (host_path + "/").startswith(p if p.endswith("/") else p + "/")
+
+
 def is_ambient(t: Trace, ambient: dict[str, set[str]]) -> bool:
+    """ambient.json: registrable domain; or the host or any subdomain of a listed host; or a search-results path."""
     host = (t.get("host") or "").lower()
-    if host in ambient["hosts"] or (t.get("eTLD1") or "").lower() in ambient["etld1"]:
+    if (t.get("eTLD1") or "").lower() in ambient["etld1"]:
+        return True
+    if any(host == h or host.endswith("." + h) for h in ambient["hosts"]):
         return True
     hp = host + "/" + "/".join(t.get("pathTokens") or [])
-    return any(hp.startswith(p) for p in ambient["search_paths"])
+    return any(_on_search_path(hp, p) for p in ambient["search_paths"])
 
 
 def eligible(traces: list[Trace], ambient: dict[str, set[str]] | None = None) -> tuple[list[Trace], list[Trace]]:

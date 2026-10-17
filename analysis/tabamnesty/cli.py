@@ -26,7 +26,7 @@ from .cluster import ablation_betas, cluster, pair_signals
 from .config import FIXTURES, load_betas
 from .score import CONVENTION, chrome_groups, placed_by_both, score
 from .signals import eligible
-from .traces import load_chrome, load_fixture, load_labels
+from .traces import count_unlabelled, load_chrome, load_fixture, load_labels
 from .ts import groups_of, run_cluster_cli
 
 
@@ -107,8 +107,17 @@ def cluster_main(argv: list[str] | None = None) -> None:
         a.edges.write_text(json.dumps(rows), encoding="utf-8")
 
 
+def comparison_universe(labels: dict, chrome: dict | None) -> list[str]:
+    """Labelled tabs, minus those in groups the person already had when Chrome's grouping was
+    captured: the organiser did not place them, and scoring them as its singletons inflated the
+    delta (a tester's own 15-tab group moved it from +0.475 to +0.573 with our score unchanged)."""
+    pre = set((chrome or {}).get("preexisting", []))
+    return [u for u in labels if u not in pre]
+
+
 def _score_table(ours: list[list[str]], labels: dict, chrome: dict | None) -> pd.DataFrame:
-    universe = list(labels)
+    universe = comparison_universe(labels, chrome)
+    labels = {u: labels[u] for u in universe}
     rows = {"ours (full set)": score(ours, labels, universe).row()}
     if chrome:
         cg = chrome_groups(chrome)
@@ -132,12 +141,16 @@ def score_main(argv: list[str] | None = None) -> None:
     chrome = load_chrome(paths["chrome"]) if paths["chrome"].exists() else None
     ours, source, pr = _ours(a.name, traces, a.python, a.partition)
 
-    print(f"== {a.name} | {len(traces)} traces, {len(labels)} labelled")
+    unlabelled = count_unlabelled(paths["labels"])
+    print(f"== {a.name} | {len(traces)} traces, {len(labels)} labelled"
+          + (f", {unlabelled} not labelled yet (left out)" if unlabelled else ""))
     print(f"   {source}")
     print(f"   {CONVENTION}")
     if chrome:
+        pre = len(chrome.get("preexisting", []))
         print(f"   chrome baseline: {chrome['method']}, {len(chrome['groups'])} groups, "
-              f"{len(chrome.get('ungrouped', []))} ungrouped")
+              f"{len(chrome.get('ungrouped', []))} ungrouped"
+              + (f"; {pre} tabs in groups the person already had are left out of the comparison" if pre else ""))
     else:
         print("   no chrome baseline (fixtures/<name>.chrome.json missing)")
     df = _score_table(ours, labels, chrome)
@@ -206,7 +219,10 @@ def report_main(argv: list[str] | None = None) -> None:
         base = score(runs["baseline"], labels, universe).ari
         row = {"browser": name, "ours": base}
         if paths["chrome"].exists():
-            row["chrome"] = score(chrome_groups(load_chrome(paths["chrome"])), labels, universe).ari
+            ch = load_chrome(paths["chrome"])
+            cmp = comparison_universe(labels, ch)
+            row["ours"] = score(runs["baseline"], labels, cmp).ari
+            row["chrome"] = score(chrome_groups(ch), labels, cmp).ari
         per_browser.append(row)
         for run, groups in runs.items():
             per_signal.setdefault(run, {})[name] = score(groups, labels, universe).ari - base
