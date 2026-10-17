@@ -54,6 +54,9 @@ describe('keep a copy', () => {
     expect(html.match(/<script\b/g)).toHaveLength(1); // the records, as data
     expect(html).toMatch(/<script type="application\/json" id="tab-amnesty-copy">/);
     expect(copyToHtml([], [], NOW)).toContain('Nothing was put away when this copy was saved.');
+    // A site left on a card by a forget from before sites went with their lines is not written out.
+    const stale = copyToHtml([{ ...trip, hosts: [...trip.hosts, 'forgotten.example'] }], [], NOW);
+    expect(stale).not.toContain('forgotten.example');
   });
 
   it('writes what pages call themselves as text, and links only to web pages', () => {
@@ -74,7 +77,7 @@ describe('keep a copy', () => {
     expect(readCopy('{"kind":"tab-amnesty-copy","version":1,')).toBeNull();
     expect(readCopy('{"kind":"tab-amnesty-copy","version":2,"cards":[]}')).toBe('newer');
     const odd = {
-      kind: 'tab-amnesty-copy', version: 1, savedAt: NOW, neverRemember: ['WWW.Reddit.com/', 7],
+      kind: 'tab-amnesty-copy', version: 1, savedAt: NOW, neverRemember: ['WWW.Reddit.com/', 7, 'com', 'co', 'localhost'],
       cards: [
         { cardId: 'a', name: 'x'.repeat(500), color: 'magenta', tier: 'gpt', undoUntil: NOW * 2, tabs: [{ url: 'https://a.example/1', host: 'evil.example', title: 3 }] },
         { cardId: 'a', name: 'duplicate', tabs: [{ url: 'https://a.example/2' }] },
@@ -83,7 +86,7 @@ describe('keep a copy', () => {
       ],
     };
     const copy = readCopy(JSON.stringify(odd), NOW) as Copy;
-    expect(copy.neverRemember).toEqual(['reddit.com']);
+    expect(copy.neverRemember).toEqual(['reddit.com', 'localhost']); // "com" would match every .com address
     expect(copy.cards).toHaveLength(1);
     expect(copy.cards[0]).toMatchObject({ cardId: 'a', color: 'grey', tier: 'heuristic', undoUntil: NOW, archivedAt: NOW, restoredAt: null });
     expect(copy.cards[0]!.name).toHaveLength(60);

@@ -18,7 +18,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
-import { readCopy } from '../src/archive/copy';
+import { copyToHtml, readCopy } from '../src/archive/copy';
 import type { ArchiveCard } from '../src/archive/types';
 import type { TabTrace } from '../src/cluster/types';
 
@@ -384,9 +384,6 @@ async function checkFindAndOpenAll(browser: Browser, extId: string, card: Archiv
   await page.type('#find', 'zqxjv');
   await sleep(600);
   const none = await page.$eval('#cards', (e) => e.textContent);
-  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-  await page.keyboard.press('/');
-  const slash = await page.evaluate(() => document.activeElement?.id);
 
   console.log(`
 find and open all: "${word}" found ${JSON.stringify(found)}`);
@@ -397,7 +394,7 @@ find and open all: "${word}" found ${JSON.stringify(found)}`);
       `records on a live tab that is not theirs: ${strays.length} (must be 0)${strays.length ? ' ' + JSON.stringify(strays.map((t) => t.url)) : ''}`,
   );
   console.log(`  message: ${message}`);
-  console.log(`  a search that finds nothing says: ${JSON.stringify(none)} | "/" moves to the search box: ${slash === 'find'}`);
+  console.log(`  a search that finds nothing says: ${JSON.stringify(none)}`);
   await page.close();
   await ctl.close();
 }
@@ -453,6 +450,15 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
   const notACopy = join(userDataDir, 'not-a-copy.html');
   writeFileSync(notACopy, '<!doctype html><title>Something else</title><p>hello</p>');
   const refused = await bringIn(notACopy);
+  // A copy that never remembers a site this browser remembers: offered, and applied only by its button.
+  const offerFile = join(userDataDir, 'copy-with-never.html');
+  writeFileSync(offerFile, copyToHtml(copy && copy !== 'newer' ? copy.cards : [], ['offer.example'], Date.now()));
+  const offered = await bringIn(offerFile);
+  const neverList = () => page.$$eval('#never-list li', (lis) => lis.map((l) => l.firstChild?.textContent ?? ''));
+  const neverBefore = await neverList();
+  await page.evaluate(() => ([...document.querySelectorAll('#copy-status button')].find((b) => b.textContent === 'Never remember them here too') as HTMLButtonElement | undefined)?.click());
+  await sleep(1000);
+  const neverAfter = await neverList();
 
   console.log(
     `\nkeep a copy: saved ${file.split(/[\\/]/).pop()} (${Math.round(html.length / 1024)} KB): card "${saved?.name}" with ${saved?.tabs.length} tab line(s) inside; ` +
@@ -464,6 +470,10 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
       `undo offered: ${!!back && back.undoUntil > Date.now()} (must be false); list shows ${JSON.stringify(shown)}`,
   );
   console.log(`  messages: ${JSON.stringify(first)} | same file again: ${JSON.stringify(again)} | not a copy: ${JSON.stringify(refused)}`);
+  console.log(
+    `  a copy that never remembers offer.example: ${JSON.stringify(offered)}; on the list before the button: ${neverBefore.includes('offer.example')} (must be false), ` +
+      `after: ${neverAfter.includes('offer.example')} (must be true)`,
+  );
   await page.close();
 }
 

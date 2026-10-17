@@ -10,6 +10,7 @@ import type { Digest, TabTrace } from '../cluster/types';
 import {
   CO_ACTIVE_WINDOW_MS,
   deleteTrace,
+  getAllTraces,
   getMeta,
   getOpenTraces,
   getOpenTracesByUrl,
@@ -22,6 +23,7 @@ import {
   updateTraceByTabId,
 } from './db';
 import { isNeverRemembered } from '../archive/forget';
+import { isAmbient } from '../cluster/affinity';
 import { getNeverRemember, seedBackup } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
 import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
@@ -60,9 +62,18 @@ function baseTrace(tab: chrome.tabs.Tab, url: string): Omit<
   };
 }
 
-/** §6.10: a never-remember site keeps only what grouping needs (url, timing, lineage) — no title, no page content. */
+/**
+ * Records that keep no title and no page content, only what grouping needs (url, timing,
+ * lineage): a never-remember site (§6.10), and a mail, chat, calendar or search-results tab (the
+ * ambient list), which is never grouped, named, put away or searched — its title would serve
+ * nothing, and a search page's title is the search itself.
+ */
+function textless(t: TabTrace, never: readonly string[]): boolean {
+  return isNeverRemembered(t, never) || isAmbient(t);
+}
+
 function scrubbed(t: TabTrace, never: readonly string[]): TabTrace {
-  return isNeverRemembered(t, never) && (t.title || t.digest) ? { ...t, title: '', digest: null, digestAt: null } : t;
+  return textless(t, never) && (t.title || t.digest) ? { ...t, title: '', digest: null, digestAt: null } : t;
 }
 
 /** Best URL we can see for a tab right now. Pending URLs are visible with the "tabs" permission. */
@@ -248,7 +259,7 @@ async function onUpdated(
       // keeps openedAt / transition / lineage as they were at creation.
       next = { ...next, url: changeInfo.url, ...urlFeatures(changeInfo.url), digest: null, digestAt: null, typing: false };
     }
-    if (isNeverRemembered(next, never)) next = { ...next, title: '', digest: null, digestAt: null };
+    if (textless(next, never)) next = { ...next, title: '', digest: null, digestAt: null };
     return next;
   });
   if (!updated) return;
@@ -420,18 +431,18 @@ async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
   const now = Date.now();
   const never = await getNeverRemember();
   await updateTraceByTabId(tabId, (t) => {
-    // §6.10: a never-remember site keeps only what grouping needs (url, timing, lineage) —
-    // no title, no page content — and its record goes when the tab does.
-    if (isNeverRemembered(t, never)) return t.title || t.digest ? { ...t, title: '', digest: null, digestAt: null } : null;
     const sameUrl = t.url === msg.url;
+    // The content script's location is authoritative for what was digested; this also stops a
+    // racing onUpdated from wiping a digest that belongs to the new URL.
+    const urlPatch = sameUrl ? {} : { url: msg.url, ...urlFeatures(msg.url) };
+    // A never-remember site or an ambient tab keeps no title or page content (textless) — judged
+    // by the page this digest is of, not the one the record held a moment ago.
+    if (textless({ ...t, ...urlPatch }, never)) return t.title || t.digest ? { ...t, title: '', digest: null, digestAt: null } : null;
     // 10-minute rule — except that a first-visible capture may replace a thin one, because pages
     // that render lazily while hidden produce an empty digest at readyState=complete.
     if (sameUrl && t.digestAt !== null && now - t.digestAt < DIGEST_MIN_INTERVAL_MS) {
       if (!(msg.reason === 'visible' && isThin(t.digest) && !isThin(msg.digest))) return null;
     }
-    // The content script's location is authoritative for what was digested; this also stops a
-    // racing onUpdated from wiping a digest that belongs to the new URL.
-    const urlPatch = sameUrl ? {} : { url: msg.url, ...urlFeatures(msg.url) };
     return { ...t, ...urlPatch, title: msg.title || t.title, digest: msg.digest, digestAt: now };
   });
 }
@@ -571,7 +582,18 @@ async function refreshBackfilled(): Promise<void> {
 // Install and update only (DECISIONS 2026-09-12). It used to run on every worker start too, and
 // each time rewrote adopted tabs' timing from the newest visit to their url — from any tab — so
 // weeks-old tabs kept acquiring today's timing and joined today's session.
-chrome.runtime.onInstalled.addListener(() => void rebindAll().then(refreshBackfilled).then(takeSnapshot));
+chrome.runtime.onInstalled.addListener(() => {
+  void rebindAll().then(refreshBackfilled).then(takeSnapshot);
+  void scrubAmbientText();
+});
+
+/** Records of ambient tabs written before they became textless lose their titles and page text, once, on update. */
+async function scrubAmbientText(): Promise<void> {
+  for (const t of await getAllTraces()) {
+    if (!(t.title || t.digest) || !isAmbient(t)) continue;
+    await updateTrace(t.traceId, (x) => (isAmbient(x) && (x.title || x.digest) ? { ...x, title: '', digest: null, digestAt: null } : null));
+  }
+}
 chrome.runtime.onStartup.addListener(() => void rebindAll());
 
 /**

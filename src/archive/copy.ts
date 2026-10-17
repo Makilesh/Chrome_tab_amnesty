@@ -14,14 +14,14 @@
  * never-remember list here holds for whatever comes in (§6.10).
  */
 import { urlFeatures } from '../collector/url';
-import { dominantHost, restoreOrder } from './card';
+import { cardHosts, dominantHost, restoreOrder } from './card';
 import { isNeverRemembered, namesNeverSite, normaliseDomain } from './forget';
 import { GROUP_COLORS, type ArchiveCard, type ArchivedTab, type GroupColor } from './types';
 
 const KIND = 'tab-amnesty-copy';
 const VERSION = 1;
-/** A card is a few kilobytes; a file this big is not a copy. */
-export const MAX_COPY_BYTES = 100 * 1024 * 1024;
+/** About as much text as a page can read in one go; a card is a few kilobytes. */
+export const MAX_COPY_BYTES = 400 * 1024 * 1024;
 const MAX_CARDS = 100_000;
 const MAX_TABS = 2_000;
 
@@ -68,8 +68,9 @@ a { color: var(--link); }
 
 /** The whole file: a page anyone can read, with the records for "Bring in a copy" inside it. */
 export function copyToHtml(cards: readonly ArchiveCard[], neverRemember: readonly string[], savedAt: number): string {
-  const copy: Copy = { kind: KIND, version: VERSION, savedAt, cards: [...cards], neverRemember: [...neverRemember] };
-  const sections = cards.map((c) => {
+  const kept = cards.map((c) => ({ ...c, hosts: cardHosts(c) }));
+  const copy: Copy = { kind: KIND, version: VERSION, savedAt, cards: kept, neverRemember: [...neverRemember] };
+  const sections = kept.map((c) => {
     const when = [day(c.whenAt ?? c.archivedAt), c.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ');
     const items = restoreOrder(c).map((t) => {
       const label = esc(t.title || t.url);
@@ -183,7 +184,8 @@ export function readCopy(text: string, now = Date.now()): Copy | 'newer' | null 
     seen.add(c.cardId);
     cards.push(c);
   }
-  const neverRemember = [...new Set(strings(o.neverRemember, 10_000, 253).map(normaliseDomain).filter(Boolean))];
+  // Sites, not whole endings: "com" would match every .com address.
+  const neverRemember = [...new Set(strings(o.neverRemember, 1_000, 253).map(normaliseDomain).filter((d) => d === 'localhost' || d.includes('.')))];
   return { kind: KIND, version: VERSION, savedAt: num(o.savedAt) ?? now, cards, neverRemember };
 }
 

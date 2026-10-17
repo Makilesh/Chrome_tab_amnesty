@@ -5,6 +5,7 @@
  * reproduced against the shipped worker; they pin the fixed behaviour.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ArchiveCard } from '../archive/types';
 import type { TabTrace } from '../cluster/types';
 
 const h = vi.hoisted(() => {
@@ -43,6 +44,10 @@ vi.mock('./db', () => ({
     return h.clone(h.store.get(id));
   },
   getTraceByTabId: h.getTraceByTabId,
+  getAllTraces: async () => {
+    await h.tick();
+    return [...h.store.values()].map(h.clone);
+  },
   getOpenTraces: async () => {
     await h.tick();
     h.hooks.onGetOpen?.(++h.hooks.getOpenCalls);
@@ -148,8 +153,25 @@ const reconcile = () => chromeMock.alarms.onAlarm.fire({ name: 'reconcile-window
 
 const A = 'https://mail.example.com/inbox';
 const B = 'https://mail.example.com/thread/42';
+/** A put-away card with one line, the record 'away' at `url`. */
+const mailCard = (url: string): ArchiveCard => ({
+  cardId: 'c', name: 'Mail', color: 'blue', tier: 'heuristic', when: '', whenAt: null, hosts: ['mail.example.com'], archivedAt: NOW - DAY, undoUntil: NOW, restoredAt: null, sourceCommunity: 0,
+  tabs: [{ traceId: 'away', url, title: 'Thread 42 - Mail', host: 'mail.example.com', order: 0, digest: null, summary: null, openedAt: NOW - 2 * DAY }],
+});
+
+/** chrome.tabs.create as Chrome does it: the tab exists, then onCreated fires. */
+function tabsCreateFrom(firstId: number): void {
+  let next = firstId;
+  chromeMock.tabs.create.mockImplementation(async (p: { url: string; windowId?: number }) => {
+    const t = tab(next++, liveTabs.length, p.url, { title: '' });
+    liveTabs.push(t);
+    chromeMock.tabs.onCreated.fire({ ...t });
+    return { ...t };
+  });
+}
 
 beforeEach(() => {
+  chromeMock.tabs.create.mockImplementation(async () => ({}));
   h.store.clear();
   h.meta.clear();
   h.visits.clear();
@@ -283,6 +305,33 @@ describe('collector', () => {
     expect(h.open().find((t) => t.tabId === 10)?.title).toBe('');
   });
 
+  it('mail, chat and search tabs keep no title or page text, nor do records written before that rule', async () => {
+    const search = 'https://www.google.com/search?q=symptoms+of+something';
+    liveTabs = [tab(20, 0, search, { title: 'symptoms of something - Google Search' }), tab(21, 1, 'https://mail.google.com/mail/u/0/#inbox', { title: 'Inbox (3) - me@example.com - Gmail' })];
+    chromeMock.tabs.onCreated.fire({ ...liveTabs[0]! });
+    chromeMock.tabs.onCreated.fire({ ...liveTabs[1]! });
+    await settle();
+    expect(openOn(20).map((t) => t.title)).toEqual(['']);
+    expect(openOn(21).map((t) => t.title)).toEqual(['']);
+    chromeMock.tabs.onUpdated.fire(21, { title: 'Re: the lease - me@example.com - Gmail' }, { ...liveTabs[1]!, title: 'Re: the lease - me@example.com - Gmail' });
+    const respond = vi.fn();
+    const digest = { description: '', headings: ['Re: the lease'], leadText: 'Dear landlord' };
+    chromeMock.runtime.onMessage.fire({ type: 'digest', url: liveTabs[1]!.url, title: 'Re: the lease', digest, reason: 'complete' }, { tab: { id: 21 }, frameId: 0, documentLifecycle: 'active' }, respond);
+    await settle();
+    expect(openOn(21)[0]).toMatchObject({ title: '', digest: null });
+    // A tab that moves onto a search page: the digest of that page is not kept, though the record still held the old page.
+    h.store.set('docs', trace({ traceId: 'docs', tabId: 22, url: 'https://docs.example/a', title: 'Docs' }));
+    liveTabs.push(tab(22, 2, 'https://docs.example/a'));
+    chromeMock.runtime.onMessage.fire({ type: 'digest', url: 'https://www.bing.com/search?q=private', title: 'private - Search', digest, reason: 'complete' }, { tab: { id: 22 }, frameId: 0, documentLifecycle: 'active' }, respond);
+    await settle();
+    expect(h.store.get('docs')).toMatchObject({ title: '', digest: null });
+    // Written before the rule: cleared on install or update.
+    h.store.set('old', trace({ traceId: 'old', tabId: 30, url: 'https://web.whatsapp.com/', host: 'web.whatsapp.com', eTLD1: 'whatsapp.com', title: 'WhatsApp - (2) Mum', closedAt: NOW - DAY }));
+    chromeMock.runtime.onInstalled.fire({ reason: 'update' });
+    await settle(400);
+    expect(h.store.get('old')).toMatchObject({ title: '', digest: null });
+  });
+
   it('a tab opened from another tab is new, even at the url of a record waiting to be closed', async () => {
     h.store.set('op', trace({ traceId: 'op', tabId: 1, url: 'https://a.example/1' }));
     h.store.set('waiting', trace({ traceId: 'waiting', tabId: 77, windowId: 2, url: 'https://a.example/2' }));
@@ -314,24 +363,26 @@ describe('collector', () => {
     h.store.set('away', trace({ traceId: 'away', tabId: 7, url: B, title: 'Thread 42 - Mail', closedAt: NOW - DAY }));
     h.store.set('mine', trace({ traceId: 'mine', tabId: 7, url: A, openedAt: NOW - 60_000 }));
     liveTabs = [tab(7, 0, A)];
-    let next = 50;
-    chromeMock.tabs.create.mockImplementation(async (p: { url: string; windowId?: number }) => {
-      const t = tab(next++, liveTabs.length, p.url, { title: '' });
-      liveTabs.push(t);
-      chromeMock.tabs.onCreated.fire({ ...t });
-      return { ...t };
-    });
-    try {
-      const { openCard } = await import('../archive/sweep');
-      const away = { traceId: 'away', url: B, title: 'Thread 42 - Mail', host: 'mail.example.com', order: 0, digest: null, summary: null, openedAt: NOW - 2 * DAY };
-      await openCard({ cardId: 'c', name: 'Mail', color: 'blue', tier: 'heuristic', when: '', whenAt: null, hosts: ['mail.example.com'], tabs: [away], archivedAt: NOW - DAY, undoUntil: NOW, restoredAt: null } as never);
-      await settle();
-      expect(h.store.get('away')).toMatchObject({ tabId: 50, closedAt: null, title: 'Thread 42 - Mail' });
-      expect(openOn(7).map((t) => t.traceId)).toEqual(['mine']); // was ['mine', 'away']: Archive & close on 'away' closed tab 7
-      expect(h.open().filter((t) => t.url === B).map((t) => t.traceId)).toEqual(['away']);
-    } finally {
-      chromeMock.tabs.create.mockImplementation(async () => ({}));
-    }
+    tabsCreateFrom(50);
+    const { openCard } = await import('../archive/sweep');
+    await openCard(mailCard(B));
+    await settle();
+    expect(h.store.get('away')).toMatchObject({ tabId: 50, closedAt: null, title: 'Thread 42 - Mail' });
+    expect(openOn(7).map((t) => t.traceId)).toEqual(['mine']); // was ['mine', 'away']: Archive & close on 'away' closed tab 7
+    expect(h.open().filter((t) => t.url === B).map((t) => t.traceId)).toEqual(['away']);
+  });
+
+  it('a record whose tab went on to another page before it closed stays closed; its tab gets a record of its own', async () => {
+    // Brought back once, the tab followed a redirect to thread 43, then was closed there.
+    h.store.set('away', trace({ traceId: 'away', tabId: 9, url: 'https://mail.example.com/thread/43', closedAt: NOW - DAY }));
+    liveTabs = [];
+    tabsCreateFrom(60);
+    const { openCard } = await import('../archive/sweep');
+    await openCard(mailCard(B));
+    await settle();
+    expect(h.store.get('away')!.closedAt).not.toBeNull();
+    expect(h.open().filter((t) => t.tabId === -1)).toEqual([]); // was ['away']: listed in a group, on no tab
+    expect(openOn(60).map((t) => t.url)).toEqual([B]);
   });
 
   it("re-derives adopted tabs' timing on install only, never on a worker start", async () => {

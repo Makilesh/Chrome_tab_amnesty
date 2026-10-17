@@ -7,7 +7,8 @@
  * name, sites and when ("tuesday" finds Tuesday's). Case and accents are ignored ("belem" finds
  * "Belém"). A word found only in the card's own name or when shows the whole card.
  */
-import { cardWhen, restoreOrder } from './card';
+import { isUnsegmented } from '../cluster/lexical';
+import { cardHosts, cardWhen, restoreOrder } from './card';
 import type { ArchiveCard, ArchivedTab } from './types';
 
 export interface SearchHit {
@@ -52,10 +53,14 @@ function decodeSafe(u: string): string {
   }
 }
 
-/** Best weight at which a term starts a word among the fields, 0 when it does not. */
+/**
+ * Best weight at which a term starts a word among the fields, 0 when it does not. A term in a
+ * script written without spaces matches anywhere in a run of it ("旅行" in "東京旅行ガイド").
+ */
 function weightOf(term: string, fields: [number, string[]][]): number {
+  const inside = [...term].some(isUnsegmented);
   let best = 0;
-  for (const [w, ws] of fields) if (w > best && ws.some((x) => x.startsWith(term))) best = w;
+  for (const [w, ws] of fields) if (w > best && ws.some((x) => x.startsWith(term) || (inside && x.includes(term)))) best = w;
   return best;
 }
 
@@ -67,7 +72,7 @@ export function searchArchive(cards: readonly ArchiveCard[], query: string, now 
     const cardFields: [number, string[]][] = [
       [3, words(card.name)],
       [1, words(cardWhen(card, now))],
-      [1, words(card.hosts.join(' '))],
+      [1, words(cardHosts(card).join(' '))],
     ];
     const cardWeights = terms.map((t) => weightOf(t, cardFields));
     if (cardWeights.every((w) => w > 0)) {

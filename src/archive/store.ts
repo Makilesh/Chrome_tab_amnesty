@@ -20,7 +20,7 @@ import {
 } from './backup';
 import { type Copy, cardsToBringIn } from './copy';
 import { isNeverRemembered, normaliseDomain } from './forget';
-import type { RememberedName } from './naming';
+import { type RememberedName, withoutTabs } from './naming';
 import type { ArchiveCard, SummariseJob } from './types';
 
 // --- archive cards -------------------------------------------------------------------------
@@ -101,25 +101,35 @@ async function forgetNamesOf(traceIds: string[]): Promise<void> {
 }
 
 /** Forget one tab inside a card. The card stays; if it was the last tab the card goes too. */
-export async function forgetTab(cardId: string, traceId: string): Promise<void> {
+export function forgetTab(cardId: string, traceId: string): Promise<void> {
+  return forgetTabs(cardId, [traceId]);
+}
+
+/**
+ * Forget lines of a card: the lines, the sites only they were on, and a name that came from them
+ * (naming.withoutTabs; `never`: sites never remembered now, whose names go too). The card stays
+ * unless nothing is left of it.
+ */
+async function forgetTabs(cardId: string, traceIds: string[], never: readonly string[] = []): Promise<void> {
+  const gone = new Set(traceIds);
   await cardsLocked(async () => {
     const card = await getCard(cardId);
     if (card) {
       // The second copy first, as in forgetCard.
-      const tabs = card.tabs.filter((t) => t.traceId !== traceId);
-      if (tabs.length) await backupCard({ ...card, tabs });
+      const left = withoutTabs(card, gone, never);
+      if (left.tabs.length) await backupCard(left);
       else await dropCardBackup(cardId);
     }
-    const next = await updateCardUnlocked(cardId, (c) => ({ ...c, tabs: c.tabs.filter((t) => t.traceId !== traceId) }));
+    const next = await updateCardUnlocked(cardId, (c) => withoutTabs(c, gone, never));
     if (next && next.tabs.length === 0) {
       await (await db()).delete('archive', cardId);
       await dropCardBackup(cardId); // updateCardUnlocked just copied the emptied card over
     }
   });
-  await deleteTrace(traceId);
-  await forgetNamesOf([traceId]);
+  for (const id of traceIds) await deleteTrace(id);
+  await forgetNamesOf(traceIds);
   const d = await db();
-  for (const j of await d.getAll('jobs')) if (j.traceId === traceId) await d.delete('jobs', j.jobId);
+  for (const j of await d.getAll('jobs')) if (gone.has(j.traceId)) await d.delete('jobs', j.jobId);
 }
 
 // --- summarisation queue -------------------------------------------------------------------
@@ -174,7 +184,8 @@ export async function addNeverRemember(domain: string): Promise<string[]> {
   await backupNeverRemember(list); // first, like forgetting: an interrupted add must not be undone by a restore
   await setMeta('neverRemember', list);
   for (const card of await getCards()) {
-    for (const t of card.tabs) if (isNeverRemembered(t, list)) await forgetTab(card.cardId, t.traceId);
+    const lines = card.tabs.filter((t) => isNeverRemembered(t, list)).map((t) => t.traceId);
+    if (lines.length) await forgetTabs(card.cardId, lines, list);
   }
   for (const t of await getAllTraces()) {
     if (!isNeverRemembered(t, list)) continue;
@@ -195,17 +206,16 @@ export async function removeNeverRemember(domain: string): Promise<string[]> {
 // --- keep a copy -------------------------------------------------------------------------------
 
 /**
- * Bring in a copy the person saved (copy.ts). Its never-remember sites come first, so what follows
- * is held to them: a site never remembered there is never remembered here. Then every card this
- * browser does not have; nothing here is changed or replaced. Returns what was added.
+ * Bring in a copy the person saved (copy.ts): every card this browser does not have, without
+ * anything on a site never remembered here or in the copy. Nothing here is changed or replaced —
+ * not even the never-remember list: adding a site to it forgets what is kept about the site, so
+ * the copy's sites missing here are only returned (`neverOffered`), for the person to add or not.
  */
-export async function bringInCopy(copy: Copy): Promise<{ added: ArchiveCard[]; neverAdded: string[] }> {
-  const before = await getNeverRemember();
-  for (const d of copy.neverRemember) if (!before.includes(d)) await addNeverRemember(d);
-  const never = await getNeverRemember();
-  const added = cardsToBringIn(copy, new Set((await getCards()).map((c) => c.cardId)), never);
+export async function bringInCopy(copy: Copy): Promise<{ added: ArchiveCard[]; neverOffered: string[] }> {
+  const here = await getNeverRemember();
+  const added = cardsToBringIn(copy, new Set((await getCards()).map((c) => c.cardId)), [...here, ...copy.neverRemember]);
   for (const c of added) await putCard(c);
-  return { added, neverAdded: never.filter((d) => !before.includes(d)) };
+  return { added, neverOffered: copy.neverRemember.filter((d) => !here.includes(d)) };
 }
 
 // --- study: presses ----------------------------------------------------------------------------

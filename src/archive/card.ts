@@ -86,6 +86,15 @@ export function undoable(card: ArchiveCard, now = Date.now()): boolean {
   return card.restoredAt === null && now < card.undoUntil;
 }
 
+/**
+ * The card's sites that a line of it is still on. Forgetting a line now takes its site off the
+ * card (naming.withoutTabs); cards forgotten from before that still list it, so everything that
+ * shows or searches a card's sites reads them through here.
+ */
+export function cardHosts(card: Pick<ArchiveCard, 'hosts' | 'tabs'>): string[] {
+  return card.hosts.filter((h) => card.tabs.some((t) => t.host === h || t.host.endsWith('.' + h)));
+}
+
 /** URLs in the order they should be recreated. */
 export function restoreOrder(card: ArchiveCard): ArchivedTab[] {
   return [...card.tabs].sort((a, b) => a.order - b.order);
