@@ -18,6 +18,7 @@ import {
   readBackup,
   restorePending,
 } from './backup';
+import { type Copy, cardsToBringIn } from './copy';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import type { RememberedName } from './naming';
 import type { ArchiveCard, SummariseJob } from './types';
@@ -189,6 +190,22 @@ export async function removeNeverRemember(domain: string): Promise<string[]> {
   await setMeta('neverRemember', list);
   await backupNeverRemember(list);
   return list;
+}
+
+// --- keep a copy -------------------------------------------------------------------------------
+
+/**
+ * Bring in a copy the person saved (copy.ts). Its never-remember sites come first, so what follows
+ * is held to them: a site never remembered there is never remembered here. Then every card this
+ * browser does not have; nothing here is changed or replaced. Returns what was added.
+ */
+export async function bringInCopy(copy: Copy): Promise<{ added: ArchiveCard[]; neverAdded: string[] }> {
+  const before = await getNeverRemember();
+  for (const d of copy.neverRemember) if (!before.includes(d)) await addNeverRemember(d);
+  const never = await getNeverRemember();
+  const added = cardsToBringIn(copy, new Set((await getCards()).map((c) => c.cardId)), never);
+  for (const c of added) await putCard(c);
+  return { added, neverAdded: never.filter((d) => !before.includes(d)) };
 }
 
 // --- study: presses ----------------------------------------------------------------------------

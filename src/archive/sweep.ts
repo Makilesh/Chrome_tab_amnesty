@@ -7,7 +7,7 @@
 import type { Community, TabTrace } from '../cluster/types';
 import { deleteTrace, getTrace, updateTrace } from '../collector/db';
 import { buildCard, dominantHost, inStripOrder, restoreOrder, undoable } from './card';
-import { isNeverRemembered } from './forget';
+import { isNeverRemembered, namesNeverSite } from './forget';
 import { enqueue, getNeverRemember, notePress, putCard, updateCard } from './store';
 import type { ArchiveCard, GroupName, SummariseJob } from './types';
 
@@ -105,12 +105,6 @@ async function unsentIn(tabId: number): Promise<boolean | null> {
   } catch {
     return null;
   }
-}
-
-/** A never-remembered site named anywhere in a group name (its domain, or that domain's first word). */
-function namesNeverSite(name: string, never: readonly string[]): boolean {
-  const n = name.toLowerCase();
-  return never.some((d) => d && (n.includes(d) || ((d.split('.')[0] ?? '').length >= 4 && n.includes(d.split('.')[0]!))));
 }
 
 /**

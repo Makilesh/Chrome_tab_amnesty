@@ -17,7 +17,7 @@ export function stableHash(s: string): number {
 }
 
 /** The host most tabs in the group are on; ties go to the first seen. */
-export function dominantHost(traces: TabTrace[]): string {
+export function dominantHost(traces: readonly Pick<TabTrace, 'eTLD1' | 'host'>[]): string {
   const count = new Map<string, number>();
   for (const t of traces) count.set(t.eTLD1 || t.host, (count.get(t.eTLD1 || t.host) ?? 0) + 1);
   let best = '';

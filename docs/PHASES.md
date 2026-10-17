@@ -281,6 +281,10 @@ now says instead of naming a date that has passed.
 - [x] Restore — one tab or a whole session, one click, original order. 17 Oct: Open on every tab;
       Bring back for a card's first day, then Open all, in order, each tab on its own record (the
       reopened record now waits on no tab — DECISIONS 2026-10-17).
+- [x] Keep a copy (added 17 Oct on the owner's instruction) — everything put away as one file the
+      person keeps: a page any browser reads, with the records inside; Bring in a copy adds what is
+      missing and changes nothing else. `src/archive/copy.ts`; `npm run check` saves, forgets and
+      brings back a card.
 - [ ] Event-shaped browsing — archive organised by session, headed by what the person was doing,
       date as small secondary metadata
 - [ ] Resurfacing on the **new-tab page** — ambient, never a notification, never a nag

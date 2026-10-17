@@ -13,11 +13,12 @@
  *   npx @puppeteer/browsers install chrome@stable      (lands in ./chrome/, git-ignored)
  * CHROME_PATH is a fallback for any other Chromium build.
  */
-import { existsSync, globSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, globSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import { readCopy } from '../src/archive/copy';
 import type { ArchiveCard } from '../src/archive/types';
 import type { TabTrace } from '../src/cluster/types';
 
@@ -401,6 +402,71 @@ find and open all: "${word}" found ${JSON.stringify(found)}`);
   await ctl.close();
 }
 
+/**
+ * Phase 2: Keep a copy saves a page anyone can read with the records inside; after Forget, Bring in
+ * a copy puts the card back (as Open all, not an undo); the same file again adds nothing, and a
+ * file that is not a copy is refused.
+ */
+async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard, userDataDir: string): Promise<void> {
+  const page = await browser.newPage();
+  const downloads = join(userDataDir, 'copy-downloads');
+  const cdp = await page.createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
+  await page.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
+  await page.waitForSelector('#cards .group', { timeout: 10_000 });
+  await page.click('#keep summary');
+  await page.click('#copy-save');
+  let file = '';
+  for (let i = 0; i < 20 && !file; i++) {
+    await sleep(500);
+    const done = existsSync(downloads) ? readdirSync(downloads).filter((f) => f.endsWith('.html')) : [];
+    file = done[0] ? join(downloads, done[0]) : '';
+  }
+  if (!file) {
+    console.log('\nkeep a copy: no file downloaded');
+    await page.close();
+    return;
+  }
+  const html = readFileSync(file, 'utf8');
+  const copy = readCopy(html);
+  const saved = copy && copy !== 'newer' ? copy.cards.find((c) => c.cardId === card.cardId) : undefined;
+  const scripts = (html.match(/<script\b/g) ?? []).length;
+  const csp = html.includes(`content="default-src 'none'; style-src 'unsafe-inline'"`);
+
+  // Forget the card, then bring the copy in.
+  await page.evaluate((id) => {
+    const g = document.querySelector(`#cards [data-card="${id}"]`);
+    ([...(g?.querySelectorAll('header button') ?? [])].find((b) => b.textContent === 'Forget this') as HTMLButtonElement | undefined)?.click();
+  }, card.cardId);
+  await sleep(1500);
+  const afterForget = (await readCards(browser, extId)).some((c) => c.cardId === card.cardId);
+  const input = await page.$('input#copy-file');
+  const bringIn = async (path: string) => {
+    await input!.uploadFile(path);
+    await sleep(1500);
+    return page.$eval('#copy-status', (e) => e.textContent);
+  };
+  const first = await bringIn(file);
+  const back = (await readCards(browser, extId)).find((c) => c.cardId === card.cardId);
+  const shown = await page.$$eval('#cards .group', (gs) => gs.map((g) => [g.querySelector('h2')?.textContent, g.querySelector('header button')?.textContent]));
+  const again = await bringIn(file);
+  const notACopy = join(userDataDir, 'not-a-copy.html');
+  writeFileSync(notACopy, '<!doctype html><title>Something else</title><p>hello</p>');
+  const refused = await bringIn(notACopy);
+
+  console.log(
+    `\nkeep a copy: saved ${file.split(/[\\/]/).pop()} (${Math.round(html.length / 1024)} KB): card "${saved?.name}" with ${saved?.tabs.length} tab line(s) inside; ` +
+      `scripts in the file: ${scripts} (must be 1, the records); no-script policy: ${csp}`,
+  );
+  console.log(
+    `  forget, then bring in: card gone after Forget: ${!afterForget}; back after Bring in: ${!!back} ` +
+      `(${back?.tabs.length} tab line(s), same as saved: ${JSON.stringify(back?.tabs.map((t) => t.url)) === JSON.stringify(saved?.tabs.map((t) => t.url))}); ` +
+      `undo offered: ${!!back && back.undoUntil > Date.now()} (must be false); list shows ${JSON.stringify(shown)}`,
+  );
+  console.log(`  messages: ${JSON.stringify(first)} | same file again: ${JSON.stringify(again)} | not a copy: ${JSON.stringify(refused)}`);
+  await page.close();
+}
+
 /** Phase 1 study: the summary export carries times and counts only, and sees the archive. */
 async function checkStudyExport(browser: Browser, extId: string, userDataDir: string): Promise<void> {
   const page = await browser.newPage();
@@ -493,7 +559,7 @@ async function checkDatabaseReplaced(browser: Browser, extId: string, origin: st
   const sweep = await browser.newPage();
   await sweep.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
   await sweep.waitForSelector('#never-input');
-  await sweep.click('.never summary');
+  await sweep.click('#never summary');
   await sweep.type('#never-input', 'example.org');
   await sweep.click('#never-add');
   await sleep(500);
@@ -683,6 +749,7 @@ async function main(): Promise<void> {
       await checkBringBack(browser, extId, card);
       await checkStudyExport(browser, extId, userDataDir);
       await checkFindAndOpenAll(browser, extId, card);
+      await checkKeepACopy(browser, extId, card, userDataDir);
     } finally {
       await browser.close();
     }
