@@ -71,7 +71,11 @@ export function clampName(s: string): string {
   return (sp > 8 ? cut.slice(0, sp) : cut).trim();
 }
 
-/** Platforms whose name says where, not what. A group is never named after them. */
+/**
+ * Platforms whose name says where, not what. A group is named after one only when nearly all of
+ * it is there and its tabs share nothing better: a dozen Claude conversations are "Claude", but a
+ * project that happens to live on GitHub is named for the project.
+ */
 const PLATFORM = new Set([
   'github', 'gitlab', 'google', 'gmail', 'docs', 'drive', 'notion', 'linkedin', 'luma', 'youtube',
   'reddit', 'wikipedia', 'stackoverflow', 'stack', 'overflow', 'medium', 'twitter', 'facebook',
@@ -80,61 +84,181 @@ const PLATFORM = new Set([
 ]);
 /** Letters, combining marks (Indic vowel signs) and digits — a word in any script. */
 const TITLE_WORD = /[\p{L}\p{M}\p{N}]{3,}/gu;
+/** What sites put between a page's own title and their name: "Lisbon – Travel guide at Wikivoyage". */
+const SEPARATOR = /\s+[|·•–—:-]\s+|\s*[|·•]\s*/u;
 
-/** Distinct words of a title, lower-cased key -> the casing the person saw. */
-function titleWords(title: string): Map<string, string> {
+const isWordKey = (k: string) => !STOP.has(k) && !/^\p{N}+$/u.test(k);
+
+/** The registrable domain's own word: "wikipedia" for en.wikipedia.org. */
+function siteWord(t: Pick<TabTrace, 'host' | 'eTLD1'>): string {
+  return ((t.eTLD1 || t.host || '').replace(/^www\./, '').split('.')[0] ?? '').toLowerCase();
+}
+
+/** Per host, the first or last title pieces its pages repeat ("Python 3.15.0 documentation"). */
+const repeatedCache = new WeakMap<TabTrace[], Map<string, Set<string>>>();
+function repeatedEnds(corpus: TabTrace[]): Map<string, Set<string>> {
+  let m = repeatedCache.get(corpus);
+  if (!m) {
+    const counts = new Map<string, Map<string, number>>();
+    for (const t of corpus) {
+      const parts = t.title.split(SEPARATOR).map((p) => p.trim().toLowerCase()).filter(Boolean);
+      if (parts.length < 2) continue;
+      const per = counts.get(t.host) ?? new Map<string, number>();
+      for (const p of new Set([parts[0]!, parts[parts.length - 1]!])) per.set(p, (per.get(p) ?? 0) + 1);
+      counts.set(t.host, per);
+    }
+    m = new Map([...counts].map(([host, per]) => [host, new Set([...per].filter(([, n]) => n >= 2).map(([p]) => p))]));
+    repeatedCache.set(corpus, m);
+  }
+  return m;
+}
+
+/**
+ * A page's own title, without the site's name around it: a first or last piece that names the
+ * site ("Lisbon - Wikipedia", "Amazon.in : rtx 5070 ti") or that the site's other titles repeat.
+ * Those pieces are shared by every tab on the site — they named the walkthrough's Lisbon trip
+ * "Travel" (Wikivoyage's "Travel guide").
+ */
+export function ownTitle(t: Pick<TabTrace, 'title' | 'host' | 'eTLD1'>, corpus: TabTrace[] = []): string {
+  const parts = t.title.split(SEPARATOR).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return t.title;
+  const word = siteWord(t);
+  const repeated = repeatedEnds(corpus).get(t.host) ?? new Set<string>();
+  const isSite = (p: string) => (word.length >= 3 && p.toLowerCase().includes(word)) || repeated.has(p.toLowerCase());
+  let lo = 0;
+  let hi = parts.length;
+  if (isSite(parts[hi - 1]!)) hi--;
+  if (hi - lo > 1 && isSite(parts[lo]!)) lo++;
+  return parts.slice(lo, hi).join(' ');
+}
+
+/**
+ * The words of a title (lower-cased key -> the casing the person saw), and its adjacent word pairs
+ * ("First Commit"): a pair is not a coincidence the way two unrelated shared words are.
+ */
+function titleTerms(own: string): Map<string, string> {
   const out = new Map<string, string>();
-  for (const w of title.match(TITLE_WORD) ?? []) {
+  // Every run of letters, so a pair is two words that really stand together: "Claude in Chrome"
+  // has no pair, and "Claude Chrome" is not a phrase anyone wrote.
+  const runs = own.match(/[\p{L}\p{M}\p{N}]+/gu) ?? [];
+  const word = (w: string | undefined) => !!w && w.length >= 3 && isWordKey(w.toLowerCase());
+  for (let i = 0; i < runs.length; i++) {
+    const w = runs[i]!;
+    if (!word(w)) continue;
     const k = w.toLowerCase();
-    if (STOP.has(k) || PLATFORM.has(k) || /^\p{N}+$/u.test(k) || out.has(k)) continue;
-    out.set(k, w);
+    if (!PLATFORM.has(k) && !out.has(k)) out.set(k, w);
+    const next = runs[i + 1];
+    if (!word(next)) continue;
+    const k2 = next!.toLowerCase();
+    if (!(PLATFORM.has(k) && PLATFORM.has(k2))) out.set(`${k} ${k2}`, `${w} ${next}`);
   }
   return out;
 }
 
-/**
- * The word the group's titles share that the rest of the browser does not: count in the group
- * times IDF over all open titles, in the casing the person saw. One word — pairing a second one
- * picks up coincidences ("AWS · Center"). Returns '' when no word is shared by two tabs.
- */
-/** Title-word document frequency, once per corpus array (see describe.ts, same reason). */
+/** Title-term document frequency, once per corpus array (see describe.ts, same reason). */
 const titleDfCache = new WeakMap<TabTrace[], Map<string, number>>();
 function titleDf(corpus: TabTrace[]): Map<string, number> {
   let df = titleDfCache.get(corpus);
   if (!df) {
     df = new Map<string, number>();
-    for (const t of corpus) for (const k of titleWords(t.title).keys()) df.set(k, (df.get(k) ?? 0) + 1);
+    for (const t of corpus) for (const k of titleTerms(ownTitle(t, corpus)).keys()) df.set(k, (df.get(k) ?? 0) + 1);
     titleDfCache.set(corpus, df);
   }
   return df;
 }
 
-export function sharedTitleName(members: TabTrace[], corpus: TabTrace[]): string {
+/**
+ * What the group's own titles share that the rest of the browser does not: count in the group
+ * times IDF over all open titles, in the casing the person saw; a word pair beats its words on a
+ * tie. `n` is how many tabs share it.
+ */
+function bestShared(members: TabTrace[], corpus: TabTrace[]): { form: string; n: number } | null {
   const df = titleDf(corpus);
   const inGroup = new Map<string, { n: number; form: string }>();
   for (const t of members) {
-    for (const [k, form] of titleWords(t.title)) {
+    for (const [k, form] of titleTerms(ownTitle(t, corpus))) {
       const cur = inGroup.get(k);
       inGroup.set(k, { n: (cur?.n ?? 0) + 1, form: cur?.form ?? form });
     }
   }
-  const n = corpus.length;
+  const size = corpus.length;
   const ranked = [...inGroup.entries()]
     .filter(([, v]) => v.n >= 2)
-    .map(([k, v]) => ({ ...v, score: v.n * (Math.log((n + 1) / ((df.get(k) ?? 0) + 1)) + 1) }))
-    .sort((a, b) => b.score - a.score);
-  return ranked[0]?.form ?? '';
+    .map(([k, v]) => ({ ...v, pair: k.includes(' '), score: v.n * (Math.log((size + 1) / ((df.get(k) ?? 0) + 1)) + 1) }))
+    .sort((a, b) => b.score - a.score || Number(b.pair) - Number(a.pair));
+  return ranked[0] ?? null;
+}
+
+export function sharedTitleName(members: TabTrace[], corpus: TabTrace[]): string {
+  return bestShared(members, corpus)?.form ?? '';
+}
+
+/** A word as the group's titles spell it most often ("ChatGPT", not one tweet's "CHATGPT"), if they do. */
+function seenForm(word: string, members: TabTrace[]): string | undefined {
+  const forms = new Map<string, number>();
+  for (const t of members) for (const w of t.title.match(TITLE_WORD) ?? []) if (w.toLowerCase() === word) forms.set(w, (forms.get(w) ?? 0) + 1);
+  return [...forms].sort((a, b) => b[1] - a[1])[0]?.[0];
+}
+
+/** The platform at least 70 % of the group is on, spelt as its titles spell it. */
+function dominantPlatform(members: TabTrace[]): string | null {
+  const counts = new Map<string, number>();
+  for (const t of members) {
+    const w = siteWord(t);
+    if (PLATFORM.has(w)) counts.set(w, (counts.get(w) ?? 0) + 1);
+  }
+  const top = [...counts].sort((a, b) => b[1] - a[1])[0];
+  if (!top || top[1] < 0.7 * members.length) return null;
+  return seenForm(top[0], members) ?? titleCase(top[0]);
+}
+
+const JOB_HOSTS =
+  /(^|\.)(greenhouse\.io|lever\.co|smartrecruiters\.com|myworkdayjobs\.com|eightfold\.ai|ashbyhq\.com|workable\.com|naukri\.com|wellfound\.com|instahyre\.com|cutshort\.io|foundit\.in|amazon\.jobs|iimjobs\.com|hirist\.tech|indeed\.[a-z.]+|glassdoor\.[a-z.]+)$/;
+/** A job posting or application, by its site, path or title. */
+function looksLikeJob(t: TabTrace): boolean {
+  const host = (t.host ?? '').toLowerCase();
+  return (
+    JOB_HOSTS.test(host) ||
+    /^(careers?|jobs?)\./.test(host) ||
+    (t.pathTokens ?? []).some((p) => /^(jobs?|careers?)$/i.test(p)) ||
+    /\b(careers?|jobs?|hiring|job application)\b/i.test(t.title)
+  );
+}
+
+/** The own title of the tab the group started from ("Lenovo Cart", "CUDA Toolkit 13.4.2"). */
+function rootTitle(members: TabTrace[], corpus: TabTrace[]): string {
+  const root = [...members].sort((a, b) => a.openedAt - b.openedAt)[0];
+  return root ? ownTitle(root, corpus).trim() : '';
 }
 
 /**
- * Heuristic tier: the word the tabs' titles share, else the first word the x-ray heading found,
- * else the dominant site. Everything here runs with the AI APIs absent.
+ * Heuristic tier, for every browser without Gemini Nano (most of them): mostly job postings ->
+ * "Job search"; else what the tabs' own titles share; a platform's name when nearly all of the
+ * group is there and what they share is a plain word that covers under half of it ("session" in a
+ * dozen Claude tabs — a proper name like "VoidAlgo" keeps its group); else the x-ray heading's
+ * first word; else the own title of the tab the group started from; else the site's name, never a
+ * bare address. Everything here runs with the AI APIs absent.
  */
 export function heuristicName(members: TabTrace[], d: Description, corpus: TabTrace[] = members): GroupName {
-  const fromTitles = sharedTitleName(members, corpus);
-  const firstHeading = d.heading.includes(' · ') || !d.heading.includes('.') ? titleCase(d.heading.split(' · ')[0] ?? '') : '';
-  const name = clampName(fromTitles || firstHeading || d.hosts[0]?.replace(/^www\./, '') || 'Untitled') || 'Untitled';
-  return { name, color: colorFor(members), tier: 'heuristic' };
+  const done = (name: string): GroupName => ({ name: clampName(name) || 'Untitled', color: colorFor(members), tier: 'heuristic' });
+  const jobs = members.filter(looksLikeJob).length;
+  if (jobs >= 2 && jobs >= members.length / 2) return done('Job search');
+  const shared = bestShared(members, corpus);
+  const platform = dominantPlatform(members);
+  // A shared term outranks the platform only as a proper name of its own — not a plain word, and
+  // not the platform's name with a word added ("Claude Code" among a dozen Claude tabs).
+  const plain = !!shared && (shared.form === shared.form.toLowerCase() || (!!platform && shared.form.toLowerCase().split(' ').includes(platform.toLowerCase())));
+  if (platform && (!shared || (plain && shared.n < members.length / 2))) return done(platform);
+  if (shared) return done(shared.form);
+  if (d.heading.includes(' · ') || !d.heading.includes('.')) {
+    const first = (d.heading.split(' · ')[0] ?? '').trim();
+    if (first) return done(seenForm(first.toLowerCase(), members) ?? titleCase(first));
+  }
+  const fromRoot = rootTitle(members, corpus);
+  if (fromRoot) return done(fromRoot);
+  const top = members.find((t) => t.host === d.hosts[0]) ?? members[0];
+  const site = top ? siteWord(top) : '';
+  return done(site ? (seenForm(site, members) ?? titleCase(site)) : 'Untitled');
 }
 
 // --- on-device tier --------------------------------------------------------------------------

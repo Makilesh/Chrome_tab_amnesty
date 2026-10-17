@@ -15,10 +15,16 @@ zeroing S1/S2/S8 drops ARI ≥ 0.10 — must still be read before any store subm
 
 Phase 1 question: will people press "Archive & close" of their own accord, and is their tab count
 still lower a week later? Build is in `src/archive/` (cards, naming, sweep actions), `src/ui/sweep/`
-(the page the icon opens), `src/offscreen/` (summarisation). Phase 1 anti-scope (building any is a
-failure, not initiative): search, any MCP, any cloud default, any auto-close, any settings beyond
-the never-remember list. Still no network request without asking — the BYO-key cloud naming tier
-is deliberately unbuilt. Do not start Phase 2 until the user confirms the Phase 1 gate.
+(the page the icon opens), `src/offscreen/` (summarisation).
+
+**Phase 2's return path started 2026-10-17 on the owner's instruction, with the Phase 1 gate still
+unmeasured** (DECISIONS 2026-10-17): the owner wants a finished product people use. Approved, in
+order: better names without Gemini Nano; search across everything put away (full-text, lexical);
+restore of a whole card after the undo day; a backup file the person keeps; then the public-install
+work (icon, README, privacy page, store listing). Not approved yet: resurfacing on the new-tab
+page. Anti-scope (building any is a failure, not initiative): any MCP, any cloud default, any
+auto-close, any settings beyond the never-remember list. Still no network request without asking —
+the BYO-key cloud naming tier is deliberately unbuilt.
 
 ## Thesis
 
