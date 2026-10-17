@@ -273,12 +273,18 @@ now says instead of naming a date that has passed.
 **Question:** Does the archive give things back — or did we build a doom box?
 
 ### Deliverables
-- [ ] Search across everything archived — full-text over titles, digests, URLs (semantic only if
-      lexical proves insufficient; measure first)
-- [ ] Restore — one tab or a whole session, one click, original order
+- [x] Search across everything archived — full-text over titles, digests, URLs (semantic only if
+      lexical proves insufficient; measure first). 17 Oct: lexical, every word must start a word in
+      the tab or its card (title, summary, page headings / description / opening text, address,
+      site; card name, sites, when), accents ignored; matching tabs shown open under their card.
+      Semantic not built — nothing measured says lexical is insufficient. `src/archive/search.ts`.
+- [x] Restore — one tab or a whole session, one click, original order. 17 Oct: Open on every tab;
+      Bring back for a card's first day, then Open all, in order, each tab on its own record (the
+      reopened record now waits on no tab — DECISIONS 2026-10-17).
 - [ ] Event-shaped browsing — archive organised by session, headed by what the person was doing,
       date as small secondary metadata
 - [ ] Resurfacing on the **new-tab page** — ambient, never a notification, never a nag
+      (not approved by the owner as of 17 Oct; DECISIONS 2026-10-17)
 
 ### Done when
 - [ ] Someone can find a thing archived three weeks ago without remembering when

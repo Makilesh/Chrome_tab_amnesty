@@ -170,14 +170,9 @@ export async function archiveAndClose(
 }
 
 /**
- * Bring a whole card back: every tab, original order, as a named group, in the current window.
- * Works after a restart because the card is in IndexedDB (§6.8). The card is kept and marked.
- *
- * The archived traces are reopened BEFORE the tabs are created. Their old tabIds are dead, so
- * they are orphans, and the collector's onCreated re-binds each new tab to its own trace by url —
- * the same path session restore takes (§5.3). The tabs come back with their lineage, timing and
- * co-activation, so they cluster as the same project again instead of fusing with whatever is
- * open now. A trace that was forgotten is simply absent and its tab gets a fresh one.
+ * Undo an Archive & close within its day: every tab, original order, as a named group, in the
+ * current window (reopenTabs). Works after a restart because the card is in IndexedDB (§6.8).
+ * The card is kept and marked brought back.
  */
 export async function bringBack(cardId: string): Promise<{ ok: boolean; reason?: string }> {
   // Claim the card first, in one transaction: a second click — the toast's Bring back and the
@@ -191,9 +186,32 @@ export async function bringBack(cardId: string): Promise<{ ok: boolean; reason?:
     return { ...c, restoredAt: now };
   });
   if (!card) return { ok: false, reason: 'That one is gone.' };
-  if (!claimed) return { ok: false, reason: card.restoredAt ? 'Already brought back.' : 'That one is older than a day; open its tabs from the card instead.' };
+  if (!claimed) return { ok: false, reason: card.restoredAt ? 'Already brought back.' : 'That one is older than a day; Open all on its card brings it back.' };
+  await reopenTabs(card);
+  return { ok: true };
+}
 
-  for (const t of card.tabs) await updateTrace(t.traceId, (tr) => (tr.closedAt === null ? null : { ...tr, closedAt: null }));
+/**
+ * Open every tab of a card again, in order, as a named group — at any time, as often as wanted
+ * (Phase 2: "restore a whole session in one click"). Unlike Bring back it is not an undo: the
+ * card stays where it is and says nothing new. Tabs of the card that are open already get a
+ * second copy with a record of its own; nothing is moved.
+ */
+export async function openCard(card: ArchiveCard): Promise<void> {
+  await reopenTabs(card);
+}
+
+/**
+ * The archived traces are reopened BEFORE the tabs are created, so the collector re-binds each new
+ * tab to its own trace by url (§5.3) and the tabs come back with their lineage, timing and
+ * co-activation instead of fusing with whatever is open now. A forgotten trace is simply absent.
+ *
+ * Reopened on no tab (-1), not the one it had: after a restart that id may belong to a live tab
+ * (§5.3), and an open record on a live tab's id is not an orphan to re-bind — it stayed open and
+ * unbound, a second record for that tab that Archive & close would have closed with it.
+ */
+async function reopenTabs(card: ArchiveCard): Promise<void> {
+  for (const t of card.tabs) await updateTrace(t.traceId, (tr) => (tr.closedAt === null ? null : { ...tr, closedAt: null, tabId: -1 }));
   const current = await chrome.windows.getCurrent();
   const created: number[] = [];
   for (const t of restoreOrder(card)) {
@@ -208,7 +226,6 @@ export async function bringBack(cardId: string): Promise<{ ok: boolean; reason?:
       /* grouping is cosmetic here; the tabs are back either way */
     }
   }
-  return { ok: true };
 }
 
 /** Open a single archived tab again (no undo semantics, just a return path). */
