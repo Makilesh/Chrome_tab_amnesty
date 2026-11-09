@@ -4,6 +4,12 @@
 
 <p align="center"><b>Close it, you'll still have it.</b></p>
 
+<p align="center">
+  <a href="https://github.com/Makilesh/Chrome_tab_amnesty/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Makilesh/Chrome_tab_amnesty/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Makilesh/Chrome_tab_amnesty/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Makilesh/Chrome_tab_amnesty"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/Makilesh/Chrome_tab_amnesty"></a>
+</p>
+
 <p align="center">A Chrome extension that remembers what your tabs were about, groups them by what you were
 doing, and lets you put a whole project away in one click — kept, searchable, and back whenever
 you want it. Everything stays on your computer.</p>

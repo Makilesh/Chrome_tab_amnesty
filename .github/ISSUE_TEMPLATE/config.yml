@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem privately
+    url: https://github.com/Makilesh/Chrome_tab_amnesty/security/advisories/new
+    about: Please report vulnerabilities here, not in a public issue.

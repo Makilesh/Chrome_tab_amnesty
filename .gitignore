@@ -30,3 +30,8 @@ Claude outputs/*
 release/
 *.egg-info/
 %SystemDrive%/
+
+# Local scratch from CI runs, agents and Claude Code worktrees.
+ci-build/
+.agent-notes/
+.claude/worktrees/

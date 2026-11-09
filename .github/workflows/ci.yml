@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit -p .
+      - name: Unit tests
+        run: npx vitest run
+      - name: Public build (the one in releases and the Web Store)
+        run: npx vite build --mode store --outDir ci-build --emptyOutDir
+      - name: The public build carries no study pages
+        run: |
+          test ! -e ci-build/src/ui/xray
+          test ! -e ci-build/src/ui/dev
+          ! grep -q "For the study" ci-build/src/ui/sweep/index.html
+          node -e "JSON.parse(require('fs').readFileSync('ci-build/manifest.json', 'utf8'))"

@@ -1,0 +1,50 @@
+name: Something is not working
+description: Tell us what happened and what you expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please do not paste page titles, web addresses or files saved with "Keep a copy".** They are your browsing, and this page is public. Describe the shape instead ("a group of 6 tabs from two sites, named after the wrong one").
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 142, Edge 141, Brave 1.85…
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11, macOS 15, Ubuntu 24.04…
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Tab Amnesty version
+      description: Shown at chrome://extensions
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      placeholder: 1. … 2. … 3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Anything shown on the page in words is fine; please leave out your own page titles and addresses.
+    validations:
+      required: true

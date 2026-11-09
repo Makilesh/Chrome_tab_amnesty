@@ -1,0 +1,21 @@
+name: An idea
+description: Something Tab Amnesty could do for you.
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A few things Tab Amnesty will not do, by design: show how many tabs you have as a problem (no counts, badges or streaks), close anything on its own or on a timer, send anything off your computer, or ask you to name things. Ideas inside those lines are very welcome.
+  - type: textarea
+    id: moment
+    attributes:
+      label: The moment you wished it existed
+      description: What were you doing, and what got in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+    validations:
+      required: true
