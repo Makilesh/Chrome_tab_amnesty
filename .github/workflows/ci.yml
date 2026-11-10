@@ -30,4 +30,4 @@ jobs:
           test ! -e ci-build/src/ui/xray
           test ! -e ci-build/src/ui/dev
           ! grep -q "For the study" ci-build/src/ui/sweep/index.html
-          node -e "JSON.parse(require('fs').readFileSync('ci-build/manifest.json', 'utf8'))"
+          node -e "const m = JSON.parse(require('fs').readFileSync('ci-build/manifest.json', 'utf8')); if (m.web_accessible_resources) process.exit(1)"

@@ -526,6 +526,7 @@ async function main(): Promise<void> {
     if (!input.value.trim()) return;
     renderNever(await addNeverRemember(input.value));
     input.value = '';
+    await renderArchive(true); // lines of the site just left the cards
   });
   // Summaries arrive in the background; refresh the archive now and then to show them.
   setInterval(() => void renderArchive(), 20_000);

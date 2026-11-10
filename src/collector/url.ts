@@ -56,6 +56,11 @@ export function urlFeatures(raw: string): UrlFeatures {
   return { host, eTLD1: eTLD1(host), pathTokens, queryKeys };
 }
 
+/** A whole ending ("com", "co.uk", "github.io"), not a site: never a never-remember entry. */
+export function isPublicSuffix(host: string): boolean {
+  return SUFFIX_SET.has(host.toLowerCase());
+}
+
 /** Host + path only — what a shareable export keeps of a URL. */
 export function reduceUrl(raw: string): string {
   try {

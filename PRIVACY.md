@@ -4,7 +4,7 @@
 own: nothing is sent to the developer, to an analytics service, to an AI service, or to anyone
 else. There is no account, no server, no tracking and no advertising. Nothing is sold or shared.
 
-Last changed: 17 October 2026. Changes to this page are visible in the
+Last changed: 10 November 2026. Changes to this page are visible in the
 [repository's history](https://github.com/Makilesh/Chrome_tab_amnesty/commits/main/PRIVACY.md).
 
 ## What it records, and why
@@ -24,9 +24,13 @@ whole project away in one click and find it again later. For that, for each tab 
   your computer at whether that box is empty, and keeps a yes or no only, never the text — so
   that Archive & close never closes a tab with a half-written message.
 
-Tabs on mail, chat, calendar and search-results pages are never grouped, so for those it keeps
-only the site and page path of the address — not a search's words, not a message's id — and the
-timing: no title, no page text.
+Tabs on the mail, chat, calendar, search and message pages on Tab Amnesty's
+[built-in list](src/cluster/ambient.json) are never grouped, so for those it keeps only the site —
+and, for a search or message page, which page of the site — never a search's words or a message's
+id, plus the timing: no title, no page text. A tab that is not a web page (a local file, a blank
+page, a file opened in a tab) keeps no title, no text, and only what kind of page it was. Other
+pages that show your messages are kept like any page; add their site to **Sites never remembered**
+to keep nothing about them.
 
 When you put a group away, it keeps a card for it: the group's name, when it was, its sites, and
 for each tab the address, title, digest and, if Chrome's on-device model wrote one, a summary.
@@ -49,6 +53,10 @@ copy of what you put away in its Cache Storage, so a database Chrome replaces do
 archive along). Only Tab Amnesty can read it — web pages cannot. Uninstalling Tab Amnesty
 removes all of it.
 
+When you show groups on your tab strip, or bring a group back, Chrome makes named tab groups. If
+Chrome sync is on, Chrome itself may save those groups and their names to your Google account —
+that is Chrome's own feature, under your sync settings, not Tab Amnesty sending anything.
+
 What you put away is kept until you forget it. The record of a tab you closed yourself, without
 putting it away, is removed 30 days after it closed.
 
@@ -59,8 +67,8 @@ putting it away, is removed 30 days after it closed.
   about them is kept: no titles, no page text, nothing after they close. Adding a site also
   removes what was already kept about it.
 - **Keep a copy** — saves everything you put away as one file, where your downloads go. That file
-  is yours: it holds the titles and addresses of what you put away and your list of sites never
-  remembered, and it goes nowhere you do not take it. **Bring in a copy** reads one back, adding
+  is yours: it holds what you put away — titles, addresses, what each page said and any summaries —
+  and your list of sites never remembered, and it goes nowhere you do not take it. **Bring in a copy** reads one back, adding
   only what is missing.
 - **Uninstall** — removes everything Tab Amnesty kept.
 

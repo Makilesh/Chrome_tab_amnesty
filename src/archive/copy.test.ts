@@ -77,7 +77,7 @@ describe('keep a copy', () => {
     expect(readCopy('{"kind":"tab-amnesty-copy","version":1,')).toBeNull();
     expect(readCopy('{"kind":"tab-amnesty-copy","version":2,"cards":[]}')).toBe('newer');
     const odd = {
-      kind: 'tab-amnesty-copy', version: 1, savedAt: NOW, neverRemember: ['WWW.Reddit.com/', 7, 'com', 'co', 'localhost'],
+      kind: 'tab-amnesty-copy', version: 1, savedAt: NOW, neverRemember: ['WWW.Reddit.com/', 7, 'com', 'co', 'co.uk', 'github.io', 'localhost'],
       cards: [
         { cardId: 'a', name: 'x'.repeat(500), color: 'magenta', tier: 'gpt', undoUntil: NOW * 2, tabs: [{ url: 'https://a.example/1', host: 'evil.example', title: 3 }] },
         { cardId: 'a', name: 'duplicate', tabs: [{ url: 'https://a.example/2' }] },
@@ -86,11 +86,20 @@ describe('keep a copy', () => {
       ],
     };
     const copy = readCopy(JSON.stringify(odd), NOW) as Copy;
-    expect(copy.neverRemember).toEqual(['reddit.com', 'localhost']); // "com" would match every .com address
+    expect(copy.neverRemember).toEqual(['reddit.com', 'localhost']); // "com", "co.uk", "github.io" would match every address under them
     expect(copy.cards).toHaveLength(1);
     expect(copy.cards[0]).toMatchObject({ cardId: 'a', color: 'grey', tier: 'heuristic', undoUntil: NOW, archivedAt: NOW, restoredAt: null });
     expect(copy.cards[0]!.name).toHaveLength(60);
     expect(copy.cards[0]!.tabs[0]).toMatchObject({ host: 'a.example', title: '', order: 0, digest: null, summary: null });
+  });
+
+  it('reads a crafted file in linear time, and caps how many lines a card can bring in', () => {
+    const crafted = '<script id="tab-amnesty-copy" '.repeat(20_000); // ~600 KB, no closing tag
+    const t0 = performance.now();
+    expect(readCopy(crafted, NOW)).toBeNull();
+    expect(performance.now() - t0).toBeLessThan(500);
+    const many = { kind: 'tab-amnesty-copy', version: 1, cards: [{ cardId: 'm', name: 'Many', tabs: Array.from({ length: 3_000 }, (_, i) => ({ url: `https://a.example/${i}` })) }] };
+    expect((readCopy(JSON.stringify(many), NOW) as Copy).cards[0]!.tabs).toHaveLength(500);
   });
 
   it('still reads a copy the browser saved again ("Save page as" moves attributes about)', () => {

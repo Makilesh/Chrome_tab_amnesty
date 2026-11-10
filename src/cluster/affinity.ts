@@ -16,13 +16,23 @@ function onSearchPath(hostPath: string, p: string): boolean {
   return (hostPath + '/').startsWith(p.endsWith('/') ? p : p + '/');
 }
 
-/** ambient.json: registrable domain; or the host or any subdomain of a listed host; or a search-results path. */
-export function isAmbient(t: Pick<TabTrace, 'host' | 'eTLD1' | 'pathTokens'>): boolean {
+/**
+ * ambient.json: registrable domain; or the host or any subdomain of a listed host; or a search or
+ * message path. Returns how much of the address past the site a record keeps (collector
+ * `storedUrl`): '' for a listed site, the listed path for a search or message page ("search" of
+ * google.com/search) — never a query, a fragment or an id after it. null when not ambient.
+ */
+export function ambientPath(t: Pick<TabTrace, 'host' | 'eTLD1' | 'pathTokens'>): string | null {
   const host = (t.host ?? '').toLowerCase();
-  if (AMBIENT.etld1.has((t.eTLD1 ?? '').toLowerCase())) return true;
-  for (const h of AMBIENT.hosts) if (host === h || host.endsWith('.' + h)) return true;
+  if (AMBIENT.etld1.has((t.eTLD1 ?? '').toLowerCase())) return '';
+  for (const h of AMBIENT.hosts) if (host === h || host.endsWith('.' + h)) return '';
   const hp = host + '/' + (t.pathTokens ?? []).join('/');
-  return AMBIENT.searchPaths.some((p) => onSearchPath(hp, p));
+  const p = AMBIENT.searchPaths.find((x) => onSearchPath(hp, x));
+  return p === undefined ? null : p.slice(p.indexOf('/') + 1).replace(/\/$/, '');
+}
+
+export function isAmbient(t: Pick<TabTrace, 'host' | 'eTLD1' | 'pathTokens'>): boolean {
+  return ambientPath(t) !== null;
 }
 
 /** Excluded: pinned, ambient hosts, closed, and non-http URLs. */

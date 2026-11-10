@@ -13,7 +13,7 @@
  * http(s), a card never arrives undoable (Bring back is for the records of this browser), and the
  * never-remember list here holds for whatever comes in (§6.10).
  */
-import { urlFeatures } from '../collector/url';
+import { isPublicSuffix, urlFeatures } from '../collector/url';
 import { cardHosts, dominantHost, restoreOrder } from './card';
 import { isNeverRemembered, namesNeverSite, normaliseDomain } from './forget';
 import { GROUP_COLORS, type ArchiveCard, type ArchivedTab, type GroupColor } from './types';
@@ -21,9 +21,10 @@ import { GROUP_COLORS, type ArchiveCard, type ArchivedTab, type GroupColor } fro
 const KIND = 'tab-amnesty-copy';
 const VERSION = 1;
 /** About as much text as a page can read in one go; a card is a few kilobytes. */
-export const MAX_COPY_BYTES = 400 * 1024 * 1024;
+export const MAX_COPY_BYTES = 200 * 1024 * 1024;
 const MAX_CARDS = 100_000;
-const MAX_TABS = 2_000;
+/** Far above a real group: a file cannot make Open all open thousands of addresses. */
+const MAX_TABS = 500;
 
 export interface Copy {
   kind: typeof KIND;
@@ -164,8 +165,16 @@ function readCard(v: unknown, now: number): ArchiveCard | null {
  * 'newer' when a later Tab Amnesty saved it; null when it is not a copy at all.
  */
 export function readCopy(text: string, now = Date.now()): Copy | 'newer' | null {
-  const block = /<script\b[^>]*\bid=["']?tab-amnesty-copy["']?[^>]*>([\s\S]*?)<\/script>/i.exec(text);
-  const json = block ? block[1]! : text.trimStart().startsWith('{') ? text : null;
+  // Found with plain searches, never one pattern over the whole file: a backtracking pattern
+  // spent minutes on a crafted file a few megabytes long (security review, 10 Nov).
+  let json: string | null = null;
+  const at = text.search(/\bid=["']?tab-amnesty-copy\b/i);
+  if (at >= 0) {
+    const tag = text.lastIndexOf('<', at);
+    const open = text.indexOf('>', at);
+    const close = open < 0 ? -1 : text.slice(open).search(/<\/script/i);
+    if (tag >= 0 && /^<script\b/i.test(text.slice(tag, tag + 8)) && close > 0) json = text.slice(open + 1, open + close);
+  } else if (text.trimStart().startsWith('{')) json = text;
   if (json === null) return null;
   let raw: unknown;
   try {
@@ -184,8 +193,8 @@ export function readCopy(text: string, now = Date.now()): Copy | 'newer' | null 
     seen.add(c.cardId);
     cards.push(c);
   }
-  // Sites, not whole endings: "com" would match every .com address.
-  const neverRemember = [...new Set(strings(o.neverRemember, 1_000, 253).map(normaliseDomain).filter((d) => d === 'localhost' || d.includes('.')))];
+  // Sites, not whole endings: "com" or "co.uk" would match every address under them.
+  const neverRemember = [...new Set(strings(o.neverRemember, 1_000, 253).map(normaliseDomain).filter((d) => d === 'localhost' || (d.includes('.') && !isPublicSuffix(d))))];
   return { kind: KIND, version: VERSION, savedAt: num(o.savedAt) ?? now, cards, neverRemember };
 }
 

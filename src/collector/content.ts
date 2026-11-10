@@ -90,7 +90,7 @@ function send(reason: Reason): void {
     if (recent && reason !== 'visible') return;
     lastSent = { url, at: now };
     chrome.runtime
-      .sendMessage({ type: 'digest', url, title: document.title, digest: buildDigest(), reason })
+      .sendMessage({ type: 'digest', url, title: document.title.slice(0, 500), digest: buildDigest(), reason })
       .catch(() => {
         /* worker unreachable (e.g. extension reloaded); the next event will retry */
       });
@@ -183,6 +183,9 @@ function reportAfterUrlChange(): void {
 document.addEventListener(
   'input',
   (e) => {
+    // Typing only: a page (or an ad frame in it) dispatching its own input events must not keep
+    // its tab from being put away.
+    if (!e.isTrusted) return;
     // composedPath()[0] is the field itself even inside a shadow root (e.target is its host).
     const field = e.composedPath()[0];
     if (!isTextField(field)) return;

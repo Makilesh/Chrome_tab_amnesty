@@ -1,22 +1,12 @@
 {
-  "_comment": "Mail, calendar, messaging, music, meetings and search results belong to every project and therefore to none (DECISIONS 2026-09-15). Excluded from clustering entirely, never down-weighted. Read by both TS and Python. Matching: 'etld1' on the registrable domain; 'hosts' on the host or any subdomain of it — hosts are recorded without www., and the suffix list makes slack.com a public suffix, so each workspace is its own registrable domain; 'search_paths' on host + path, whole segments only, so the rest of google.com and bing.com (Maps, Flights, Shopping) groups like any site. AI assistants (chatgpt, claude.ai, gemini, perplexity) are deliberately NOT here: a conversation tab has a project-specific title and is opened from, and switched with, the project it serves (DECISIONS 2026-09-15).",
+  "_comment": "Mail, calendar, messaging, music, meetings and search results belong to every project and therefore to none (DECISIONS 2026-09-15). Excluded from clustering entirely, never down-weighted. Read by both TS and Python. Matching: 'etld1' on the registrable domain; 'hosts' on the host or any subdomain of it — hosts are recorded without www., and the suffix list makes slack.com a public suffix, so each workspace is its own registrable domain; 'search_paths' on host + path, whole segments only, so the rest of google.com and bing.com (Maps, Flights, Shopping) groups like any site. AI assistants (chatgpt, claude.ai, gemini, perplexity) are deliberately NOT here: a conversation tab has a project-specific title and is opened from, and switched with, the project it serves (DECISIONS 2026-09-15). Message pages of sites that are more than messages (linkedin.com/messaging, facebook.com/messages, x.com/messages, instagram.com/direct) and search pages beyond the big engines are listed as paths the same way; a record of any of these keeps only the site and the listed path (DECISIONS 2026-11-10).",
   "etld1": [
-    "gmail.com", "outlook.com", "protonmail.com", "proton.me", "fastmail.com", "hey.com",
-    "calendly.com",
-    "discord.com", "messenger.com", "telegram.org",
-    "spotify.com", "soundcloud.com", "tidal.com", "deezer.com",
-    "todoist.com", "ticktick.com",
-    "zoom.us"
+    "gmail.com", "outlook.com", "protonmail.com", "proton.me", "fastmail.com", "hey.com", "calendly.com", "discord.com", "messenger.com", "telegram.org", "spotify.com", "soundcloud.com", "tidal.com", "deezer.com", "todoist.com", "ticktick.com", "zoom.us"
   ],
   "hosts": [
-    "mail.google.com", "calendar.google.com", "chat.google.com", "keep.google.com", "meet.google.com",
-    "mail.yahoo.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com", "outlook.cloud.microsoft",
-    "teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft",
-    "slack.com", "web.whatsapp.com", "web.telegram.org",
-    "music.youtube.com", "music.apple.com"
+    "mail.google.com", "calendar.google.com", "chat.google.com", "keep.google.com", "meet.google.com", "mail.yahoo.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com", "outlook.cloud.microsoft", "teams.microsoft.com", "teams.live.com", "teams.cloud.microsoft", "slack.com", "web.whatsapp.com", "web.telegram.org", "music.youtube.com", "music.apple.com", "search.yahoo.com", "duckduckgo.com", "kagi.com", "mail.zoho.com", "mail.zoho.eu", "mail.zoho.in"
   ],
   "search_paths": [
-    "google.com/search", "bing.com/search", "duckduckgo.com/", "search.brave.com/search",
-    "startpage.com/sp/search", "startpage.com/do/search", "search.yahoo.com/search", "ecosia.org/search"
+    "google.com/search", "bing.com/search", "duckduckgo.com/", "search.brave.com/search", "startpage.com/sp/search", "startpage.com/do/search", "search.yahoo.com/search", "ecosia.org/search", "cn.bing.com/search", "yandex.com/search", "yandex.ru/search", "youtube.com/results", "linkedin.com/messaging", "facebook.com/messages", "x.com/messages", "x.com/i/chat", "twitter.com/messages", "instagram.com/direct", "icloud.com/mail"
   ]
 }

@@ -315,7 +315,7 @@ describe('collector', () => {
     expect(openOn(21).map((t) => t.title)).toEqual(['']);
     // The address keeps its site and path: not the search's words, not the message's id.
     expect(openOn(20)[0]).toMatchObject({ url: 'https://www.google.com/search', queryKeys: {} });
-    expect(openOn(21)[0]!.url).toBe('https://mail.google.com/mail/u/0/');
+    expect(openOn(21)[0]!.url).toBe('https://mail.google.com/'); // a listed site keeps nothing past the site
     chromeMock.tabs.onUpdated.fire(21, { title: 'Re: the lease - me@example.com - Gmail' }, { ...liveTabs[1]!, title: 'Re: the lease - me@example.com - Gmail' });
     const respond = vi.fn();
     const digest = { description: '', headings: ['Re: the lease'], leadText: 'Dear landlord' };
@@ -338,6 +338,34 @@ describe('collector', () => {
     await settle(400);
     expect(h.store.get('old')).toMatchObject({ title: '', digest: null });
     expect(h.store.get('oldsearch')).toMatchObject({ url: 'https://duckduckgo.com/', queryKeys: {}, title: '' });
+  });
+
+  it('message and regional search pages keep only the site and the listed path; pages that are not web pages keep no text', async () => {
+    liveTabs = [
+      tab(70, 0, 'https://www.linkedin.com/messaging/thread/2-ABCdef123/', { title: 'Messaging | LinkedIn' }),
+      tab(71, 1, 'https://uk.search.yahoo.com/search?p=private+question', { title: 'private question - Yahoo Search' }),
+      tab(72, 2, 'https://outlook.office.com/mail/id/AAQkAGI2', { title: 'Re: the lease - Outlook' }),
+      tab(73, 3, 'file:///C:/Users/someone/Documents/payslip.pdf', { title: 'payslip.pdf' }),
+      tab(74, 4, 'data:text/html,<h1>a private note</h1>', { title: 'a private note' }),
+      tab(75, 5, 'about:blank', { title: 'Statement - Bank' }),
+    ];
+    for (const t of liveTabs) chromeMock.tabs.onCreated.fire({ ...t });
+    await settle();
+    const rec = (id: number) => openOn(id)[0]!;
+    expect(rec(70)).toMatchObject({ url: 'https://www.linkedin.com/messaging', title: '' });
+    expect(rec(71)).toMatchObject({ url: 'https://uk.search.yahoo.com/', title: '' });
+    expect(rec(72)).toMatchObject({ url: 'https://outlook.office.com/', title: '' });
+    expect([rec(73), rec(74), rec(75)].map((t) => [t.url, t.title])).toEqual([['file:', ''], ['data:', ''], ['about:', '']]);
+  });
+
+  it('keeps no more of a page than the content script would send, whatever the page manages to send', async () => {
+    h.store.set('big', trace({ traceId: 'big', tabId: 80, url: 'https://docs.example/a', title: 'Docs' }));
+    liveTabs = [tab(80, 0, 'https://docs.example/a')];
+    const digest = { description: 'd'.repeat(5_000), headings: Array.from({ length: 50 }, () => 'h'.repeat(500)), leadText: 'l'.repeat(50_000) };
+    chromeMock.runtime.onMessage.fire({ type: 'digest', url: 'https://docs.example/a', title: 't'.repeat(1_000_000), digest, reason: 'complete' }, { tab: { id: 80 }, frameId: 0, documentLifecycle: 'active' }, vi.fn());
+    await settle();
+    const t = h.store.get('big')!;
+    expect([t.title.length, t.digest!.description.length, t.digest!.headings.length, t.digest!.headings[0]!.length, t.digest!.leadText.length]).toEqual([500, 500, 20, 120, 1000]);
   });
 
   it('a search tab restored after a restart finds its record, though the record keeps no search words', async () => {

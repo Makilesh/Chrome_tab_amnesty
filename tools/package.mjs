@@ -18,6 +18,9 @@ const zip = join('release', `${name}.zip`);
 rmSync(dir, { recursive: true, force: true });
 rmSync(zip, { force: true });
 execSync(`npx tsc --noEmit && npx vite build${study ? '' : ' --mode store'} --outDir "${dir}" --emptyOutDir`, { stdio: 'inherit' });
+if (JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')).web_accessible_resources) {
+  throw new Error('the build makes files web-accessible, which lets sites detect the extension');
+}
 if (!study) {
   // What the store build must not carry, checked on the files themselves.
   for (const p of ['src/ui/xray', 'src/ui/dev']) if (existsSync(join(dir, p))) throw new Error(`the store build has ${p}`);

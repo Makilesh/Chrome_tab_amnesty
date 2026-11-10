@@ -23,12 +23,12 @@ import {
   updateTraceByTabId,
 } from './db';
 import { isNeverRemembered } from '../archive/forget';
-import { isAmbient } from '../cluster/affinity';
+import { ambientPath, isAmbient } from '../cluster/affinity';
 import { getNeverRemember, pruneClosedRecords, seedBackup } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
 import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
 import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
-import { reduceUrl, urlFeatures } from './url';
+import { urlFeatures } from './url';
 
 /** Never re-capture a digest for the same URL inside this window. */
 const DIGEST_MIN_INTERVAL_MS = 10 * 60_000;
@@ -69,18 +69,38 @@ function baseTrace(tab: chrome.tabs.Tab, url: string): Omit<
  * nothing, and a search page's title is the search itself.
  */
 function textless(t: TabTrace, never: readonly string[]): boolean {
-  return isNeverRemembered(t, never) || isAmbient(t);
+  return !/^https?:/.test(t.url) || isNeverRemembered(t, never) || isAmbient(t);
 }
 
 /**
- * What a record keeps of an address. A mail, chat, calendar or search-results address (the
- * ambient list) keeps its site and path only — a search's words are in its query, a message's id
- * in its fragment — and every other address is kept whole: grouping reads it. Applied wherever an
- * address is stored, and to every address compared with a stored one, so a search tab restored
- * after a restart still finds its record.
+ * What a record keeps of an address. A web page's is kept whole — grouping reads it — except on
+ * the ambient list (mail, chat, calendar, search and message pages): the site and the listed path
+ * only (affinity `ambientPath`), never a search's words, a message's id or anything after them. A
+ * page that is not a web page is never grouped: a browser or extension page keeps where it is; a
+ * local file, a blob, a data: page or about:blank only what kind of address it was — a file's
+ * path, a blob's site and a data page's own content say too much. Applied wherever an address is
+ * stored, and to every address compared with a stored one, so a restored tab still finds its record.
  */
 function storedUrl(url: string): string {
-  return isAmbient(urlFeatures(url)) ? reduceUrl(url) || url : url;
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return url;
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+    return /^(chrome|edge|brave|opera|vivaldi|chrome-extension|extension):$/.test(u.protocol) ? `${u.protocol}//${u.host}${u.pathname}` : u.protocol;
+  }
+  const kept = ambientPath(urlFeatures(url));
+  return kept === null ? url : `${u.protocol}//${u.host}/${kept}`;
+}
+
+/** A digest held to the content script's own limits (content.ts), whatever a page managed to send. */
+function cleanDigest(d: unknown): Digest {
+  const o = d && typeof d === 'object' ? (d as Record<string, unknown>) : {};
+  const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+  const headings = Array.isArray(o.headings) ? o.headings.filter((h): h is string => typeof h === 'string').slice(0, 20).map((h) => h.slice(0, 120)) : [];
+  return { description: str(o.description, 500), headings, leadText: str(o.leadText, 1000) };
 }
 
 function scrubbed(t: TabTrace, never: readonly string[]): TabTrace {
@@ -454,10 +474,12 @@ async function handleDigest(tabId: number, msg: DigestMessage): Promise<void> {
     if (textless({ ...t, ...urlPatch }, never)) return t.title || t.digest ? { ...t, title: '', digest: null, digestAt: null } : null;
     // 10-minute rule — except that a first-visible capture may replace a thin one, because pages
     // that render lazily while hidden produce an empty digest at readyState=complete.
+    const digest = cleanDigest(msg.digest);
     if (sameUrl && t.digestAt !== null && now - t.digestAt < DIGEST_MIN_INTERVAL_MS) {
-      if (!(msg.reason === 'visible' && isThin(t.digest) && !isThin(msg.digest))) return null;
+      if (!(msg.reason === 'visible' && isThin(t.digest) && !isThin(digest))) return null;
     }
-    return { ...t, ...urlPatch, title: msg.title || t.title, digest: msg.digest, digestAt: now };
+    const title = typeof msg.title === 'string' ? msg.title.slice(0, 500) : '';
+    return { ...t, ...urlPatch, title: title || t.title, digest, digestAt: now };
   });
 }
 
@@ -604,12 +626,14 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 /**
- * Records of ambient tabs written before the rules above lose their title, page text and the
- * query and fragment of their address — once, on install or update.
+ * Records written before the rules above — of ambient tabs and of pages that are not web pages —
+ * lose their title, page text and what `storedUrl` no longer keeps of their address: once, on
+ * install or update.
  */
 async function scrubAmbient(): Promise<void> {
+  const quiet = (x: TabTrace) => !/^https?:/.test(x.url) || isAmbient(x);
   const clean = (x: TabTrace): TabTrace => ({ ...x, url: storedUrl(x.url), ...urlFeatures(storedUrl(x.url)), title: '', digest: null, digestAt: null });
-  const dirty = (x: TabTrace) => isAmbient(x) && (!!x.title || !!x.digest || storedUrl(x.url) !== x.url);
+  const dirty = (x: TabTrace) => quiet(x) && (!!x.title || !!x.digest || storedUrl(x.url) !== x.url);
   for (const t of await getAllTraces()) {
     if (dirty(t)) await updateTrace(t.traceId, (x) => (dirty(x) ? clean(x) : null));
   }

@@ -5,7 +5,8 @@
  * list are also kept in a second store (backup.ts) so a database Chrome replaces does not take
  * them along.
  */
-import { db, deleteTrace, getAllTraces, getMeta, getTracesClosedBefore, restoreInto, setMeta, updateTrace } from '../collector/db';
+import { db, deleteTrace, getAllTraces, getMeta, getTrace, getTracesClosedBefore, restoreInto, setMeta, updateTrace } from '../collector/db';
+import { isPublicSuffix } from '../collector/url';
 import {
   backupCard,
   backupNeverRemember,
@@ -76,6 +77,19 @@ async function updateCardUnlocked(cardId: string, fn: (c: ArchiveCard) => Archiv
   return next ?? cur;
 }
 
+/**
+ * Of a forgotten card's records, those nothing else holds: another card holds its own lines'
+ * records (a card put away again after Bring back holds the same ones), and an open tab its own
+ * (Open all reopens them). Deleting those left the other card without its lineage and an open tab
+ * without a record (correctness review, 10 Nov).
+ */
+async function deletable(ids: readonly string[], cardId: string): Promise<string[]> {
+  const held = new Set((await getCards()).filter((c) => c.cardId !== cardId).flatMap((c) => c.tabs.map((t) => t.traceId)));
+  const out: string[] = [];
+  for (const id of ids) if (!held.has(id) && (await getTrace(id))?.closedAt !== null) out.push(id);
+  return out;
+}
+
 /** Forget a whole card: the card, its queued jobs, and the traces behind it. User action only. */
 export async function forgetCard(cardId: string): Promise<void> {
   const card = await cardsLocked(async () => {
@@ -89,7 +103,7 @@ export async function forgetCard(cardId: string): Promise<void> {
     return c;
   });
   if (!card) return;
-  for (const t of card.tabs) await deleteTrace(t.traceId);
+  for (const id of await deletable(card.tabs.map((t) => t.traceId), cardId)) await deleteTrace(id);
   await forgetNamesOf(card.tabs.map((t) => t.traceId));
 }
 
@@ -127,10 +141,10 @@ async function forgetTabs(cardId: string, traceIds: string[], never: readonly st
       await dropCardBackup(cardId); // updateCardUnlocked just copied the emptied card over
     }
   });
-  for (const id of traceIds) await deleteTrace(id);
+  for (const id of await deletable(traceIds, cardId)) await deleteTrace(id);
   await forgetNamesOf(traceIds);
   const d = await db();
-  for (const j of await d.getAll('jobs')) if (gone.has(j.traceId)) await d.delete('jobs', j.jobId);
+  for (const j of await d.getAll('jobs')) if (gone.has(j.traceId) && j.cardId === cardId) await d.delete('jobs', j.jobId);
 }
 
 // --- summarisation queue -------------------------------------------------------------------
@@ -179,20 +193,27 @@ export async function getNeverRemember(): Promise<string[]> {
  */
 export async function addNeverRemember(domain: string): Promise<string[]> {
   const d = normaliseDomain(domain);
-  const list = await getNeverRemember();
-  if (!d || list.includes(d)) return list;
-  list.push(d);
-  await backupNeverRemember(list); // first, like forgetting: an interrupted add must not be undone by a restore
-  await setMeta('neverRemember', list);
+  let list = await getNeverRemember();
+  // A site, not a whole ending: "com" or "co.uk" would forget every address under it, in one click.
+  if (!d || (d !== 'localhost' && (!d.includes('.') || isPublicSuffix(d)))) return list;
+  if (!list.includes(d)) {
+    list = [...list, d];
+    await backupNeverRemember(list); // first, like forgetting: an interrupted add must not be undone by a restore
+    await setMeta('neverRemember', list);
+  }
+  // Every time, so adding a site again finishes what an interrupted page left half done.
   for (const card of await getCards()) {
     const lines = card.tabs.filter((t) => isNeverRemembered(t, list)).map((t) => t.traceId);
     if (lines.length) await forgetTabs(card.cardId, lines, list);
   }
+  const onSite: string[] = [];
   for (const t of await getAllTraces()) {
     if (!isNeverRemembered(t, list)) continue;
+    onSite.push(t.traceId);
     if (t.closedAt !== null) await deleteTrace(t.traceId);
     else if (t.title || t.digest) await updateTrace(t.traceId, (x) => ({ ...x, title: '', digest: null, digestAt: null }));
   }
+  await forgetNamesOf(onSite); // a group name the model took from the site's open tabs goes too
   return list;
 }
 

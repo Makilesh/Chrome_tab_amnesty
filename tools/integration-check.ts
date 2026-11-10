@@ -378,7 +378,8 @@ async function checkFindAndOpenAll(browser: Browser, extId: string, card: Archiv
   const onOwnTab = back.filter((t) => live.some((l) => l.id === t.tabId && l.url === t.url));
   const order = [...onOwnTab].sort((a, b) => live.find((l) => l.id === a.tabId)!.index - live.find((l) => l.id === b.tabId)!.index).map((t) => t.url);
   const expected = [...card.tabs].sort((a, b) => a.order - b.order).map((t) => t.url);
-  const strays = open.filter((t) => live.some((l) => l.id === t.tabId && l.url !== t.url));
+  // Web pages only: a record of about:blank or a file keeps only its kind of address, by design.
+  const strays = open.filter((t) => /^https?:/.test(t.url) && live.some((l) => l.id === t.tabId && l.url !== t.url));
 
   await page.click('#find', { clickCount: 3 });
   await page.type('#find', 'zqxjv');
