@@ -41,10 +41,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return e;
 }
 
+let lineIds = 0;
+
 function line(title: string, host: string, url: string, summary?: string | null): HTMLLIElement {
   const li = el('li');
   const label = title || url;
   const t = el('span', 't', label);
+  t.id = `line-${++lineIds}`; // a line's own buttons are described by it
   t.title = url;
   li.append(t);
   if (host && host !== label) li.append(el('span', 'host', host)); // a page titled by its own address shows it once
@@ -128,10 +131,7 @@ async function upgradeNames(byId: Map<string, TabTrace>, taken: string[]): Promi
     await updateNames((m) => rememberName(m, g.community.traceIds, better.name));
     g.name = better;
     const h = g.el?.querySelector('h2');
-    if (h) {
-      h.textContent = better.name;
-      h.title = 'Named on this device';
-    }
+    if (h) h.textContent = better.name;
   }
 }
 
@@ -140,8 +140,9 @@ function groupCard(g: Group): HTMLElement {
   g.el = card;
   const header = el('header');
   const h = el('h2', undefined, g.name.name);
-  h.title = g.name.tier === 'nano' ? 'Named on this device' : 'Named from what the tabs share';
+  h.id = `group-${g.community.id}`;
   const btn = el('button', 'primary', 'Archive & close');
+  btn.setAttribute('aria-describedby', h.id); // five "Archive & close" buttons, each says which group
   btn.addEventListener('click', () => void onArchive(g, card, btn));
   header.append(h, btn);
   card.append(header);
@@ -180,10 +181,11 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
     const kept = keptOpen.length
       ? ` Left open, because you typed something in ${keptOpen.length === 1 ? 'it' : 'them'}: ${keptOpen.map(quoted).join(', ')}.`
       : '';
-    if (saved) toast(`Put away “${saved.name}”.${kept}`, saved.cardId);
+    if (saved) toast(`Put away “${saved.name}”.${kept}`, saved.cardId, saved.name);
     else if (keptOpen.length) toast(`Nothing put away.${kept}`);
-    // Keyboard users keep their place: focus moves to the next thing they can act on.
-    ($('groups').querySelector<HTMLButtonElement>('button.primary') ?? $<HTMLButtonElement>('strip')).focus({ preventScroll: true });
+    // Keyboard users keep their place on the next group's name — not its button, where a second
+    // Enter would put that group away too.
+    focusHeading($('groups').querySelector<HTMLElement>('.group h2')) || $<HTMLButtonElement>('strip').focus({ preventScroll: true });
     await renderArchive();
   } catch (e) {
     btn.disabled = false;
@@ -258,12 +260,44 @@ async function checkBuild(): Promise<void> {
 // ---------------------------------------------------------------------------------------------
 
 /** Bring a card back from either of its buttons; a refusal is said in a toast, where a re-render cannot wipe it. */
-async function onBringBack(cardId: string, button: HTMLButtonElement): Promise<void> {
+async function onBringBack(cardId: string, button: HTMLButtonElement, name: string): Promise<void> {
   button.disabled = true;
   const r = await bringBack(cardId);
   if (!r.ok && r.reason) toast(r.reason);
-  else document.querySelector('.toast')?.remove();
-  await renderArchive(true);
+  else {
+    document.querySelector('.toast')?.remove();
+    say(`“${name}” is back on your tab strip.`);
+  }
+  await renderArchive(true, { cardId, label: 'Open all' });
+}
+
+/**
+ * Forget is for good, so the first press asks and the second forgets (WCAG 3.3.4; .ux-profile.md,
+ * rule 5). The button goes back to "Forget this" after six seconds or when focus leaves it.
+ */
+function forgetButton(what: string, forget: () => Promise<void>, describedBy: string): HTMLButtonElement {
+  const btn = el('button', 'quiet', 'Forget this');
+  btn.setAttribute('aria-describedby', describedBy);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const disarm = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    btn.textContent = 'Forget this';
+  };
+  btn.addEventListener('blur', () => timer !== undefined && disarm());
+  btn.addEventListener('click', async () => {
+    if (timer === undefined) {
+      btn.textContent = 'Forget for good';
+      say(`Press again to forget ${what}. This can't be undone.`);
+      timer = setTimeout(disarm, 6000);
+      return;
+    }
+    clearTimeout(timer);
+    btn.disabled = true;
+    await forget();
+    say(`Forgot ${what}.`);
+  });
+  return btn;
 }
 
 /** Open a whole card again, any time after its day; the tabs land at the end of the strip, behind this page. */
@@ -287,43 +321,48 @@ function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[]): HT
   const card = el('section', `group c-${c.color}`);
   card.dataset.card = c.cardId;
   const header = el('header');
-  header.append(el('h2', undefined, c.name));
+  const h = el('h3', undefined, c.name);
+  h.id = `card-${c.cardId}`;
+  header.append(h);
   const actions = el('div');
   // One action per card (§6.4): the undo for its first day, then opening it again, as often as wanted.
   if (undoable(c)) {
     const back = el('button', undefined, 'Bring back');
-    back.addEventListener('click', () => void onBringBack(c.cardId, back));
+    back.setAttribute('aria-describedby', h.id);
+    back.addEventListener('click', () => void onBringBack(c.cardId, back, c.name));
     actions.append(back);
   } else {
     const all = el('button', undefined, 'Open all');
+    all.setAttribute('aria-describedby', h.id);
     all.addEventListener('click', () => void onOpenAll(c, all));
     actions.append(all);
   }
-  const forget = el('button', 'quiet', 'Forget this');
-  forget.addEventListener('click', async () => {
-    forget.disabled = true;
-    await forgetCard(c.cardId);
-    await renderArchive(true);
-  });
-  actions.append(forget);
+  actions.append(
+    forgetButton(`“${c.name}”`, async () => {
+      await forgetCard(c.cardId);
+      await renderArchive(true, { cardId: c.cardId });
+    }, h.id),
+  );
   header.append(actions);
   card.append(header);
   const when = [cardWhen(c), cardHosts(c).slice(0, 3).join(', ')].filter(Boolean).join(' · ');
   card.append(el('p', `when${c.restoredAt ? ' done' : ''}`, c.restoredAt ? `${when} · brought back` : when));
   const details = el('details');
   details.open = open || !!matched;
-  details.append(el('summary', undefined, matched ? 'What matched' : 'What was in it'));
+  const summary = el('summary', undefined, matched ? 'What matched' : 'What was in it');
+  summary.setAttribute('aria-describedby', h.id);
+  details.append(summary);
   const ul = el('ul');
   for (const t of matched ?? c.tabs) {
     const li = line(t.title, t.host, t.url, t.summary);
+    const lineId = li.querySelector('.t')!.id;
     const openBtn = el('button', 'quiet', 'Open');
+    openBtn.setAttribute('aria-describedby', lineId);
     openBtn.addEventListener('click', () => void openOne(t.url));
-    const fg = el('button', 'quiet', 'Forget this');
-    fg.addEventListener('click', async () => {
-      fg.disabled = true;
+    const fg = forgetButton(`“${t.title || t.host}”`, async () => {
       await forgetTab(c.cardId, t.traceId);
-      await renderArchive(true);
-    });
+      await renderArchive(true, { cardId: c.cardId, label: 'Open all' });
+    }, lineId);
     li.append(openBtn, fg);
     ul.append(li);
   }
@@ -345,7 +384,7 @@ let cardsShown = VISIBLE;
  * changed, and keeps open "What was in it" lists open — it used to snap them shut and drop the
  * focused button every time.
  */
-async function renderArchive(force = false): Promise<void> {
+async function renderArchive(force = false, keep?: { cardId: string; label?: string }): Promise<void> {
   const cards = await getCards();
   // Read after the await: of two redraws in flight, both show what is typed now.
   const searching = queryTerms(query).length > 0;
@@ -359,12 +398,46 @@ async function renderArchive(force = false): Promise<void> {
   const section = $('archive');
   const root = $('cards');
   const open = new Set([...root.querySelectorAll<HTMLElement>('[data-card]')].filter((s) => s.querySelector('details')?.open).map((s) => s.dataset.card));
+  // Where focus was, so a redraw does not drop it to the top of the page (a refresh, a forget).
+  const was = document.activeElement instanceof HTMLElement && root.contains(document.activeElement) ? document.activeElement : null;
+  const target = keep ?? (was ? { cardId: was.closest<HTMLElement>('[data-card]')?.dataset.card ?? '', label: was.textContent ?? undefined } : undefined);
+  const order = [...root.querySelectorAll<HTMLElement>('[data-card]')].map((s) => s.dataset.card);
   root.replaceChildren();
   section.hidden = cards.length === 0;
   const list = searching ? searchArchive(cards, query) : cards.map((card) => ({ card, tabs: card.tabs, whole: true }));
   if (searching && list.length === 0) root.append(el('p', 'empty', 'Nothing put away matches that.'));
   for (const h of list.slice(0, cardsShown)) root.append(archiveCard(h.card, open.has(h.card.cardId), h.whole ? undefined : h.tabs));
   $('cards-more').hidden = list.length <= cardsShown;
+  if (searching && query !== saidFor) say(list.length ? `Best match: “${list[0]!.card.name}”.` : 'Nothing put away matches that.'); // no count (§6.1)
+  saidFor = searching ? query : '';
+  if (target) refocus(root, target, order.indexOf(target.cardId));
+}
+
+/** The query whose result was last said, so a refresh does not say it again. */
+let saidFor = '';
+
+/** Focus the same button in the same card, else that card, else the card that took its place, else the search box. */
+function refocus(root: HTMLElement, target: { cardId: string; label?: string }, index: number): void {
+  const cardEls = [...root.querySelectorAll<HTMLElement>('[data-card]')];
+  const card = cardEls.find((s) => s.dataset.card === target.cardId) ?? cardEls[Math.min(Math.max(index, 0), cardEls.length - 1)];
+  const buttons = card ? [...card.querySelectorAll<HTMLButtonElement>('header button')] : [];
+  const same = buttons.find((b) => b.textContent === target.label) ?? buttons[0];
+  (same ?? $<HTMLInputElement>('find')).focus({ preventScroll: true });
+}
+
+/** Move to a heading that is not itself focusable (after a step that removed what had focus). */
+function focusHeading(h: HTMLElement | null | undefined): boolean {
+  if (!h) return false;
+  h.tabIndex = -1;
+  h.focus({ preventScroll: false });
+  return true;
+}
+
+/** Said to screen readers through one region that is always there (WCAG 4.1.3). */
+function say(text: string): void {
+  const s = $('say');
+  s.textContent = '';
+  requestAnimationFrame(() => (s.textContent = text));
 }
 
 /** A search box behaves like one: results as you type. (No single-key shortcut to reach it: WCAG 2.1.4.) */
@@ -381,19 +454,21 @@ function wireSearch(): void {
   };
   find.addEventListener('input', onFind);
   find.addEventListener('search', onFind); // Escape and the clear button
-  $('cards-more-btn').addEventListener('click', () => {
+  $('cards-more-btn').addEventListener('click', async () => {
+    const before = cardsShown;
     cardsShown += VISIBLE;
-    void renderArchive(true);
+    await renderArchive(true);
+    focusHeading($('cards').querySelectorAll<HTMLElement>('.group h3')[before]);
   });
 }
 
-function toast(text: string, cardId?: string): void {
+function toast(text: string, cardId?: string, name?: string): void {
   document.querySelector('.toast')?.remove();
   const t = el('div', 'toast', text);
-  t.setAttribute('role', 'status'); // announced by screen readers without stealing focus
+  say(text); // through the page's one status region: a region inserted with its text is not reliably read
   if (cardId) {
     const back = el('button', undefined, 'Bring back');
-    back.addEventListener('click', () => void onBringBack(cardId, back));
+    back.addEventListener('click', () => void onBringBack(cardId, back, name ?? 'It'));
     t.append(back);
   }
   document.body.append(t);
@@ -484,13 +559,18 @@ function offerNever(status: HTMLElement, sites: string[]): void {
 function renderNever(list: string[]): void {
   const ul = $('never-list');
   ul.replaceChildren();
-  for (const d of list) {
+  list.forEach((d, i) => {
     const li = el('li', undefined, d);
     const rm = el('button', 'quiet', 'remember again');
-    rm.addEventListener('click', async () => renderNever(await removeNeverRemember(d)));
+    rm.setAttribute('aria-label', `Remember ${d} again`);
+    rm.addEventListener('click', async () => {
+      renderNever(await removeNeverRemember(d));
+      const left = [...$('never-list').querySelectorAll('button')];
+      (left[i] ?? left[i - 1] ?? $('never-input')).focus();
+    });
     li.append(rm);
     ul.append(li);
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -510,8 +590,10 @@ async function main(): Promise<void> {
 
   $('strip').addEventListener('click', () => void onStrip());
   $('more-btn').addEventListener('click', () => {
+    const before = shown;
     shown += VISIBLE;
     renderGroups();
+    focusHeading($('groups').querySelectorAll<HTMLElement>('.group h2')[before]);
   });
   $('copy-save').addEventListener('click', () => void onSaveCopy());
   $('copy-open').addEventListener('click', () => $('copy-file').click());
@@ -521,7 +603,8 @@ async function main(): Promise<void> {
     input.value = ''; // so the same file can be chosen again
     if (file) void onBringInCopy(file);
   });
-  $('never-add').addEventListener('click', async () => {
+  $('never-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); // Enter in the box works too
     const input = $<HTMLInputElement>('never-input');
     if (!input.value.trim()) return;
     renderNever(await addNeverRemember(input.value));

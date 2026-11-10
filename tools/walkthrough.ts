@@ -254,7 +254,7 @@ async function main(): Promise<void> {
   await sleep(1500);
   await sweep2.screenshot({ path: join(OUT, '3-after-bring-back.png'), fullPage: true });
   const regrouped = await sweep2.$$eval('#groups .group', (gs) =>
-    gs.map((g) => `"${g.querySelector('h2')?.textContent ?? ''}": ${[...g.querySelectorAll('li .t')].map((x) => x.textContent ?? '').join(' / ')}`),
+    gs.map((g) => `"${g.querySelector('h2, h3')?.textContent ?? ''}": ${[...g.querySelectorAll('li .t')].map((x) => x.textContent ?? '').join(' / ')}`),
   );
   console.log('  groups after bring back:');
   for (const g of regrouped) console.log(`   ${g}`);

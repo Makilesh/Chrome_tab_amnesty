@@ -352,7 +352,7 @@ async function checkFindAndOpenAll(browser: Browser, extId: string, card: Archiv
   await sleep(600);
   const found = await page.$$eval('#cards .group', (gs) =>
     gs.map((g) => ({
-      name: g.querySelector('h2')?.textContent,
+      name: g.querySelector('h2, h3')?.textContent,
       list: `${g.querySelector('details summary')?.textContent}${(g.querySelector('details') as HTMLDetailsElement | null)?.open ? ' (open)' : ''}`,
       lines: [...g.querySelectorAll('li .t')].map((x) => x.textContent),
       action: g.querySelector('header button')?.textContent,
@@ -365,7 +365,7 @@ async function checkFindAndOpenAll(browser: Browser, extId: string, card: Archiv
       { id: number; url: string; index: number }[]
     >;
   const clicked = await page.evaluate((name) => {
-    const g = [...document.querySelectorAll('#cards .group')].find((x) => x.querySelector('h2')?.textContent === name);
+    const g = [...document.querySelectorAll('#cards .group')].find((x) => x.querySelector('h2, h3')?.textContent === name);
     const b = [...(g?.querySelectorAll('header button') ?? [])].find((x) => x.textContent === 'Open all') as HTMLButtonElement | undefined;
     b?.click();
     return !!b;
@@ -436,6 +436,11 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
     const g = document.querySelector(`#cards [data-card="${id}"]`);
     ([...(g?.querySelectorAll('header button') ?? [])].find((b) => b.textContent === 'Forget this') as HTMLButtonElement | undefined)?.click();
   }, card.cardId);
+  await sleep(200);
+  await page.evaluate((id) => {
+    const g = document.querySelector(`#cards [data-card="${id}"]`);
+    ([...(g?.querySelectorAll('header button') ?? [])].find((b) => b.textContent === 'Forget for good') as HTMLButtonElement | undefined)?.click();
+  }, card.cardId);
   await sleep(1500);
   const afterForget = (await readCards(browser, extId)).some((c) => c.cardId === card.cardId);
   const input = await page.$('input#copy-file');
@@ -446,7 +451,7 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
   };
   const first = await bringIn(file);
   const back = (await readCards(browser, extId)).find((c) => c.cardId === card.cardId);
-  const shown = await page.$$eval('#cards .group', (gs) => gs.map((g) => [g.querySelector('h2')?.textContent, g.querySelector('header button')?.textContent]));
+  const shown = await page.$$eval('#cards .group', (gs) => gs.map((g) => [g.querySelector('h2, h3')?.textContent, g.querySelector('header button')?.textContent]));
   const again = await bringIn(file);
   const notACopy = join(userDataDir, 'not-a-copy.html');
   writeFileSync(notACopy, '<!doctype html><title>Something else</title><p>hello</p>');
