@@ -5,7 +5,13 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.1.1] - 2026-11-10
+## [0.2.0] - 2026-11-10
+
+### Added
+- **Alt+Shift+K** opens Tab Amnesty (change it at `chrome://extensions/shortcuts`).
+- **Search from the address bar:** type `ta`, a space and a few words to find something you put
+  away; Enter opens it, or shows every match on Tab Amnesty's page.
+- A first install opens Tab Amnesty's page once, so you see your tabs grouped straight away.
 
 ### Privacy and security
 - Sites can no longer detect that Tab Amnesty is installed: nothing in it is web-accessible.
@@ -30,7 +36,7 @@ versions follow [Semantic Versioning](https://semver.org/).
 - Text and field borders meet WCAG AA contrast in light and dark; lines wrap on narrow screens.
 - The page opens on your groups; "Show these groups on my tab strip" sits below them.
 
-### Added
+### For contributors
 - Continuous integration: typecheck, unit tests and the public build on every push and pull request.
 - `CONTRIBUTING.md`, `SECURITY.md`, issue and pull-request templates.
 
@@ -58,6 +64,6 @@ The first public release.
 - Mail, chat, calendar and search-results tabs keep no title, page text, search words or message ids.
 - Records of tabs closed without being put away are removed after 30 days.
 
-[Unreleased]: https://github.com/Makilesh/Chrome_tab_amnesty/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/Makilesh/Chrome_tab_amnesty/compare/v0.1.0...v0.1.1
+[Unreleased]: https://github.com/Makilesh/Chrome_tab_amnesty/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Makilesh/Chrome_tab_amnesty/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Makilesh/Chrome_tab_amnesty/releases/tag/v0.1.0
