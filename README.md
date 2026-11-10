@@ -39,6 +39,10 @@ gives everything back — in one click, by search, or as a file you keep.
 - **Bring back** puts the whole group back on your tab strip, in its order, for a day — even after
   a restart. After that, **Open all** brings it back whenever you like.
 - **Find anything you put away** by a word from its title, its text, its site, or the day.
+- **Or from the address bar:** type `ta`, press Tab, then a word. Pick a page to open it, or press
+  Enter to see everything that matches.
+- **Alt+Shift+K** (Option+Shift+K on a Mac) opens Tab Amnesty from any tab. Change it at
+  `chrome://extensions/shortcuts`.
 - **Keep a copy:** everything you put away as one file that opens in any browser, and can be
   brought back in here or on another computer.
 - **Forget anything:** *Forget this* on every group and every page, and a list of sites it never

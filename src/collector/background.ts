@@ -1,6 +1,8 @@
 /**
  * Collector service worker. Records, never touches UI, never closes or groups anything.
- * (Phase 1 adds one passive duty: driving the summarisation queue's alarm — see summarise.ts.)
+ * (Phase 1 adds one passive duty: driving the summarisation queue's alarm — see summarise.ts.
+ * Phase 2 adds the ways in to the sweep page: the icon and its shortcut, "ta" in the address bar
+ * (the end of this file), and a first install (openOnFirstInstall).)
  *
  * Every handler reads and writes IndexedDB directly: MV3 kills this worker after 30 s idle, so
  * nothing of consequence may live in a module-level variable (§5.5). Lineage (§5.1) and
@@ -23,8 +25,10 @@ import {
   updateTraceByTabId,
 } from './db';
 import { isNeverRemembered } from '../archive/forget';
+import { searchArchive } from '../archive/search';
+import type { ArchivedTab } from '../archive/types';
 import { ambientPath, isAmbient } from '../cluster/affinity';
-import { getNeverRemember, pruneClosedRecords, seedBackup } from '../archive/store';
+import { getCards, getNeverRemember, pruneClosedRecords, seedBackup } from '../archive/store';
 import { lastVisit, transitionNear } from './history';
 import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
 import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
@@ -618,12 +622,26 @@ async function refreshBackfilled(): Promise<void> {
 // Install and update only (DECISIONS 2026-09-12). It used to run on every worker start too, and
 // each time rewrote adopted tabs' timing from the newest visit to their url — from any tab — so
 // weeks-old tabs kept acquiring today's timing and joined today's session.
-chrome.runtime.onInstalled.addListener(() => {
-  void rebindAll()
-    .then(refreshBackfilled)
-    .then(() => (__STUDY__ ? takeSnapshot() : undefined));
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  const adopted = rebindAll();
+  void adopted.then(refreshBackfilled).then(() => (__STUDY__ ? takeSnapshot() : undefined));
   void scrubAmbient().then(() => pruneClosedRecords());
+  if (reason === 'install') void adopted.then(openOnFirstInstall, openOnFirstInstall);
 });
+
+/**
+ * A first install opens the sweep page, in front: a new person sees their own tabs grouped (§6.3)
+ * without first having to find and pin the icon — once the open tabs are adopted, or it would
+ * have nothing on it yet. Never on an update, a Reload ('update') or a Chrome update; and once per
+ * database, not per 'install', because Chrome reports every start of an extension loaded with
+ * --load-extension (npm run check, the walkthrough) as an install. Uninstalling takes the database
+ * along, so installing again is a first install again.
+ */
+async function openOnFirstInstall(): Promise<void> {
+  if (await getMeta('firstRunShown')) return;
+  await setMeta('firstRunShown', true);
+  await chrome.tabs.create({ url: sweepUrl(), active: true });
+}
 
 /**
  * Records written before the rules above — of ambient tabs and of pages that are not web pages —
@@ -668,11 +686,99 @@ async function injectIntoOpenTabs(): Promise<void> {
 // than recording nothing about them until the next restart (7 Oct: 13 hours).
 onDatabaseReset(() => void rebindAll());
 
-// Phase 1: the icon opens the sweep page. The x-ray page stays reachable by URL for the study
-// (not in the store build, which has no study).
+// ---------------------------------------------------------------------------------------------
+// Ways in to the sweep page: the icon and its shortcut, the address bar (a first install: above)
+// ---------------------------------------------------------------------------------------------
+
+/** The sweep page; with `find`, it opens searching what was put away for that (sweep.ts). */
+function sweepUrl(find = ''): string {
+  const page = chrome.runtime.getURL('src/ui/sweep/index.html');
+  return find ? `${page}?find=${encodeURIComponent(find)}` : page;
+}
+
+// Phase 1: the icon opens the sweep page — and so does its shortcut, Alt+Shift+K (manifest
+// `commands`): `_execute_action` fires onClicked just as a click does. The x-ray page stays
+// reachable by URL for the study (not in the store build, which has no study).
 chrome.action.onClicked.addListener(() => {
-  void chrome.tabs.create({ url: chrome.runtime.getURL('src/ui/sweep/index.html') });
+  void chrome.tabs.create({ url: sweepUrl() });
 });
+
+/** The most put-away pages the address bar lists at once: five, as the page shows five cards (§6.4). */
+const ADDRESS_BAR_PAGES = 5;
+
+/**
+ * Text for an address-bar line, which Chrome reads as XML: the five characters XML reserves are
+ * escaped, and control characters (with U+FFFE and U+FFFF) become spaces — XML cannot hold most of
+ * them, and Chrome drops every line offered with one it cannot read.
+ */
+function xmlText(s: string): string {
+  return s
+    .replace(/[\u0000-\u001f\u007f\ufffe\uffff]+/g, ' ')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * A put-away page the address bar may offer and open: a web page, never one on a site never
+ * remembered (§6.10). Cards do not hold those — never remembering a site takes its lines out of
+ * every card (store.addNeverRemember) — so this is a second guard, not the rule.
+ */
+function offerable(t: ArchivedTab, never: readonly string[]): boolean {
+  return /^https?:\/\//i.test(t.url) && !isNeverRemembered(t, never);
+}
+
+/**
+ * "ta" and some words: the sweep page's own search (search.ts), best first as the page lists it,
+ * each page once — its title (its address when it has none) and, dimmed, the name of the card it
+ * was put away in. Nothing counted (§6.1).
+ */
+async function putAwayPages(text: string): Promise<chrome.omnibox.SuggestResult[]> {
+  const never = await getNeverRemember();
+  const lines: chrome.omnibox.SuggestResult[] = [];
+  for (const hit of searchArchive(await getCards(), text)) {
+    for (const t of hit.tabs) {
+      if (!offerable(t, never) || lines.some((l) => l.content === t.url)) continue;
+      const page = t.title.trim() ? xmlText(t.title) : `<url>${xmlText(t.url)}</url>`;
+      const card = hit.card.name.trim();
+      lines.push({ content: t.url, description: card ? `${page} <dim>· ${xmlText(card)}</dim>` : page });
+      if (lines.length === ADDRESS_BAR_PAGES) return lines;
+    }
+  }
+  return lines;
+}
+
+/** Is this the address of a page that was put away (and may be offered)? */
+async function isPutAway(url: string): Promise<boolean> {
+  const never = await getNeverRemember();
+  return (await getCards()).some((c) => c.tabs.some((t) => t.url === url && offerable(t, never)));
+}
+
+/**
+ * Enter in the address bar. A put-away page's address — a line picked, or one typed out in full —
+ * opens that page; anything else opens the sweep page searching for it. The address is checked
+ * against the cards again, not remembered from the lines offered (the worker may have stopped in
+ * between, §5.5), so nothing typed is ever opened unless it is a web page that was put away.
+ */
+async function enterInAddressBar(text: string, disposition: chrome.omnibox.OnInputEnteredDisposition): Promise<void> {
+  const typed = text.trim();
+  const url = typed && (await isPutAway(typed).catch(() => false)) ? typed : sweepUrl(typed);
+  // Where Chrome asks for it: in this tab, or in a new one in front or behind.
+  if (disposition === 'currentTab') await chrome.tabs.update({ url }).catch(() => chrome.tabs.create({ url }));
+  else await chrome.tabs.create({ url, active: disposition === 'newForegroundTab' });
+}
+
+// Chrome keeps this and puts what is typed in place of %s; set on every start, as that costs nothing.
+chrome.omnibox.setDefaultSuggestion({ description: 'Find something you put away: %s' });
+chrome.omnibox.onInputChanged.addListener((text, suggest) => {
+  void putAwayPages(text).then(suggest, () => suggest([]));
+});
+chrome.omnibox.onInputEntered.addListener((text, disposition) => {
+  void enterInAddressBar(text, disposition);
+});
+
 // Anything left in the queue from before the worker died gets picked up on start.
 void runSummariser();
 if (__STUDY__) void ensureStudyAlarm();

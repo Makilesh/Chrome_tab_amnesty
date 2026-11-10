@@ -298,6 +298,8 @@ now says instead of naming a date that has passed.
 - [ ] The same out of every earlier commit (history rewrite + force-push, on the owner's
       go-ahead), then release 0.1.0 on GitHub (`release/tab-amnesty-0.1.0.zip` is built)
 - [x] Search, mail and chat records keep no query or fragment; closed records go after 30 days
+- [x] Ways in (10 Nov): Alt+Shift+K opens the sweep page; `ta` in the address bar finds what was
+      put away; a first install opens the sweep page once (DECISIONS 2026-11-10)
 - [ ] Owner: the Web Store account and fee · the Phase 0 gate rule before submitting (CLAUDE.md)
 
 ### Done when

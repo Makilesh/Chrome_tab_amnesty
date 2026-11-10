@@ -44,6 +44,8 @@ interface MetaRecords {
   resets: Reset[];
   /** When the Summarizer last turned out unavailable here; jobs set aside then are retried daily. */
   summariserCheckedAt: number;
+  /** A first install has opened the sweep page: once per database, not once per 'install' (background.ts). */
+  firstRunShown: boolean;
 }
 
 interface TabAmnestyDB extends DBSchema {

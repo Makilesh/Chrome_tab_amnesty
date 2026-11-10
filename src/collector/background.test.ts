@@ -30,7 +30,9 @@ const h = vi.hoisted(() => {
   }
   const never: string[] = [];
   const visits = new Map<string, { visitTime: number; transition: string }>();
-  return { store, meta, tick, clone, open, hooks, getTraceByTabId, updateTrace, never, visits };
+  /** What was put away, newest first, as store.getCards gives it. */
+  const cards: ArchiveCard[] = [];
+  return { store, meta, tick, clone, open, hooks, getTraceByTabId, updateTrace, never, visits, cards };
 });
 
 vi.mock('./db', () => ({
@@ -76,7 +78,15 @@ vi.mock('./db', () => ({
   },
   onDatabaseReset: () => {},
 }));
-vi.mock('../archive/store', () => ({ getNeverRemember: async () => [...h.never], seedBackup: async () => {}, pruneClosedRecords: async () => 0 }));
+vi.mock('../archive/store', () => ({
+  getNeverRemember: async () => [...h.never],
+  getCards: async () => {
+    await h.tick();
+    return h.cards.map(h.clone);
+  },
+  seedBackup: async () => {},
+  pruneClosedRecords: async () => 0,
+}));
 vi.mock('./history', () => ({
   lastVisit: async (url: string) => h.visits.get(url) ?? null,
   transitionNear: async () => 'unknown',
@@ -115,7 +125,8 @@ const chromeMock = {
       return { ...t };
     }),
     sendMessage: vi.fn(async () => {}),
-    create: vi.fn(async (_p: { url: string; windowId?: number }): Promise<object> => ({})),
+    create: vi.fn(async (_p: { url: string; windowId?: number; active?: boolean }): Promise<object> => ({})),
+    update: vi.fn(async (_p: { url: string }): Promise<object> => ({})),
     group: vi.fn(async () => 1),
   },
   windows: { onFocusChanged: ev(), WINDOW_ID_NONE: -1, getCurrent: vi.fn(async () => ({ id: 1 })) },
@@ -128,6 +139,7 @@ const chromeMock = {
     getManifest: () => ({ content_scripts: [] }),
   },
   action: { onClicked: ev() },
+  omnibox: { onInputChanged: ev(), onInputEntered: ev(), setDefaultSuggestion: vi.fn() },
   history: { getVisits: vi.fn(async () => []) },
   scripting: { executeScript: vi.fn(async () => []) },
 };
@@ -158,6 +170,13 @@ const mailCard = (url: string): ArchiveCard => ({
   cardId: 'c', name: 'Mail', color: 'blue', tier: 'heuristic', when: '', whenAt: null, hosts: ['mail.example.com'], archivedAt: NOW - DAY, undoUntil: NOW, restoredAt: null, sourceCommunity: 0,
   tabs: [{ traceId: 'away', url, title: 'Thread 42 - Mail', host: 'mail.example.com', order: 0, digest: null, summary: null, openedAt: NOW - 2 * DAY }],
 });
+/** A put-away card holding these pages, in this order. */
+const awayCard = (cardId: string, name: string, pages: { url: string; title: string; host: string }[], o: Partial<ArchiveCard> = {}): ArchiveCard => ({
+  cardId, name, color: 'green', tier: 'heuristic', when: '', whenAt: null, hosts: [...new Set(pages.map((p) => p.host))], archivedAt: NOW - DAY, undoUntil: NOW, restoredAt: null, sourceCommunity: 0,
+  tabs: pages.map((p, order) => ({ traceId: `${cardId}-${order}`, ...p, order, digest: null, summary: null, openedAt: NOW - 2 * DAY })),
+  ...o,
+});
+const SWEEP = 'chrome-extension://abc/src/ui/sweep/index.html';
 
 /** chrome.tabs.create as Chrome does it: the tab exists, then onCreated fires. */
 function tabsCreateFrom(firstId: number): void {
@@ -171,11 +190,14 @@ function tabsCreateFrom(firstId: number): void {
 }
 
 beforeEach(() => {
+  chromeMock.tabs.create.mockClear();
+  chromeMock.tabs.update.mockClear();
   chromeMock.tabs.create.mockImplementation(async () => ({}));
   h.store.clear();
   h.meta.clear();
   h.visits.clear();
   h.never.length = 0;
+  h.cards.length = 0;
   h.hooks.onGetOpen = null;
   h.hooks.getOpenCalls = 0;
   liveTabs = [];
@@ -428,6 +450,105 @@ describe('collector', () => {
     expect(h.store.get('away')!.closedAt).not.toBeNull();
     expect(h.open().filter((t) => t.tabId === -1)).toEqual([]); // was ['away']: listed in a group, on no tab
     expect(openOn(60).map((t) => t.url)).toEqual([B]);
+  });
+
+  // The address bar and the first install: before the test below loads the worker a second time,
+  // after which every event reaches two of it.
+  it('"ta" offers the put-away pages a search finds, best first, five at most, every title as text', async () => {
+    expect(chromeMock.omnibox.setDefaultSuggestion).toHaveBeenCalledWith({ description: 'Find something you put away: %s' });
+    h.cards.push(
+      awayCard('lisbon', 'Lisbon', [
+        { url: 'https://visitlisboa.example/trams', title: 'Trams & funiculars <28E>', host: 'visitlisboa.example' },
+        { url: 'https://visitlisboa.example/fado', title: 'Fado houses', host: 'visitlisboa.example' },
+        { url: 'https://visitlisboa.example/tram-28', title: '', host: 'visitlisboa.example' },
+      ]),
+      awayCard('ci', 'Deploy fix', [{ url: 'https://ci.example/job/42', title: 'Build 42\u0007"tram" test\'s log', host: 'ci.example' }], { archivedAt: NOW - 2 * DAY }),
+    );
+    const suggest = vi.fn();
+    chromeMock.omnibox.onInputChanged.fire('tram', suggest);
+    await settle();
+    expect(suggest).toHaveBeenCalledWith([
+      { content: 'https://visitlisboa.example/trams', description: 'Trams &amp; funiculars &lt;28E&gt; <dim>· Lisbon</dim>' },
+      { content: 'https://visitlisboa.example/tram-28', description: '<url>https://visitlisboa.example/tram-28</url> <dim>· Lisbon</dim>' },
+      { content: 'https://ci.example/job/42', description: 'Build 42 &quot;tram&quot; test&apos;s log <dim>· Deploy fix</dim>' },
+    ]);
+    // A word of a card's own name finds the whole card: its pages in order, five of them.
+    h.cards.push(awayCard('bread', 'Sourdough', [0, 1, 2, 3, 4, 5, 6].map((i) => ({ url: `https://bread.example/${i}`, title: `Step ${i}`, host: 'bread.example' }))));
+    const more = vi.fn();
+    chromeMock.omnibox.onInputChanged.fire('sourdough', more);
+    await settle();
+    expect(more.mock.calls[0]![0].map((s: { content: string }) => s.content)).toEqual([0, 1, 2, 3, 4].map((i) => `https://bread.example/${i}`));
+  });
+
+  it('"ta" never offers or opens a page on a site never remembered, even one a card still holds', async () => {
+    h.never.push('bank.example');
+    h.cards.push(
+      awayCard('money', 'Money', [
+        { url: 'https://www.bank.example/statements', title: 'Statements', host: 'www.bank.example' },
+        { url: 'https://budget.example/statements', title: 'Statements to check', host: 'budget.example' },
+      ]),
+    );
+    const suggest = vi.fn();
+    chromeMock.omnibox.onInputChanged.fire('statements', suggest);
+    await settle();
+    expect(suggest.mock.calls[0]![0].map((s: { content: string }) => s.content)).toEqual(['https://budget.example/statements']);
+    chromeMock.omnibox.onInputEntered.fire('https://www.bank.example/statements', 'currentTab');
+    await settle();
+    expect(chromeMock.tabs.update).toHaveBeenCalledWith({ url: `${SWEEP}?find=${encodeURIComponent('https://www.bank.example/statements')}` });
+  });
+
+  it('Enter on a put-away page opens it where Chrome asks: in this tab, or a new one in front or behind', async () => {
+    const url = 'https://visitlisboa.example/trams';
+    h.cards.push(awayCard('lisbon', 'Lisbon', [{ url, title: 'Trams', host: 'visitlisboa.example' }]));
+    chromeMock.omnibox.onInputEntered.fire(url, 'currentTab');
+    await settle();
+    expect(chromeMock.tabs.update).toHaveBeenLastCalledWith({ url });
+    chromeMock.omnibox.onInputEntered.fire(url, 'newForegroundTab');
+    await settle();
+    expect(chromeMock.tabs.create).toHaveBeenLastCalledWith({ url, active: true });
+    chromeMock.omnibox.onInputEntered.fire(url, 'newBackgroundTab');
+    await settle();
+    expect(chromeMock.tabs.create).toHaveBeenLastCalledWith({ url, active: false });
+    expect(chromeMock.tabs.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('Enter on words, or on any address that is not a put-away web page, opens the sweep page searching for it', async () => {
+    h.cards.push(
+      awayCard('lisbon', 'Lisbon', [
+        { url: 'https://visitlisboa.example/trams', title: 'Trams', host: 'visitlisboa.example' },
+        { url: 'javascript:alert(1)', title: 'Trams', host: '' }, // no card holds one; the guard is still there
+      ]),
+    );
+    chromeMock.omnibox.onInputEntered.fire(' lisbon trams ', 'currentTab');
+    await settle();
+    expect(chromeMock.tabs.update).toHaveBeenLastCalledWith({ url: `${SWEEP}?find=lisbon%20trams` });
+    for (const typed of ['https://elsewhere.example/', 'javascript:alert(1)', 'file:///C:/notes.txt']) {
+      chromeMock.omnibox.onInputEntered.fire(typed, 'newForegroundTab');
+      await settle();
+      expect(chromeMock.tabs.create).toHaveBeenLastCalledWith({ url: `${SWEEP}?find=${encodeURIComponent(typed)}`, active: true });
+    }
+    chromeMock.omnibox.onInputEntered.fire('', 'currentTab'); // nothing typed: the page as the icon opens it
+    await settle();
+    expect(chromeMock.tabs.update).toHaveBeenLastCalledWith({ url: SWEEP });
+  });
+
+  it('a first install opens the sweep page once, in front, after the open tabs are adopted; nothing after it does again', async () => {
+    liveTabs = [tab(5, 0, 'https://a.example/1', { title: 'One' })];
+    let adoptedFirst: boolean | undefined;
+    chromeMock.tabs.create.mockImplementation(async () => {
+      adoptedFirst = openOn(5).length === 1;
+      return {};
+    });
+    const sweepOpened = () => chromeMock.tabs.create.mock.calls.filter(([p]) => p.url === SWEEP);
+    chromeMock.runtime.onInstalled.fire({ reason: 'install' });
+    await settle(400);
+    expect(sweepOpened()).toEqual([[{ url: SWEEP, active: true }]]);
+    expect(adoptedFirst).toBe(true); // the page has the person's tabs to show
+    chromeMock.runtime.onInstalled.fire({ reason: 'update' }); // an update, or a Reload
+    chromeMock.runtime.onInstalled.fire({ reason: 'chrome_update' });
+    chromeMock.runtime.onInstalled.fire({ reason: 'install' }); // what Chrome says at every start of a --load-extension build
+    await settle(400);
+    expect(sweepOpened()).toHaveLength(1);
   });
 
   it("re-derives adopted tabs' timing on install only, never on a worker start", async () => {

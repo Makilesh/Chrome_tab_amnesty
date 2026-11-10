@@ -462,6 +462,31 @@ function wireSearch(): void {
   });
 }
 
+/**
+ * Words sent from the address bar ("ta" and some words, background.ts) as ?find=: they fill the
+ * box, so "Put away" is drawn already searching for them. Then they leave this page's address:
+ * every tab's address is recorded, and what a person searches for is not kept (DECISIONS
+ * 2026-10-17) — the change reaches the record through onUpdated.
+ */
+function findFromAddress(): string {
+  const asked = new URLSearchParams(location.search).get('find')?.trim() ?? '';
+  if (asked) {
+    query = asked;
+    $<HTMLInputElement>('find').value = asked;
+  }
+  if (location.search) history.replaceState(null, '', location.pathname);
+  return asked;
+}
+
+/**
+ * Came here to find something: "Put away" is brought to the top of the window — the groups stay
+ * one scroll above — and the box keeps the focus, so the words can be changed at once.
+ */
+function showFound(): void {
+  $('archive').scrollIntoView({ block: 'start' });
+  $<HTMLInputElement>('find').focus({ preventScroll: true });
+}
+
 function toast(text: string, cardId?: string, name?: string): void {
   document.querySelector('.toast')?.remove();
   const t = el('div', 'toast', text);
@@ -577,6 +602,7 @@ function renderNever(list: string[]): void {
 
 async function main(): Promise<void> {
   wireSearch();
+  const asked = findFromAddress();
   try {
     await load();
   } catch (e) {
@@ -586,6 +612,7 @@ async function main(): Promise<void> {
   void checkRecorder();
   void checkBuild();
   await renderArchive();
+  if (asked) showFound();
   renderNever(await getNeverRemember());
 
   $('strip').addEventListener('click', () => void onStrip());
