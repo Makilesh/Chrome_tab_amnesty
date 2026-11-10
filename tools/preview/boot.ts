@@ -2,11 +2,12 @@
  * Design preview boot (vite.config.ts): stands in for the extension APIs the sweep page uses,
  * fills a fresh database with the made-up tabs in data.ts, then runs the page's own script.
  *
- *   ?empty   a first visit: nothing recorded yet, nothing put away
+ *   ?empty   a first visit: the Start notice, nothing recorded yet, nothing put away
  *   ?find=w  arrive searching, as from "ta w" in the address bar
  *   ?slow    Archive & close's movement at a tenth of its speed, to look at it frame by frame
  */
 import { saveRememberedNames, putCard } from '../../src/archive/store';
+import { start } from '../../src/collector/consent';
 import { DB_NAME, putTrace, setMeta } from '../../src/collector/db';
 import { previewData } from './data';
 
@@ -15,7 +16,9 @@ const ok = <T>(v: T) => () => Promise.resolve(v);
 const stub = {
   runtime: {
     getURL: (p: string) => new URL(p, location.origin).href,
-    sendMessage: (m: { type?: string }) => Promise.resolve(m?.type === 'build' ? { build: __BUILD_ID__ } : undefined),
+    sendMessage: (m: { type?: string }) =>
+      m?.type === 'start' ? start().then(() => ({ ok: true })) : Promise.resolve(m?.type === 'build' ? { build: __BUILD_ID__ } : undefined),
+    getManifest: () => ({ version: 'preview' }),
     onMessage: { addListener() {} },
   },
   tabs: {

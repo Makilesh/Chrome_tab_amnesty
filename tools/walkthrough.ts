@@ -144,6 +144,20 @@ async function downloadsTo(p: Page): Promise<void> {
 const FORBIDDEN = /\b(delete|clean ?up|declutter|tidy|messy)\b/i;
 const COUNT = /\b\d+\s+tabs?\b/i;
 
+/**
+ * A first install opens the sweep page, and it asks first (collector/consent.ts): nothing is
+ * recorded until Start is pressed. Pressed there as a person would.
+ */
+async function pressStart(browser: Browser, extId: string): Promise<void> {
+  const url = `chrome-extension://${extId}/src/ui/sweep/index.html`;
+  const target = await browser.waitForTarget((t) => t.url().startsWith(url), { timeout: 10_000 }).catch(() => null);
+  const page = (await target?.page()) ?? (await browser.newPage());
+  if (!target) await page.goto(url);
+  await page.waitForSelector('#start', { timeout: 10_000 });
+  await page.click('#start');
+  await page.waitForSelector('.start', { hidden: true, timeout: 10_000 });
+}
+
 async function main(): Promise<void> {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(DOWNLOADS, { recursive: true });
@@ -153,6 +167,8 @@ async function main(): Promise<void> {
   let id = await extensionId(browser);
   await sleep(1500);
   console.log(`  extension ${id}`);
+  say('Pressing Start on the page the first install opens (nothing is recorded before it)');
+  await pressStart(browser, id);
 
   say('Browsing project 1 — asyncio (typed visit, then links in new tabs)');
   const A = PROJECTS.asyncio;

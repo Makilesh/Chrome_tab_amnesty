@@ -29,10 +29,9 @@ const h = vi.hoisted(() => {
     return clone(next ?? cur);
   }
   const never: string[] = [];
-  const visits = new Map<string, { visitTime: number; transition: string }>();
   /** What was put away, newest first, as store.getCards gives it. */
   const cards: ArchiveCard[] = [];
-  return { store, meta, tick, clone, open, hooks, getTraceByTabId, updateTrace, never, visits, cards };
+  return { store, meta, tick, clone, open, hooks, getTraceByTabId, updateTrace, never, cards };
 });
 
 vi.mock('./db', () => ({
@@ -87,10 +86,6 @@ vi.mock('../archive/store', () => ({
   seedBackup: async () => {},
   pruneClosedRecords: async () => 0,
 }));
-vi.mock('./history', () => ({
-  lastVisit: async (url: string) => h.visits.get(url) ?? null,
-  transitionNear: async () => 'unknown',
-}));
 vi.mock('./study', () => ({ STUDY_ALARM: 'study-snapshot', takeSnapshot: async () => {}, ensureStudyAlarm: async () => {} }));
 vi.mock('./summarise', () => ({ SUMMARISE_ALARM: 'summarise', runSummariser: async () => {}, kickSummariser: async () => {} }));
 
@@ -140,7 +135,7 @@ const chromeMock = {
   },
   action: { onClicked: ev() },
   omnibox: { onInputChanged: ev(), onInputEntered: ev(), setDefaultSuggestion: vi.fn() },
-  history: { getVisits: vi.fn(async () => []) },
+  webNavigation: { onCommitted: ev() },
   scripting: { executeScript: vi.fn(async () => []) },
 };
 (globalThis as unknown as { chrome: unknown }).chrome = chromeMock;
@@ -195,7 +190,7 @@ beforeEach(() => {
   chromeMock.tabs.create.mockImplementation(async () => ({}));
   h.store.clear();
   h.meta.clear();
-  h.visits.clear();
+  h.meta.set('startedAt', NOW); // the person has pressed Start; the tests below that ask first take it away
   h.never.length = 0;
   h.cards.length = 0;
   h.hooks.onGetOpen = null;
@@ -452,8 +447,6 @@ describe('collector', () => {
     expect(openOn(60).map((t) => t.url)).toEqual([B]);
   });
 
-  // The address bar and the first install: before the test below loads the worker a second time,
-  // after which every event reaches two of it.
   it('"ta" offers the put-away pages a search finds, best first, five at most, every title as text', async () => {
     expect(chromeMock.omnibox.setDefaultSuggestion).toHaveBeenCalledWith({ description: 'Find something you put away: %s' });
     h.cards.push(
@@ -532,18 +525,23 @@ describe('collector', () => {
     expect(chromeMock.tabs.update).toHaveBeenLastCalledWith({ url: SWEEP });
   });
 
-  it('a first install opens the sweep page once, in front, after the open tabs are adopted; nothing after it does again', async () => {
+  it('a first install opens the sweep page once, in front; nothing is recorded until Start, then the open tabs are adopted', async () => {
+    h.meta.delete('startedAt');
     liveTabs = [tab(5, 0, 'https://a.example/1', { title: 'One' })];
-    let adoptedFirst: boolean | undefined;
-    chromeMock.tabs.create.mockImplementation(async () => {
-      adoptedFirst = openOn(5).length === 1;
-      return {};
-    });
+    chromeMock.tabs.sendMessage.mockClear();
     const sweepOpened = () => chromeMock.tabs.create.mock.calls.filter(([p]) => p.url === SWEEP);
     chromeMock.runtime.onInstalled.fire({ reason: 'install' });
+    chromeMock.tabs.onActivated.fire({ tabId: 5, windowId: 1 });
     await settle(400);
     expect(sweepOpened()).toEqual([[{ url: SWEEP, active: true }]]);
-    expect(adoptedFirst).toBe(true); // the page has the person's tabs to show
+    expect(h.store.size).toBe(0); // asked first: the page shows the Start notice, nothing is kept yet
+    const answer = vi.fn();
+    chromeMock.runtime.onMessage.fire({ type: 'start' }, { url: SWEEP }, answer);
+    await settle(400);
+    expect(answer).toHaveBeenCalledWith({ ok: true });
+    expect(h.meta.get('startedAt')).toEqual(expect.any(Number));
+    expect(openOn(5)).toHaveLength(1); // the tabs already open, adopted at once
+    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(5, { type: 'capture' }); // and asked for their page text again
     chromeMock.runtime.onInstalled.fire({ reason: 'update' }); // an update, or a Reload
     chromeMock.runtime.onInstalled.fire({ reason: 'chrome_update' });
     chromeMock.runtime.onInstalled.fire({ reason: 'install' }); // what Chrome says at every start of a --load-extension build
@@ -551,13 +549,37 @@ describe('collector', () => {
     expect(sweepOpened()).toHaveLength(1);
   });
 
-  it("re-derives adopted tabs' timing on install only, never on a worker start", async () => {
-    h.store.set('adopted', trace({ traceId: 'adopted', tabId: 8, url: A, backfilled: true, openedAt: NOW - 10 * DAY, transition: 'typed' }));
-    h.visits.set(A, { visitTime: NOW - 60_000, transition: 'link' });
-    liveTabs = [tab(8, 0, A)];
-    vi.resetModules();
-    await import('./background'); // a worker start: the module evaluates again
+  it('someone already using Tab Amnesty is never asked: records in the database count as a yes', async () => {
+    h.meta.delete('startedAt');
+    h.store.set('old', trace({ traceId: 'old', tabId: 40, url: A }));
+    liveTabs = [tab(40, 0, A), tab(41, 1, B)];
+    chromeMock.runtime.onInstalled.fire({ reason: 'update' });
+    await settle(400);
+    expect(h.meta.get('startedAt')).toEqual(expect.any(Number));
+    expect(openOn(41)).toHaveLength(1);
+  });
+
+  it("how a new tab was reached comes with its first page; later pages, frames, prerenders and adopted tabs don't change it", async () => {
+    const commit = (tabId: number, url: string, transitionType: string, o: object = {}) =>
+      chromeMock.webNavigation.onCommitted.fire({ tabId, frameId: 0, url, transitionType, transitionQualifiers: [], timeStamp: NOW, ...o });
+    liveTabs = [tab(50, 0, A), tab(51, 1, B)];
+    chromeMock.tabs.onCreated.fire({ ...liveTabs[0] });
+    chromeMock.tabs.onCreated.fire({ ...liveTabs[1] });
     await settle();
-    expect(h.store.get('adopted')).toMatchObject({ openedAt: NOW - 10 * DAY, transition: 'typed' });
+    expect(openOn(50)[0]!.transition).toBe('unknown');
+    commit(50, A, 'typed');
+    commit(51, B, 'link', { frameId: 3 }); // a frame inside the page
+    commit(51, B, 'link', { documentLifecycle: 'prerender' }); // a page prerendering for the tab
+    await settle();
+    commit(50, B, 'link'); // the tab went on to another page
+    await settle();
+    expect(openOn(50)[0]!.transition).toBe('typed');
+    expect(openOn(51)[0]!.transition).toBe('unknown');
+    h.store.set('adopted', trace({ traceId: 'adopted', tabId: 52, url: A, backfilled: true, transition: 'unknown' }));
+    commit(52, A, 'start_page');
+    commit(51, B, 'start_page');
+    await settle();
+    expect(h.store.get('adopted')!.transition).toBe('unknown'); // when and how it opened is not known
+    expect(openOn(51)[0]!.transition).toBe('auto_toplevel'); // webNavigation's name for history's
   });
 });

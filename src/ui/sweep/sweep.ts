@@ -30,9 +30,13 @@ import type { ArchiveCard, ArchivedTab } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
 import { isUnsegmented } from '../../cluster/lexical';
 import type { Community, TabTrace } from '../../cluster/types';
+import { hasStarted } from '../../collector/consent';
 import { getOpenTraces, getTraceByTabId } from '../../collector/db';
 
+/** Groups on screen at once: one button each, five at most (§6.4). */
 const VISIBLE = 5;
+/** Put-away cards on screen at once: two buttons each, so two, to stay inside five decisions (§6.4). */
+const SHELF_STEP = 2;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -313,7 +317,7 @@ function groupCard(g: Group): HTMLElement {
   if (g.name.description.when) name.append(el('span', 'when', cap(g.name.description.when)));
   const btn = button('Archive & close', 'primary', 'archive');
   btn.setAttribute('aria-describedby', h.id); // five "Archive & close" buttons, each says which group
-  btn.addEventListener('click', () => void onArchive(g, card, btn));
+  btn.addEventListener('click', (e) => void onArchive(g, card, btn, e.detail === 0)); // detail 0: Enter or Space
   header.append(name, btn);
   card.append(header);
   const ul = el('ul');
@@ -330,6 +334,61 @@ function emptyNote(text: string, iconName?: string): HTMLElement {
   return p;
 }
 
+const PRIVACY_URL = 'https://github.com/Makilesh/Chrome_tab_amnesty/blob/main/PRIVACY.md';
+
+/**
+ * Asked first (collector/consent.ts): until the person presses Start nothing is recorded, so in
+ * place of groups the page says plainly what Tab Amnesty would note, why, and where it stays —
+ * the first screen of a first install. One button; closing the page is the other answer.
+ */
+function startNotice(): HTMLElement {
+  const box = el('section', 'start');
+  const h = el('h2', undefined, 'Before Tab Amnesty starts');
+  h.id = 'start-title';
+  box.setAttribute('aria-labelledby', h.id);
+  const notes = el('ul');
+  for (const what of [
+    'its address and title',
+    'which tab it came from, and when you switch to it',
+    'a short digest of the page: its description, headings and opening text',
+    'whether a box you typed in still holds unsent text (yes or no, never the text)',
+  ]) notes.append(el('li', undefined, what));
+  const go = button('Start grouping my tabs', 'primary');
+  go.id = 'start';
+  go.addEventListener('click', () => void onStart(go));
+  const why = el('a', undefined, 'What it keeps, and why');
+  why.href = PRIVACY_URL;
+  why.target = '_blank';
+  why.rel = 'noopener';
+  const row = el('div', 'row');
+  row.append(go, why);
+  box.append(
+    h,
+    el('p', undefined, 'To group your tabs by what you were doing, Tab Amnesty notes, for each tab:'),
+    notes,
+    el('p', undefined, 'It all stays on this computer. Nothing is sent anywhere, there is no account, and you can forget anything at any time.'),
+    row,
+    el('p', 'aside', 'Rather not? Close this page: nothing is noted until you press Start.'),
+  );
+  return box;
+}
+
+async function onStart(btn: HTMLButtonElement): Promise<void> {
+  btn.disabled = true;
+  setLabel(btn, 'Starting…');
+  const r = (await chrome.runtime.sendMessage({ type: 'start' }).catch(() => null)) as { ok?: boolean } | null;
+  if (!r?.ok) {
+    btn.disabled = false;
+    setLabel(btn, 'Start grouping my tabs');
+    toast('Tab Amnesty could not start. Switch it off and on again in chrome://extensions, then press Start again.');
+    return;
+  }
+  await morph(load);
+  say('Started. Your open tabs are below, grouped by what you were doing.');
+  focusHeading($('groups').querySelector<HTMLElement>('.group h2') ?? $('groups').querySelector<HTMLElement>('.empty'));
+  void checkRecorder();
+}
+
 function renderGroups(): void {
   const root = $('groups');
   root.replaceChildren();
@@ -344,7 +403,7 @@ function quoted(t: TabTrace): string {
   return `“${s.length > 48 ? `${s.slice(0, 47)}…` : s}”`;
 }
 
-async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): Promise<void> {
+async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement, keyboard = false): Promise<void> {
   if (busy) return;
   busy = true;
   btn.disabled = true;
@@ -355,6 +414,7 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
     // The card itself travels down onto the shelf, into its new place there: closing is seen to
     // be putting away, not losing (the thesis — close it, you'll still have it).
     if (saved) card.style.viewTransitionName = shelfName(saved.cardId);
+    const at = groups.indexOf(g); // where the next group will stand
     await morph(async () => {
       groups = groups.filter((x) => x !== g);
       card.remove();
@@ -366,13 +426,16 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
       : '';
     if (saved) toast(`Put away “${saved.name}”.${kept}`, { cardId: saved.cardId, name: saved.name, ok: true });
     else if (keptOpen.length) toast(`Nothing put away.${kept}`);
-    // Keyboard users keep their place on the next group's name — not its button, where a second
-    // Enter would put that group away too.
-    focusHeading($('groups').querySelector<HTMLElement>('.group h2')) || $<HTMLButtonElement>('strip').focus({ preventScroll: true });
+    // Keyboard users keep their place on the next group's name — the one that moved up into this
+    // one's place, or the one before if this was the last — not its button, where a second Enter
+    // would put that group away too. (It used to be the first group: the page jumped to the top.)
+    // The view follows only a keyboard user; a mouse user stays where they are and sees the card land.
+    const heads = $('groups').querySelectorAll<HTMLElement>('.group h2');
+    focusHeading(heads[Math.min(at, heads.length - 1)], keyboard) || $<HTMLButtonElement>('strip').focus({ preventScroll: true });
   } catch (e) {
     btn.disabled = false;
     setLabel(btn, 'Archive & close');
-    card.append(el('p', 'note', `That did not work: ${(e as Error).message}`));
+    card.append(failure('That did not work. Try again in a moment.', e, 'p'));
   } finally {
     busy = false;
   }
@@ -471,7 +534,7 @@ async function onOpenAll(c: ArchiveCard, button: HTMLButtonElement): Promise<voi
     await openCard(c);
     toast(`“${c.name}” is open again, at the end of your tab strip.`, { ok: true });
   } catch (e) {
-    toast(`That did not work: ${(e as Error).message}`);
+    toast('Those tabs could not be opened. Try again in a moment.', { error: e });
   } finally {
     button.disabled = false;
   }
@@ -545,8 +608,8 @@ function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[], ter
 let archiveShown = '';
 /** What is typed in "Find something you put away". */
 let query = '';
-/** Put-away cards on screen: five more at a time, like the groups above (§6.4). */
-let cardsShown = VISIBLE;
+/** Put-away cards on screen, two more at a time (§6.4). */
+let cardsShown = SHELF_STEP;
 
 /**
  * Redraw "Put away" — every card, newest first, or what a search found, best first. The
@@ -607,11 +670,15 @@ function refocus(root: HTMLElement, target: { cardId: string; label?: string }, 
   (same ?? $<HTMLInputElement>('find')).focus({ preventScroll: true });
 }
 
-/** Move to a heading that is not itself focusable (after a step that removed what had focus). */
-function focusHeading(h: HTMLElement | null | undefined): boolean {
+/**
+ * Move to a heading that is not itself focusable (after a step that removed what had focus),
+ * scrolling only as far as it takes to see it: never a jump away from where the person is.
+ */
+function focusHeading(h: HTMLElement | null | undefined, follow = true): boolean {
   if (!h) return false;
   h.tabIndex = -1;
-  h.focus({ preventScroll: false });
+  h.focus({ preventScroll: true });
+  if (follow) h.scrollIntoView({ block: 'nearest' });
   return true;
 }
 
@@ -630,7 +697,7 @@ function wireSearch(): void {
     clearTimeout(pending);
     pending = setTimeout(() => {
       query = find.value;
-      cardsShown = VISIBLE;
+      cardsShown = SHELF_STEP;
       void renderArchive(true);
     }, 120);
   };
@@ -638,7 +705,7 @@ function wireSearch(): void {
   find.addEventListener('search', onFind); // Escape and the clear button
   $('cards-more-btn').addEventListener('click', async () => {
     const before = cardsShown;
-    cardsShown += VISIBLE;
+    cardsShown += SHELF_STEP;
     await renderArchive(true);
     focusHeading($('cards').querySelectorAll<HTMLElement>('.group h3')[before]);
   });
@@ -669,8 +736,30 @@ function showFound(): void {
   $<HTMLInputElement>('find').focus({ preventScroll: true });
 }
 
+/**
+ * A failure, said plainly — what did not happen and what to do — with Chrome's own words one click
+ * away for a bug report, never in the sentence (voice/errors: no raw error text in the UI).
+ */
+function copyDetails(e: unknown): HTMLButtonElement {
+  const copy = el('button', 'quiet', 'Copy error details');
+  copy.addEventListener('click', () => {
+    const details = `Tab Amnesty ${chrome.runtime.getManifest().version}\n${e instanceof Error ? (e.stack ?? e.message) : String(e)}`;
+    void navigator.clipboard.writeText(details).then(
+      () => say('Error details copied.'),
+      () => say('Copying did not work.'),
+    );
+  });
+  return copy;
+}
+
+function failure(text: string, e: unknown, tag: 'p' | 'span' = 'span'): HTMLElement {
+  const box = el(tag, 'note');
+  box.append(text, ' ', copyDetails(e));
+  return box;
+}
+
 /** What just happened, at the bottom of the window. `ok`: it went as asked, said with a check. */
-function toast(text: string, opts: { cardId?: string; name?: string; ok?: boolean } = {}): void {
+function toast(text: string, opts: { cardId?: string; name?: string; ok?: boolean; error?: unknown } = {}): void {
   document.querySelector('.toast')?.remove();
   const t = el('div', 'toast');
   if (opts.ok) t.append(icon('check'));
@@ -682,6 +771,7 @@ function toast(text: string, opts: { cardId?: string; name?: string; ok?: boolea
     back.addEventListener('click', () => void onBringBack(cardId, back, name ?? 'It'));
     t.append(back);
   }
+  if ('error' in opts) t.append(copyDetails(opts.error));
   document.body.append(t);
   // The same Bring back stays under "Put away" for a day, so nothing depends on catching this.
   setTimeout(() => {
@@ -716,7 +806,7 @@ async function onSaveCopy(): Promise<void> {
     saveFile(name, copyToHtml(await getCards(), await getNeverRemember(), now), 'text/html');
     status.textContent = `Saving “${name}” where your downloads go.`;
   } catch (e) {
-    status.textContent = `That did not work: ${(e as Error).message}`;
+    status.replaceChildren(failure('The copy could not be saved. Try again in a moment.', e));
   }
 }
 
@@ -747,7 +837,7 @@ async function onBringInCopy(file: File): Promise<void> {
     if (neverOffered.length) offerNever(status, neverOffered);
     await renderArchive(true);
   } catch (e) {
-    status.textContent = `That did not work: ${(e as Error).message}`;
+    status.replaceChildren(failure('That copy could not be brought in. Try again in a moment.', e));
   } finally {
     bringingIn = false;
   }
@@ -850,13 +940,18 @@ function renderNever(list: string[]): void {
 async function main(): Promise<void> {
   wireSearch();
   const asked = findFromAddress();
-  try {
-    await load();
-  } catch (e) {
-    console.error(e);
-    $('groups').replaceChildren(el('p', 'empty', 'Something went wrong reading your tabs. Reloading this page usually fixes it — nothing has been changed.'));
+  if (!(await hasStarted().catch(() => true))) {
+    $('groups').replaceChildren(startNotice()); // asked first (collector/consent.ts)
+    $('strip').hidden = true;
+  } else {
+    try {
+      await load();
+    } catch (e) {
+      console.error(e);
+      $('groups').replaceChildren(el('p', 'empty', 'Something went wrong reading your tabs. Reloading this page usually fixes it — nothing has been changed.'));
+    }
+    void checkRecorder(); // only once recording is allowed: before Start it is meant to be quiet
   }
-  void checkRecorder();
   void checkBuild();
   await renderArchive();
   if (asked) showFound();

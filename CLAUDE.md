@@ -11,7 +11,8 @@ If the repo docs and the original brief disagree, the repo docs win.
 open and unmeasured** (one 28-tab browser, draft labels, no organiser baseline; DECISIONS
 2026-09-19). Phase 0's gate — ARI beats Chrome by ≥ 0.15 on 4 of 5 real 80+ tab browsers AND
 zeroing S1/S2/S8 drops ARI ≥ 0.10 — must still be read before any store submission; keep
-`npm run score|ablate|report` honest and never restate it.
+`npm run score|ablate|report` honest and never restate it. **On 2026-11-10 the owner waived that
+rule for the Chrome Web Store** (DECISIONS): store submission may go ahead; the measurement goes on.
 
 Phase 1 question: will people press "Archive & close" of their own accord, and is their tab count
 still lower a week later? Build is in `src/archive/` (cards, naming, sweep actions), `src/ui/sweep/`

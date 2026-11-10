@@ -7,7 +7,8 @@
 export const SCHEMA_VERSION = 1;
 
 /**
- * chrome.history TransitionType, plus 'unknown' for when no visit matched `openedAt`.
+ * Chrome's TransitionType (history's names; webNavigation reports it as a page commits), plus
+ * 'unknown' when it is not known.
  * 'unknown' is NOT continuation evidence and must not be treated as 'link'.
  */
 export type Transition =
@@ -54,8 +55,9 @@ export interface TabTrace {
   /** history visit nearest openedAt */
   transition: Transition;
   /**
-   * True when openedAt/transition came from chrome.history rather than a live onCreated event —
-   * tabs that already existed at install or could not be re-bound on startup. Lineage is never
+   * True when the tab was adopted rather than seen opening (a live onCreated event): tabs already
+   * open at install or at Start, or that could not be re-bound on startup. Their timing is unknown
+   * (records from before 0.3.0 took it from chrome.history). Lineage is never
    * backfilled: openerTraceId is null for these.
    */
   backfilled: boolean;

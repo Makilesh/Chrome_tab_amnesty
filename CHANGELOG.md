@@ -5,6 +5,18 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-10
+
+### Added
+- **Tab Amnesty asks first.** The page a first install opens says plainly what it notes and why,
+  and nothing is recorded until you press **Start grouping my tabs**. If you were already using
+  it, it carries on as before without asking.
+
+### Privacy
+- **No more "browsing history" permission.** How a visit started now comes from the page as it
+  loads (`webNavigation`), so Chrome's install prompt drops from three warnings to two. Tabs that
+  were open before you started group a little more loosely: when they were opened isn't known.
+
 ### Changed
 - **A new look.** Tab Amnesty's page follows Notion's calm page style more closely: white cards on
   a warm grey desk, a deeper shelf for what you put away, a small tab in each group's Chrome
@@ -18,6 +30,10 @@ versions follow [Semantic Versioning](https://semver.org/).
 - Adding a site to Sites never remembered asks once first, because it forgets what was kept about
   the site, and says so plainly when what was typed is not one site.
 - A search that finds nothing offers to clear it, and the search box has a visible label.
+- "Put away" shows two groups at a time, with "Show more put away" for the rest, so no more than
+  five choices are on screen at once.
+- When something fails, it says so in plain words, with a "Copy error details" button for bug
+  reports instead of Chrome's own message.
 
 ### For contributors
 - `npm run preview` shows the real page in any browser, on made-up tabs, without loading the extension.
