@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Amnesty",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A browser memory. Close it, you'll still have it.",
   "permissions": [
     "tabs",
