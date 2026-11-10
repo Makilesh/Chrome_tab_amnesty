@@ -39,6 +39,8 @@ export interface Backup {
   createdAt?: number;
   /** Each time Chrome handed back an empty database after that. */
   resets?: Reset[];
+  /** When the person pressed Start: recording was allowed from then on (collector/consent.ts). */
+  startedAt?: number;
 }
 
 /** null where there is no Cache Storage (plain Node). */
@@ -133,11 +135,16 @@ export async function readBackup(): Promise<Backup | null> {
     presses: await get<number[]>(cache, 'presses'),
     createdAt: await get<number>(cache, 'createdAt'),
     resets: await get<Reset[]>(cache, 'resets'),
+    startedAt: await get<number>(cache, 'startedAt'),
   };
 }
 
 export async function noteCreated(at: number): Promise<void> {
   await put('createdAt', at);
+}
+
+export async function backupStarted(at: number): Promise<void> {
+  await put('startedAt', at);
 }
 
 /**

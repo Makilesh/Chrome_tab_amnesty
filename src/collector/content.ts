@@ -87,7 +87,8 @@ function send(reason: Reason): void {
     const now = Date.now();
     const recent = lastSent && lastSent.url === url && now - lastSent.at < LOCAL_MIN_INTERVAL_MS;
     // 'visible' is allowed through once so the worker can replace a thin hidden-render digest.
-    if (recent && reason !== 'visible') return;
+    // 'requested': the worker asked (an SPA navigation, or Start pressed after this page already sent one).
+    if (recent && reason !== 'visible' && reason !== 'requested') return;
     lastSent = { url, at: now };
     chrome.runtime
       .sendMessage({ type: 'digest', url, title: document.title.slice(0, 500), digest: buildDigest(), reason })

@@ -4,6 +4,9 @@
 own: nothing is sent to the developer, to an analytics service, to an AI service, or to anyone
 else. There is no account, no server, no tracking and no advertising. Nothing is sold or shared.
 
+**It asks first.** Nothing is recorded until you press **Start grouping my tabs** on the page Tab
+Amnesty opens when it is installed. That page lists what it notes, as this one does below.
+
 Last changed: 10 November 2026. Changes to this page are visible in the
 [repository's history](https://github.com/Makilesh/Chrome_tab_amnesty/commits/main/PRIVACY.md).
 
@@ -16,8 +19,8 @@ whole project away in one click and find it again later. For that, for each tab 
 - the page's **address, title and site**;
 - **when** the tab was opened, **which tab it was opened from**, when you switched to it and for
   how long, and which tabs you switched between — this is how it tells one project from another;
-- **how the visit started** (a link, a typed address, a bookmark…), read from Chrome's history
-  for that page, and for tabs that were already open when you installed it, when you visited them;
+- **how the visit started** (a link, a typed address, a bookmark…), as Chrome reports it when
+  the page loads. Tab Amnesty does not read your browsing history;
 - a short **digest of the page**: its description, its headings and its opening text (about a
   thousand characters at most), so a group can be named and a page found again by what it said;
 - whether a text box you typed into **still holds text you have not sent**. To tell, it looks on
@@ -79,7 +82,7 @@ putting it away, is removed 30 days after it closed.
 | Tabs | See which tabs are open, which tab opened which, and close or reopen them when you ask. |
 | Tab groups | Show groups on your tab strip, and reopen a card as a named group. |
 | Favicons | Show each page's site icon beside it, from the copy Chrome already keeps on your computer. Nothing is fetched from the site. |
-| History | When a visit started (link, typed, …), and when tabs that were open before you installed it were visited. |
+| Web navigation | How each visit started (a link, a typed address, a bookmark…), as the page loads. It does not read your browsing history. |
 | Access to the pages you visit (http and https) | Read each page's title, description, headings and opening text for its digest, and notice unsent typing — on your computer only. |
 | Scripting | Start reading the tabs that were already open when Tab Amnesty was installed or updated. |
 | Alarms | Do background work (summaries, keeping records in step) on a schedule rather than continuously. |

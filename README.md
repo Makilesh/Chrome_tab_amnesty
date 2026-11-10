@@ -16,7 +16,7 @@
 doing, and lets you put a whole project away in one click — kept, searchable, and back whenever
 you want it. Everything stays on your computer.</p>
 
-<p align="center"><b>Status:</b> early (0.2.0). How well the grouping works is still being measured — <a href="docs/RESEARCH.md">how</a>.</p>
+<p align="center"><b>Status:</b> early (0.3.0). How well the grouping works is still being measured — <a href="docs/RESEARCH.md">how</a>.</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/sweep-dark.png">
@@ -54,6 +54,8 @@ are no counts, streaks or reminders.
 - **Forget anything:** *Forget this* on every group and every page, and a list of sites it never
   remembers.
 
+<p align="center"><img src="docs/images/put-away.gif" width="720" alt="Archive &amp; close on the Flat in Lisbon group: its card folds down onto the Put away shelf, and a note says it was put away, with Bring back"></p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/search-dark.png">
   <img alt="Searching what was put away: 'fado' finds the Alfama page in the Lisbon group by its summary" src="docs/images/search-light.png">
@@ -61,7 +63,8 @@ are no counts, streaks or reminders.
 
 ## Private by design
 
-Everything Tab Amnesty records stays on your computer. It makes no network requests: no account,
+Tab Amnesty records nothing until you press Start, and everything it records stays on your
+computer. It makes no network requests: no account,
 no server, no analytics. It never runs in incognito windows, and mail, chat and search pages keep
 no title or text. What it records, why, and what each permission is for: [PRIVACY.md](PRIVACY.md).
 Tab Amnesty's use of this information complies with the Chrome Web Store User Data Policy,
@@ -76,7 +79,8 @@ including the Limited Use requirements.
    you'll keep: Chrome runs the extension from that folder.
 2. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`), switch on
    **Developer mode**, click **Load unpacked** and choose the unzipped folder.
-3. Pin Tab Amnesty from the puzzle-piece menu. Browse as you always do, and click its icon
+3. The page that opens asks first: press **Start grouping my tabs**. Nothing is noted before that.
+4. Pin Tab Amnesty from the puzzle-piece menu. Browse as you always do, and click its icon
    whenever you like.
 
 To update, replace the folder's contents with the new zip's, then switch Tab Amnesty off and on
@@ -87,8 +91,9 @@ the extension after every rebuild.
 
 ## How it works
 
-As you browse, a content script and a service worker note which tab opened which, when, what you
-switch between, and a short digest of each page, in the extension's own storage. When you click
+Once you press Start, a content script and a service worker note, as you browse, which tab
+opened which, when, what you switch between, and a short digest of each page, in the extension's
+own storage. When you click
 the icon, Tab Amnesty clusters your open tabs from those records — a deterministic Louvain over
 lineage, timing, co-activation, strip position and page text, never by reading live tabs — names
 each group and offers one action per group. The design rules it holds itself to are in
@@ -100,8 +105,8 @@ each group and offers one action per group. The design rules it holds itself to 
 **Will it ever close tabs by itself?**
 No. Tabs close only when you press Archive & close on a group, and a tab holding a message you haven't sent stays open even then.
 
-**Chrome warns it can "read and change all your data on all websites" and your browsing history. Why?**
-Those are Chrome's fixed words for what an extension can reach. To name groups and find pages again, Tab Amnesty reads each page's title, description, headings and first thousand or so characters, and checks whether a text box still holds unsent text — yes or no, never the text. From your history it reads only how each open tab's visit started (a link, a typed address, a bookmark) and, for tabs already open when you installed it, when you visited them. It never changes your history, and all of it stays on your computer. Each permission and its reason: [PRIVACY.md](PRIVACY.md).
+**Chrome warns it can "read and change all your data on all websites". Why?**
+That is Chrome's fixed wording for an extension that reads pages. To name groups and find pages again, Tab Amnesty reads each page's title, description, headings and first thousand or so characters, and checks whether a text box still holds unsent text — yes or no, never the text. It changes nothing on any page and does not read your browsing history; it records nothing until you press Start, and all of it stays on your computer. Each permission and its reason: [PRIVACY.md](PRIVACY.md).
 
 **Does anything leave my computer?**
 Not from Tab Amnesty: no account, no server, no analytics, no network requests. Two things are Chrome's own: Chrome may download its on-device model (nothing about your tabs is part of that), and if Chrome sync is on, Chrome may save the tab groups it shows to your Google account.

@@ -156,10 +156,9 @@ its AI history search is semantic but sends queries to Google and launched in th
 
 - **Install.** Not in a store yet: Developer mode, Load unpacked, and manual updates (switch it
   off and on). This alone loses most people who are not developers.
-- **The install prompt.** "Read and change all your data on all websites" and "Read and change
-  your browsing history on all your signed-in devices" (LISTING.md). Accurate about reach,
-  alarming in tone; the second overstates what happens (it only reads, and only open tabs'
-  addresses). LISTING.md weighs replacing `history` with `webNavigation` later.
+- **The install prompt.** "Read and change all your data on all websites" and "View and manage
+  your tab groups" (LISTING.md). Since 0.3.0 there is no browsing-history line: `history` was
+  replaced by `webNavigation`, and nothing is recorded until the person presses Start.
 - **The central claim is unmeasured.** The Phase 0 gate is open. On a real browser, one
   project done in the gaps between other work was split across four groups — a case where topic
   would have done better (PHASES.md, 5 October). HN will ask; say it first.
@@ -625,8 +624,8 @@ It is designed with ADHD in mind: nothing closes unless you press a button, you 
 **Will it ever close tabs by itself?**
 No. Tabs close only when you press Archive & close on a group, and a tab holding a message you haven't sent stays open even then.
 
-**Chrome warns it can "read and change all your data on all websites" and your browsing history. Why?**
-Those are Chrome's fixed words for what an extension can reach. To name groups and find pages again, Tab Amnesty reads each page's title, description, headings and first thousand or so characters, and checks whether a text box still holds unsent text — yes or no, never the text. From your history it reads only how each open tab's visit started (a link, a typed address, a bookmark) and, for tabs already open when you installed it, when you visited them. It never changes your history, and all of it stays on your computer. Each permission and its reason: [PRIVACY.md](PRIVACY.md).
+**Chrome warns it can "read and change all your data on all websites". Why?**
+That is Chrome's fixed wording for an extension that reads pages. To name groups and find pages again, Tab Amnesty reads each page's title, description, headings and first thousand or so characters, and checks whether a text box still holds unsent text — yes or no, never the text. It changes nothing on any page and does not read your browsing history; it records nothing until you press Start, and all of it stays on your computer. Each permission and its reason: [PRIVACY.md](PRIVACY.md).
 
 **Does anything leave my computer?**
 Not from Tab Amnesty: no account, no server, no analytics, no network requests. Two things are Chrome's own: Chrome may download its on-device model (nothing about your tabs is part of that), and if Chrome sync is on, Chrome may save the tab groups it shows to your Google account.

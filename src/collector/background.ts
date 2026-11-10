@@ -29,7 +29,8 @@ import { searchArchive } from '../archive/search';
 import type { ArchivedTab } from '../archive/types';
 import { ambientPath, isAmbient } from '../cluster/affinity';
 import { getCards, getNeverRemember, pruneClosedRecords, seedBackup } from '../archive/store';
-import { lastVisit, transitionNear } from './history';
+import { hasStarted, start } from './consent';
+import { asTransition } from './transition';
 import { ensureStudyAlarm, STUDY_ALARM, takeSnapshot } from './study';
 import { kickSummariser, runSummariser, SUMMARISE_ALARM } from './summarise';
 import { urlFeatures } from './url';
@@ -137,8 +138,9 @@ async function findOrphanFor(tab: chrome.tabs.Tab, url: string, live: Set<number
 
 /**
  * A tab we have no live trace for. Either it is a restored tab whose trace is waiting to be
- * re-bound, or it is genuinely new to us (existed before install) and gets adopted with
- * history-backfilled timing. Lineage is never backfilled.
+ * re-bound, or it is genuinely new to us (open before install, or before Start) and gets adopted
+ * with its timing marked unknown: when and how it was opened cannot be known (DECISIONS
+ * 2026-11-10). Lineage is never backfilled.
  *
  * This runs from whichever event sees the tab first — onUpdated during session restore, or
  * rebindAll from onStartup — so the outcome does not depend on event order.
@@ -164,13 +166,13 @@ async function bindOrAdopt(tab: chrome.tabs.Tab, live?: Set<number>): Promise<Ta
     await putTrace(bound);
     return bound;
   }
-  const visit = await lastVisit(url);
   const trace = scrubbed(
     {
       traceId: crypto.randomUUID(),
       openerTraceId: null,
-      openedAt: visit?.visitTime ?? Date.now(),
-      transition: visit?.transition ?? 'unknown',
+      // Timing unknown: the clusterer keeps it out of time-based sessions (segment.ts, timingKnown).
+      openedAt: Date.now(),
+      transition: 'unknown',
       backfilled: true,
       ...baseTrace(tab, url),
     },
@@ -178,17 +180,6 @@ async function bindOrAdopt(tab: chrome.tabs.Tab, live?: Set<number>): Promise<Ta
   );
   await putTrace(trace);
   return trace;
-}
-
-/**
- * Resolve the transition for a trace from the visit nearest `at`. History is written slightly
- * after navigation commits, so callers retry at status=complete if the first attempt misses.
- */
-async function resolveTransition(traceId: string, url: string, at: number): Promise<void> {
-  if (!/^https?:/.test(url)) return;
-  const transition = await transitionNear(url, at);
-  if (transition === 'unknown') return;
-  await updateTrace(traceId, (t) => (t.transition === 'unknown' ? { ...t, transition } : null));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -232,6 +223,7 @@ chrome.tabs.onCreated.addListener((tab) => {
 });
 
 async function onCreated(tab: chrome.tabs.Tab, openedAt: number): Promise<void> {
+  if (!(await hasStarted())) return; // asked first (consent.ts)
   const url = tabUrl(tab);
   // Session restore (and Bring back) can surface a tab through onCreated; if an orphaned trace
   // already describes it, re-bind rather than minting a second identity for the same tab. A tab
@@ -255,8 +247,7 @@ async function onCreated(tab: chrome.tabs.Tab, openedAt: number): Promise<void> 
     },
     await getNeverRemember(),
   );
-  await putTrace(trace);
-  if (url) await resolveTransition(trace.traceId, url, openedAt);
+  await putTrace(trace); // how it was reached arrives with its first page (webNavigation, below)
 }
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -270,12 +261,11 @@ async function onUpdated(
 ): Promise<void> {
   const existing = await getTraceByTabId(tabId);
   if (!existing) {
-    await bindOrAdopt(tab);
+    if (await hasStarted()) await bindOrAdopt(tab); // asked first (consent.ts)
     return;
   }
   const newUrl = changeInfo.url === undefined ? undefined : storedUrl(changeInfo.url);
   const urlChanged = newUrl !== undefined && newUrl !== existing.url;
-  const now = Date.now();
   const never = await getNeverRemember();
   const updated = await updateTrace(existing.traceId, (t) => {
     let next: TabTrace = {
@@ -300,20 +290,29 @@ async function onUpdated(
   });
   if (!updated) return;
 
-  if (updated.transition === 'unknown' && !updated.backfilled && /^https?:/.test(updated.url)) {
-    // First real URL for a fresh tab: the visit that opened it was written just now, so search
-    // around `now` rather than openedAt (the user may have sat on the new-tab page for a while).
-    if (urlChanged || changeInfo.status === 'complete') {
-      await resolveTransition(updated.traceId, updated.url, urlChanged ? now : updated.openedAt);
-    }
-  }
-
   if (urlChanged && !updated.discarded && /^https?:/.test(updated.url)) {
     // SPA navigations do not re-inject the content script; ask it for a fresh digest. On a full
     // navigation the message lands in a torn-down frame and simply fails.
     chrome.tabs.sendMessage(tabId, { type: 'capture' }).catch(() => {});
   }
 }
+
+/**
+ * How a tab's first page was reached (a link, a typed address, a bookmark, a search), as Chrome
+ * reports it when that page commits: the best task-boundary signal there is. Only the visit that
+ * opened the tab counts (one trace per tab for its lifetime), so this fills in a fresh trace's
+ * 'unknown' and nothing else: not a frame, not a page prerendering for the tab, not a tab adopted
+ * with unknown timing.
+ */
+chrome.webNavigation.onCommitted.addListener((d) => {
+  if (d.frameId !== 0 || d.tabId < 0 || !/^https?:/.test(d.url)) return;
+  if ((d as { documentLifecycle?: string }).documentLifecycle === 'prerender') return;
+  const transition = asTransition(d.transitionType);
+  if (transition === 'unknown') return;
+  void serial(d.tabId, () =>
+    updateTraceByTabId(d.tabId, (t) => (t.transition === 'unknown' && !t.backfilled ? { ...t, transition } : null)),
+  );
+});
 
 /**
  * A window closing and the browser shutting down are indistinguishable here, and on shutdown
@@ -348,7 +347,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RECONCILE_ALARM) void rebindAll(true); // the browser is still running
   if (alarm.name === SUMMARISE_ALARM) void runSummariser();
-  if (__STUDY__ && alarm.name === STUDY_ALARM) void takeSnapshot();
+  if (alarm.name === STUDY_ALARM) void snapshotIfStarted();
   if (alarm.name === PRUNE_ALARM) void pruneClosedRecords();
 });
 
@@ -397,6 +396,7 @@ async function traceSoon(tabId: number): Promise<TabTrace | undefined> {
 }
 
 async function foreground(tabId: number, now: number): Promise<void> {
+  if (!(await hasStarted())) return; // nothing is counted before Start (consent.ts)
   const trace = await traceSoon(tabId);
   const active = await getMeta('activeNow');
   if (active && active.traceId !== trace?.traceId) await accrueDwell(active, now);
@@ -509,6 +509,14 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     sendResponse({ build: __BUILD_ID__ });
     return false;
   }
+  // The person pressed Start on the sweep page (consent.ts): from now on Tab Amnesty records.
+  if ((m as { type?: string } | undefined)?.type === 'start' && sender.url?.startsWith(chrome.runtime.getURL(''))) {
+    startRecording().then(
+      () => sendResponse({ ok: true }),
+      () => sendResponse({ ok: false }),
+    );
+    return true;
+  }
   const typed = msg as { type?: string; typing?: boolean } | undefined;
   if (typed?.type === 'typing' && sender.tab?.id !== undefined && showing(sender)) {
     const tabId = sender.tab.id;
@@ -543,6 +551,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
  * database reset the stored activity describes a past that is gone, and is cleared.
  */
 async function rebindAll(keepActivity = false): Promise<void> {
+  if (!(await hasStarted())) return; // asked first (consent.ts)
   const now = Date.now();
   const tabs = (await chrome.tabs.query({})).filter((t) => t.id !== undefined);
 
@@ -606,33 +615,37 @@ async function rebindAll(keepActivity = false): Promise<void> {
 }
 
 /**
- * On install/update, re-derive timing for traces that were backfilled under an older rule —
- * the first rule took the latest visit, which after a session restore is always 'reload' at
- * restart time. Event-time traces are never touched.
+ * Start pressed: the tabs already open are adopted at once and asked for their page text again
+ * (what their pages sent before the answer was not kept), so the sweep page has groups to show.
  */
-async function refreshBackfilled(): Promise<void> {
-  for (const t of await getOpenTraces()) {
-    if (!t.backfilled || !/^https?:/.test(t.url)) continue;
-    const visit = await lastVisit(t.url);
-    if (!visit || (visit.visitTime === t.openedAt && visit.transition === t.transition)) continue;
-    await updateTrace(t.traceId, (cur) => ({ ...cur, openedAt: visit.visitTime, transition: visit.transition }));
+async function startRecording(): Promise<void> {
+  await start();
+  await rebindAll();
+  for (const t of await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] })) {
+    if (t.id !== undefined && !t.discarded) chrome.tabs.sendMessage(t.id, { type: 'capture' }).catch(() => {});
   }
+  await snapshotIfStarted();
 }
 
-// Install and update only (DECISIONS 2026-09-12). It used to run on every worker start too, and
-// each time rewrote adopted tabs' timing from the newest visit to their url — from any tab — so
-// weeks-old tabs kept acquiring today's timing and joined today's session.
+/** The research study's open-tab count (study builds only), once recording is allowed. */
+async function snapshotIfStarted(): Promise<void> {
+  if (__STUDY__ && (await hasStarted())) await takeSnapshot();
+}
+
+// Install and update: adopt the open tabs (rebindAll asks hasStarted first, which also counts
+// someone already using Tab Amnesty as started), tidy old records, and on a first install open the
+// sweep page, which asks the person first.
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   const adopted = rebindAll();
-  void adopted.then(refreshBackfilled).then(() => (__STUDY__ ? takeSnapshot() : undefined));
+  void adopted.then(snapshotIfStarted);
   void scrubAmbient().then(() => pruneClosedRecords());
   if (reason === 'install') void adopted.then(openOnFirstInstall, openOnFirstInstall);
 });
 
 /**
- * A first install opens the sweep page, in front: a new person sees their own tabs grouped (§6.3)
- * without first having to find and pin the icon — once the open tabs are adopted, or it would
- * have nothing on it yet. Never on an update, a Reload ('update') or a Chrome update; and once per
+ * A first install opens the sweep page, in front: it asks the person first (the Start notice,
+ * consent.ts) and, once they say yes, shows their own tabs grouped (§6.3), without their having to
+ * find and pin the icon first. Never on an update, a Reload ('update') or a Chrome update; and once per
  * database, not per 'install', because Chrome reports every start of an extension loaded with
  * --load-extension (npm run check, the walkthrough) as an install. Uninstalling takes the database
  * along, so installing again is a first install again.

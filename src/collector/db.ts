@@ -46,6 +46,8 @@ interface MetaRecords {
   summariserCheckedAt: number;
   /** A first install has opened the sweep page: once per database, not once per 'install' (background.ts). */
   firstRunShown: boolean;
+  /** When the person pressed Start; nothing is recorded before it (consent.ts). */
+  startedAt: number;
 }
 
 interface TabAmnestyDB extends DBSchema {
@@ -98,7 +100,7 @@ async function afterCreate(d: IDBPDatabase<TabAmnestyDB>, dataLoss: string): Pro
     // Anything in the copy means there was a database before this one — even if the copy was
     // still being filled in (pages write to it before a new worker has seeded it).
     const hadOne =
-      backup.createdAt !== undefined || backup.cards.length > 0 || backup.neverRemember !== undefined || backup.openSnapshots !== undefined || backup.presses !== undefined;
+      backup.createdAt !== undefined || backup.cards.length > 0 || backup.neverRemember !== undefined || backup.openSnapshots !== undefined || backup.presses !== undefined || backup.startedAt !== undefined;
     if (!hadOne) {
       await noteCreated(now);
       return;
@@ -131,6 +133,7 @@ export async function restoreInto(d: IDBPDatabase<TabAmnestyDB>, backup: Backup,
   }
   if (backup.openSnapshots) await meta.put(mergeSnapshots(((await meta.get('openSnapshots')) as OpenSnapshot[] | undefined) ?? [], backup.openSnapshots), 'openSnapshots');
   if (backup.presses) await meta.put(mergePresses(((await meta.get('presses')) as number[] | undefined) ?? [], backup.presses), 'presses');
+  if (backup.startedAt && !(await meta.get('startedAt'))) await meta.put(backup.startedAt, 'startedAt'); // asked once, not again
   if (resets) await meta.put(resets, 'resets');
   await tx.done;
 }

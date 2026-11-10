@@ -47,9 +47,9 @@ Tab Amnesty is a memory for your browser. It notices which tabs belong together 
 
 Each group has one button: Archive & close. It writes everything down first — every page, its title, what it said — and only then closes the tabs. Changed your mind? Bring back puts the whole group back on your tab strip, in its order, for a day, even after a restart. After that, Open all brings it back whenever you like.
 
-What it keeps, and why — on your computer only, never sent anywhere:
+What it keeps, and why — on your computer only, never sent anywhere, and nothing at all until you press Start on the page it opens when installed:
 • For each tab in a normal window: its address, title and site; when it was opened, which page it was opened from, and when you switched to it and for how long. That is how it tells one project from another.
-• How each visit started (a link, a typed address, a bookmark), read from Chrome's history for that page's address only.
+• How each visit started (a link, a typed address, a bookmark), as Chrome reports it when the page loads. It does not read your browsing history.
 • A short digest of each page — its description, headings and opening lines — so a group can be named and a page found again.
 • Whether a text box you typed into still holds unsent text: a yes or no, never the text.
 • Mail, chat, calendar, search and message pages on its built-in list keep no title or text. Records of pages you close yourself go after 30 days; what you put away stays until you forget it.
@@ -82,9 +82,9 @@ characters, the summary, the site and the day (`src/archive/search.ts`), not who
 - Store icon: `public/icons/icon-128.png` (128×128 PNG with transparency). Chrome's guidance is
   96×96 artwork inside 16 px of transparent margin; ours fills the square, so it will look a
   little larger than its neighbours. Optional: a padded copy, for this upload field only.
-- Screenshots, 1 to 5 at 1280×800: `docs/images/sweep-light.png`, `docs/images/search-light.png`.
-  `sweep-dark.png` and `search-dark.png` are the same size and can go in too. They show the
-  public build on made-up browsing, with no counts.
+- Screenshots, 1 to 5 at 1280×800, in this order: `docs/store/screenshots/1-groups.png`,
+  `2-put-away.png`, `3-search.png`, `4-start.png`, `5-dark.png`. They show the public build on
+  made-up browsing (`npm run preview`), with no counts.
 - Small promo tile (optional; listings without one are shown after those that have one):
   `docs/store/promo-440x280.png`. Chrome's image guide says "Avoid text" on tiles; a name and
   tagline are common and not a rejection reason.
@@ -108,25 +108,18 @@ source on 10 Nov. Edge is built on the same code.
 
 1. *Read and change all your data on all websites*: the http/https host permissions and the
    content script.
-2. *Read and change your browsing history on all your signed-in devices*: `history`.
-3. *View and manage your tab groups*: `tabGroups`.
+2. *View and manage your tab groups*: `tabGroups`.
 
-`tabs` adds no line of its own: its "Read your browsing history" is absorbed by both 1 and 2.
-`scripting`, `alarms`, `offscreen`, `unlimitedStorage` and `favicon` show nothing. Line 2 is the one that
-costs installs, and it overstates what happens: Tab Amnesty only reads, and only visits to the
-addresses of open tabs.
+`tabs` and `webNavigation` add no line of their own: their "Read your browsing history" is
+absorbed by line 1. `scripting`, `alarms`, `offscreen`, `unlimitedStorage` and `favicon` show
+nothing. Until 0.3.0 there was a third line, *Read and change your browsing history on all your
+signed-in devices*, from `history`; the owner chose to drop it (DECISIONS 2026-11-10).
 
-**Permission options (owner's call).**
-- `history` → `webNavigation`. `webNavigation.onCommitted` gives how each visit started at the
-  moment it happens, and its warning is absorbed by line 1, so the prompt drops to two lines.
-  The cost: tabs that were open before installing lose their real opening time. The clusterer
-  already treats such timing as unknown (`timingKnown`, `src/cluster/segment.ts`), so those tabs
-  group on position, text and switching only. It is a collector change, and DECISIONS
-  (10 Nov) put it off as "a bigger change — later". Doing it after launch prompts no one:
-  dropping a permission never asks, and `webNavigation` adds no new line (check with the
-  Extension Update Testing Tool before shipping).
-- `history` as an optional permission, requested from the page. This is possible, but it puts a
-  decision on screen (§6.3) and works like a setting (anti-scope). Not recommended.
+**Permission options.**
+- `history` → `webNavigation`: done in 0.3.0 (DECISIONS 2026-11-10). `webNavigation.onCommitted`
+  gives how each visit started as it happens, and its warning is absorbed by line 1. The cost:
+  tabs open before installing (or before Start) have no known opening time, so the clusterer
+  (`timingKnown`, `src/cluster/segment.ts`) groups them on position, text and switching only.
 - `tabs`: dropping it changes nothing anyone sees. Keeping it keeps grouping working when someone
   limits Tab Amnesty's site access in their browser. Keep it.
 - `tabGroups`: dropping it removes line 3, but groups on the strip and after Bring back would
@@ -142,7 +135,7 @@ addresses of open tabs.
 | tabs | To read open tabs' addresses and titles and which tab opened which (that is the grouping), and to close a group's tabs and open them again when the user presses Archive & close, Bring back or Open all. It also keeps grouping working when the user limits the extension's site access. |
 | tabGroups | To name and colour the tab-strip groups it makes when the user asks ("Show these groups on my tab strip", Bring back, Open all). Tabs already in a group — the user's own, or a saved group — are left where they are. |
 | favicon | To show each page's site icon beside its title on the extension's own page, read from the browser's local favicon store, so a group is recognisable at a glance. No request is made to any site, and nothing is stored. |
-| history | Reads `history.getVisits` for the address of a tab that is open, and nothing else, to learn how that visit started (link, typed, bookmark) and, for tabs already open before installation, when they were opened. Grouping uses that timing. It never adds, changes or removes history, never reads other addresses and never sends anything. |
+| webNavigation | Reads, for each tab's own top frame as its page commits, how that visit started (a link, a typed address, a bookmark, a search): the signal that tells one task from the next when grouping. Only that one word is kept, on the tab's record. It does not read browsing history, never reads frames or prerendered pages, and never sends anything. |
 | Host permissions (http, https) | A content script in every page builds a short digest — title, meta description, up to 20 headings, the first 1,000 characters of text — to name groups and make put-away pages searchable. It also checks whether a text box the user typed into still holds text (yes/no only), so Archive & close never closes a draft. It must already be in any tab that might be put away, and it runs in all frames because editors live in iframes. Everything is processed on the computer; nothing is sent. |
 | scripting | Only when the extension starts fresh (install, update, or being switched back on): injects its own packaged content-script file into tabs that were already open, so they are described and their drafts protected too. It never injects a code string, and discarded tabs are not reloaded. |
 | alarms | Background work on a schedule instead of continuously: on-device summaries of put-away pages, reconciling records a minute after a window closes, and once a day removing records of tabs closed more than 30 days ago. |
@@ -157,8 +150,8 @@ Data FAQ requires disclosure "even when data is processed or stored locally". Th
 "Web browsing activity" is called **Web history** in the form.
 
 - [x] **Web history**: addresses and titles of open tabs; when each was opened, switched to and
-  for how long; which tab opened which; how each visit started (from the browser's history, for
-  those addresses only). Records of tabs closed without being put away go after 30 days. Mail,
+  for how long; which tab opened which; how each visit started (as the browser reports it when
+  the page loads). Nothing is recorded until the user presses Start. Records of tabs closed without being put away go after 30 days. Mail,
   chat, calendar, search and message pages on the built-in list keep only the site (or which
   page of it). Pages that are not web pages keep only what kind they were.
 - [x] **Website content**: each page's meta description, up to 20 headings and first 1,000
@@ -196,9 +189,11 @@ purpose". Before installing, the description's "What it keeps" block, the privac
 listing and the install prompt do that. The older User Data FAQ asks for more: a disclosure
 "within the Product's user interface" that the user agrees to "in a manner that requires them to
 take a specific action", and it says the store description does "not satisfy this requirement".
-Tab Amnesty records from the moment it is installed and asks nothing, so a reviewer who applies
-the FAQ could reject it ("Purple Nickel — User consent is not obtained before data collection").
-See "Before submitting".
+Until 0.3.0 Tab Amnesty recorded from the moment it was installed, which a reviewer applying the
+FAQ could reject ("Purple Nickel — User consent is not obtained before data collection"). **Since
+0.3.0 it asks first:** the page a first install opens lists what it notes and why, and nothing is
+recorded until the person presses *Start grouping my tabs* — the specific action the FAQ asks for
+(`src/collector/consent.ts`; DECISIONS 2026-11-10).
 
 ## Distribution
 
@@ -208,35 +203,25 @@ to press Publish.
 
 ## Before submitting
 
-- [ ] **The Phase 0 gate.** CLAUDE.md says the Phase 0 gate must be read before any store
-      submission. It is still unmeasured. The owner decides whether that rule still holds.
-- [ ] **Package the commit you submit, then make the root-level zip above.** A zip from an older
-      commit is not this listing. The 0.1.0 one in `release/` predates the 10 Nov fixes, and its
-      manifest still makes the content script web-accessible. `release/tab-amnesty-0.1.1/` was
-      built 40 seconds after fdd8c5c, and the 0.1.1 release commit (0062b92) changed only the
-      version since, so it should match. Its own zip still wraps the folder, so make the
-      root-level zip from it.
+- [x] **The Phase 0 gate.** Waived for the store by the owner on 10 Nov (DECISIONS 2026-11-10).
+      The measurement goes on alongside, and the README says grouping quality is still measured.
+- [ ] **Upload `release/tab-amnesty-0.3.0-store-upload.zip`** (manifest.json at its top).
+      `npm run package` makes it from the commit you are on, and the v0.3.0 GitHub release carries
+      it. Older zips are not this listing.
 - [ ] **Summary:** keep it, or put the suggested line in `manifest.json` before packaging.
-- [ ] **In-product disclosure: decide before the first submission.**
-    - (a) Submit as is, relying on the listing and the install prompt. That is what the policy's
-      own words ("prior to installation") point to. If a reviewer applies the FAQ, the rejection
-      costs one review cycle, then (b).
-    - (b) Before recording anything, the extension's page says in two or three lines what it
-      keeps and where, with one button to start. This carries the least review risk, but it puts
-      a decision on the first screen (§6.3) and holds off collecting until the click. That is a
-      §6 deviation: the owner approves it, and it gets a DECISIONS entry.
+- [x] **In-product disclosure:** the Start notice, in 0.3.0 (the owner chose it; DECISIONS
+      2026-11-10). Nothing is recorded before the button is pressed.
 - [ ] `npm run check` passes on the commit being packaged. Load the store folder unpacked once
       and press Archive & close and Bring back by hand.
 - [ ] **See the install prompt yourself.** In `chrome://extensions`, use Pack extension on the
       store folder and drop the `.crx` on the page, or use the
       [Extension Update Testing Tool](https://github.com/GoogleChromeLabs/extension-update-testing-tool).
-      Expect exactly lines 1–3 above.
+      Expect exactly lines 1–2 above.
 - [ ] **Account steps only the owner can take:** register and pay the one-time fee, verify the
       contact email, and choose the publisher name. Also declare trader or non-trader (EU Digital
       Services Act): a trader's legal name, address and phone number are shown on the listing,
       and Google says the classification is the developer's own legal call.
-- [ ] **PRIVACY.md has one slip:** the tester copy is `npm run package -- --study`, not
-      `npm run package`.
+- [x] **PRIVACY.md** names the tester copy `npm run package -- --study`.
 - [x] **A license:** MIT, in `LICENSE`.
 - [x] **The owner's own browsing in `fixtures/`:** out of the tree (59e4e4d), and no commit on any
       branch holds a `makilesh*` file (checked 10 Nov). A few old commit messages still name one.
@@ -254,7 +239,7 @@ publisher display name is up to 50 characters and is shown on the listing. The a
 country can't be changed later.
 
 **Package:** the same root-level zip. There is no `update_url` to remove, and every API Tab
-Amnesty uses (tabs, tabGroups, history, alarms, offscreen, scripting, windows, action, runtime)
+Amnesty uses (tabs, tabGroups, webNavigation, alarms, offscreen, scripting, windows, action, runtime)
 is on Edge's supported list. The name and short description come from the manifest and are
 read-only.
 
@@ -277,9 +262,9 @@ Tab Amnesty is a memory for your browser. It notices which tabs belong together 
 
 Each group has one button: Archive & close. It writes everything down first — every page, its title, what it said — and only then closes the tabs. Changed your mind? Bring back puts the whole group back on your tab strip, in its order, for a day, even after a restart. After that, Open all brings it back whenever you like.
 
-What it keeps, and why — on your computer only, never sent anywhere:
+What it keeps, and why — on your computer only, never sent anywhere, and nothing at all until you press Start on the page it opens when installed:
 • For each tab in a normal window: its address, title and site; when it was opened, which page it was opened from, and when you switched to it and for how long. That is how it tells one project from another.
-• How each visit started (a link, a typed address, a bookmark), read from your browser's history for that page's address only.
+• How each visit started (a link, a typed address, a bookmark), as the browser reports it when the page loads. It does not read your browsing history.
 • A short digest of each page — its description, headings and opening lines — so a group can be named and a page found again.
 • Whether a text box you typed into still holds unsent text: a yes or no, never the text.
 • Mail, chat, calendar, search and message pages on its built-in list keep no title or text. Records of pages you close yourself go after 30 days; what you put away stays until you forget it.
@@ -305,7 +290,7 @@ Private by design:
   at 300; the 128 PNG meets the minimum.
 - **Small promotional tile** 440×280: `docs/store/promo-440x280.png`. Large tile 1400×560:
   optional.
-- **Screenshots,** up to 6, at 640×480 or 1280×800: the four in `docs/images/`.
+- **Screenshots,** up to 6, at 640×480 or 1280×800: the five in `docs/store/screenshots/`.
 - **Search terms,** up to 7, at most 30 characters each and 21 words in all, never shown to users:
   `tab manager` · `tab groups` · `save tabs` · `archive tabs` · `restore tabs` · `search tabs` ·
   `browser memory`.
@@ -329,7 +314,7 @@ Certification takes up to seven business days.
 **Before submitting to Edge:**
 - [ ] **A privacy policy that speaks of Edge.** Edge's policy says the privacy policy "should
       primarily refer to the Microsoft Edge browser and not other browsers". PRIVACY.md is about
-      Chrome throughout ("Chrome's history", Gemini Nano, "your Chrome profile", Chrome sync, the
+      Chrome throughout (Gemini Nano, "your Chrome profile", Chrome sync, the
       Chrome Web Store section). The simplest fix is to make it browser-neutral, with a line where
       the two differ. On Edge the on-device model is Microsoft's (Phi-4-mini, a preview there),
       and Edge downloads it from Microsoft. Add Edge's developer policies beside the Chrome Web
@@ -356,11 +341,9 @@ searchable. The other is the check that a text box the user typed into is not st
 draft, so Archive & close never closes it. Both run on the computer, and nothing is sent. A
 per-site or on-click grant would leave most tabs undescribed and drafts unprotected.
 
-**The prompt says it can change browsing history. Does it?** No. It calls only
-`history.getVisits`, for the address of a tab that is open, to read how that visit started and,
-for tabs open before installation, when they were opened. It never searches history at large,
-never writes to it and never sends it. "Read and change" is Chrome's fixed wording for the
-`history` permission.
+**Does it read browsing history?** No. Since 0.3.0 there is no `history` permission: how a visit
+started comes from `webNavigation.onCommitted` as the page commits, for the tab's own top frame,
+and only that one word is kept on the tab's record. Nothing is recorded before Start.
 
 **Why `tabs` as well as host access?** So that addresses and titles of open tabs are still
 visible when the user limits the extension's site access; grouping keeps working then. It adds

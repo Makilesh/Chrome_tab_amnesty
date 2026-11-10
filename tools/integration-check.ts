@@ -86,6 +86,23 @@ async function extensionId(browser: Browser): Promise<string> {
   return new URL(target.url()).host;
 }
 
+/**
+ * A first install opens the sweep page, and it asks first (collector/consent.ts): nothing is
+ * recorded until Start is pressed. Checked, then pressed there as a person would.
+ */
+async function pressStart(browser: Browser, extId: string): Promise<void> {
+  const url = `chrome-extension://${extId}/src/ui/sweep/index.html`;
+  const target = await browser.waitForTarget((t) => t.url().startsWith(url), { timeout: 10_000 }).catch(() => null);
+  const page = (await target?.page()) ?? (await browser.newPage());
+  if (!target) await page.goto(url);
+  await page.waitForSelector('#start', { timeout: 10_000 });
+  const before = (await readTraces(browser, extId)).length;
+  await page.click('#start');
+  await page.waitForSelector('.start', { hidden: true, timeout: 10_000 });
+  const after = (await readTraces(browser, extId)).length;
+  console.log(`start notice: shown by the first install; records before Start: ${before} (must be 0), after: ${after} (the open tabs, adopted at once)`);
+}
+
 /** Click a real link with the mouse so Chrome sets openerTabId and records a 'link' visit. */
 async function clickLinkToNewTab(page: Page, href: string): Promise<void> {
   await page.evaluate((h) => {
@@ -770,6 +787,7 @@ async function main(): Promise<void> {
     const extId = await extensionId(browser);
     console.log(`extension loaded: ${extId}`);
     await sleep(1000); // let the worker finish evaluating and registering listeners
+    await pressStart(browser, extId);
 
     // 1. A typed navigation (CDP Page.navigate records a 'typed' visit) — a deliberate new start.
     const a = await browser.newPage();
