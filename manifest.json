@@ -10,7 +10,8 @@
     "tabGroups",
     "offscreen",
     "unlimitedStorage",
-    "scripting"
+    "scripting",
+    "favicon"
   ],
   "host_permissions": [
     "http://*/*",

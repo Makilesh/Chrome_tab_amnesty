@@ -46,25 +46,28 @@ const day = (at: number) => new Date(at).toLocaleDateString(undefined, { weekday
 const isWeb = (url: string) => /^https?:\/\//i.test(url);
 
 const STYLE = `
-:root { color-scheme: light dark; --bg: #fbfaf7; --fg: #23211d; --muted: #7a756b; --card: #ffffff; --line: #e8e4db; --link: #4a6fa5; }
-@media (prefers-color-scheme: dark) { :root { --bg: #1b1a18; --fg: #ebe8e1; --muted: #9a958a; --card: #242320; --line: #37352f; --link: #8fb0e0; } }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
-h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+:root { color-scheme: light dark; --bg: #f7f7f5; --fg: #2f2e2b; --muted: #65645f; --card: #ffffff; --line: #e6e5e1; --link: #2f5fa7;
+  --g-grey: #5f6368; --g-blue: #1a73e8; --g-red: #d93025; --g-yellow: #f9ab00; --g-green: #1e8e3e; --g-pink: #d01884; --g-purple: #9334e6; --g-cyan: #007b83; --g-orange: #fa903e; }
+@media (prefers-color-scheme: dark) { :root { --bg: #191919; --fg: #ebeae6; --muted: #a3a29c; --card: #222221; --line: #2e2d2b; --link: #7eaaf0;
+  --g-grey: #bdc1c6; --g-blue: #8ab4f8; --g-red: #f28b82; --g-yellow: #fdd663; --g-green: #81c995; --g-pink: #ff8bcb; --g-purple: #c58af9; --g-cyan: #78d9ec; --g-orange: #fcad70; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 768px; margin: 0 auto; padding: 48px 20px 80px; }
+h1 { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 8px; }
 .lede, .never, .empty { color: var(--muted); }
-.lede { margin: 0 0 20px; }
-section { background: var(--card); border: 1px solid var(--line); border-left-width: 5px; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
-h2 { font-size: 16px; font-weight: 600; margin: 0; }
-.when { color: var(--muted); font-size: 13px; margin: 2px 0 8px; }
-ul { list-style: none; margin: 0; padding: 0; }
-li { padding: 3px 0; overflow-wrap: anywhere; }
-a { color: var(--link); }
-.host { color: var(--muted); font-size: 12px; margin-left: 8px; }
+.lede { margin: 0 0 28px; }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgb(15 15 15 / 0.04); }
+h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+h2::before { content: ""; flex: none; width: 15px; height: 13px; background: var(--group, var(--g-grey)); clip-path: polygon(17% 0, 83% 0, 100% 100%, 0 100%); }
+.when { color: var(--muted); font-size: 13px; margin: 2px 0 10px 25px; }
+ul { list-style: none; margin: 0; padding: 6px 0 0; border-top: 1px solid var(--line); }
+li { padding: 4px 0; overflow-wrap: anywhere; }
+a { color: var(--link); text-underline-offset: 2px; }
+.host { color: var(--muted); font-size: 12.5px; margin-left: 8px; }
 .sum { display: block; color: var(--muted); font-size: 13px; }
 .never { font-size: 13px; margin-top: 28px; }
-.c-grey { border-left-color: #9aa0a6; } .c-blue { border-left-color: #4a6fa5; } .c-red { border-left-color: #d9534f; }
-.c-yellow { border-left-color: #e0b02a; } .c-green { border-left-color: #4f9d69; } .c-pink { border-left-color: #d66fa8; }
-.c-purple { border-left-color: #8e6fd6; } .c-cyan { border-left-color: #3aa6b9; } .c-orange { border-left-color: #e08a3a; }
+.c-grey { --group: var(--g-grey); } .c-blue { --group: var(--g-blue); } .c-red { --group: var(--g-red); }
+.c-yellow { --group: var(--g-yellow); } .c-green { --group: var(--g-green); } .c-pink { --group: var(--g-pink); }
+.c-purple { --group: var(--g-purple); } .c-cyan { --group: var(--g-cyan); } .c-orange { --group: var(--g-orange); }
 `;
 
 /** The whole file: a page anyone can read, with the records for "Bring in a copy" inside it. */

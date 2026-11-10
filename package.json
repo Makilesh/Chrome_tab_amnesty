@@ -18,6 +18,7 @@
     "labels": "tsx tools/labels-template.ts",
     "phase1": "tsx tools/phase1-report.ts",
     "walkthrough": "npm run build:check && tsx tools/walkthrough.ts",
+    "preview": "vite --config tools/preview/vite.config.ts",
     "package": "node tools/package.mjs",
     "icons": "tsx tools/icons.ts",
     "read-profile": "tsx tools/read-profile.ts",
