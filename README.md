@@ -8,11 +8,15 @@
   <a href="https://github.com/Makilesh/Chrome_tab_amnesty/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Makilesh/Chrome_tab_amnesty/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/Makilesh/Chrome_tab_amnesty/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Makilesh/Chrome_tab_amnesty"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/Makilesh/Chrome_tab_amnesty"></a>
+  <img alt="Chrome, Edge and Brave 116 or later" src="https://img.shields.io/badge/Chrome%20%C2%B7%20Edge%20%C2%B7%20Brave-116%2B-4a6fa5">
+  <a href="PRIVACY.md"><img alt="Network requests: none" src="https://img.shields.io/badge/network%20requests-none-4a6fa5"></a>
 </p>
 
 <p align="center">A Chrome extension that remembers what your tabs were about, groups them by what you were
 doing, and lets you put a whole project away in one click — kept, searchable, and back whenever
 you want it. Everything stays on your computer.</p>
+
+<p align="center"><b>Status:</b> early (0.2.0). How well the grouping works is still being measured — <a href="docs/RESEARCH.md">how</a>.</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/sweep-dark.png">
@@ -25,7 +29,9 @@ People with dozens of tabs open are rarely disorganised: closing a tab feels lik
 stays open
 ([Chang et al., CHI 2021](https://www.cmu.edu/news/stories/archives/2021/may/overcoming-tab-overload.html)).
 Tab Amnesty makes closing safe. Before anything closes it writes down what each tab was, and it
-gives everything back — in one click, by search, or as a file you keep.
+gives everything back — in one click, by search, or as a file you keep. It is designed with ADHD in
+mind: nothing closes unless you press a button, you never have to name or sort anything, and there
+are no counts, streaks or reminders.
 
 ## What it does
 
@@ -89,6 +95,38 @@ each group and offers one action per group. The design rules it holds itself to 
 [CLAUDE.md](CLAUDE.md); the research behind it, and the measurement it still has to pass, are in
 [docs/RESEARCH.md](docs/RESEARCH.md).
 
+## Questions
+
+**Will it ever close tabs by itself?**
+No. Tabs close only when you press Archive & close on a group, and a tab holding a message you haven't sent stays open even then.
+
+**Chrome warns it can "read and change all your data on all websites" and your browsing history. Why?**
+Those are Chrome's fixed words for what an extension can reach. To name groups and find pages again, Tab Amnesty reads each page's title, description, headings and first thousand or so characters, and checks whether a text box still holds unsent text — yes or no, never the text. From your history it reads only how each open tab's visit started (a link, a typed address, a bookmark) and, for tabs already open when you installed it, when you visited them. It never changes your history, and all of it stays on your computer. Each permission and its reason: [PRIVACY.md](PRIVACY.md).
+
+**Does anything leave my computer?**
+Not from Tab Amnesty: no account, no server, no analytics, no network requests. Two things are Chrome's own: Chrome may download its on-device model (nothing about your tabs is part of that), and if Chrome sync is on, Chrome may save the tab groups it shows to your Google account.
+
+**What happens if I uninstall it, or Chrome loses its data?**
+Uninstalling removes everything Tab Amnesty kept, so press **Keep a copy** first: it saves everything you put away as one file that opens in any browser and can be brought back in, here or on another computer. Inside Chrome, what you put away also has a second copy, so a database Chrome replaces doesn't take it along.
+
+**How is this different from OneTab or Chrome's tab groups?**
+Those keep the tabs you choose, in the groups you make (Chrome's Organize tabs can suggest one from similar tabs). Tab Amnesty works out which tabs belong together from how you opened and used them, even across sites, writes each page down before anything closes, and lets you search what you put away.
+
+**Some groups look wrong. Why?**
+It works from what it has seen since you installed it: which tab opened which, and what you switch between. Tabs that were already open have none of that yet, so they group more loosely until you've browsed for a few days, and a project you work on in between others can end up split. A group is only a suggestion: nothing changes until you press its button. How well the grouping works is still being measured: [docs/RESEARCH.md](docs/RESEARCH.md).
+
+**Why do some groups have plain names?**
+Names come from Chrome's on-device model when your computer can run it, and from the pages' own titles when it can't. Google lists [22 GB free on the drive with your Chrome profile, and 16 GB of memory with four cores or a graphics card with more than 4 GB](https://developer.chrome.com/docs/ai/get-started), so many computers get title-based names.
+
+**Which browsers does it work in?**
+Chrome, Edge and Brave, version 116 or later, on a computer. Other Chromium browsers may work but aren't tested. There is no Firefox, Safari or phone version.
+
+**Does it sync between computers?**
+No; nothing leaves your computer. To move what you put away, use **Keep a copy**, then **Bring in a copy** on the other computer.
+
+**Is it only for people with ADHD?**
+No. It's designed with ADHD in mind — no counts, no streaks, no reminders, nothing closes without you, nothing to name — and it works the same for anyone who keeps a lot of tabs open.
+
 ## Contributing
 
 Issues and pull requests are welcome. `npm test` runs the unit tests. `npm run check` drives a real
@@ -98,3 +136,5 @@ copies (run `npm run check:setup` once first). More in [docs/RESEARCH.md](docs/R
 ## License
 
 [MIT](LICENSE).
+
+If Tab Amnesty is useful to you, a star helps other people find it.
