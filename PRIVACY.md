@@ -87,7 +87,7 @@ putting it away, is removed 30 days after it closed.
 
 ## The tester build
 
-Copies handed to testers for the research study (`npm run package`) also note, every few hours,
+Copies handed to testers for the research study (`npm run package -- --study`) also note, every few hours,
 **how many** tabs are open, and **when** Archive & close was pressed — numbers and times only, no
 addresses or titles. Those stay on the computer too; a tester sends them only by choosing
 **Export study summary** and handing the file over. The Chrome Web Store version does not include

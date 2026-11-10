@@ -7,8 +7,8 @@
  * Install steps: README.md, "Install"; testers: docs/RESEARCH.md.
  */
 import { execFileSync, execSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const study = process.argv.includes('--study');
 const { version } = JSON.parse(readFileSync('manifest.json', 'utf8'));
@@ -32,11 +32,19 @@ if (!study) {
 // Windows' own copy explicitly: under Git Bash, plain `tar` is GNU tar, which ignores -a and writes
 // an uncompressed tar with a .zip name. (Windows PowerShell's Compress-Archive writes backslash
 // paths, which other systems mis-extract.)
-if (process.platform === 'linux') {
-  execFileSync('zip', ['-qr', `${name}.zip`, name], { cwd: 'release', stdio: 'inherit' });
-} else {
-  const tar = process.platform === 'win32' ? join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
-  execFileSync(tar, ['-a', '-c', '-f', `${name}.zip`, name], { cwd: 'release', stdio: 'inherit' });
-}
+const tar = process.platform === 'win32' ? join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
+/** Zip `entries`, relative to `cwd`, into `out`. */
+const zipUp = (out, entries, cwd) =>
+  process.platform === 'linux'
+    ? execFileSync('zip', ['-qr', resolve(out), ...entries], { cwd, stdio: 'inherit' })
+    : execFileSync(tar, ['-a', '-c', '-f', resolve(out), ...entries], { cwd, stdio: 'inherit' });
+zipUp(zip, [name], 'release');
 console.log(`\n${zip}  (${Math.round(statSync(zip).size / 1024)} KB)`);
+if (!study) {
+  // The stores want manifest.json at the top of the zip; someone loading it unpacked wants one folder.
+  const upload = join('release', `${name}-store-upload.zip`);
+  rmSync(upload, { force: true });
+  zipUp(upload, readdirSync(dir), dir);
+  console.log(`${upload}  (${Math.round(statSync(upload).size / 1024)} KB) - for the Chrome Web Store and Edge Add-ons`);
+}
 console.log('Install: unzip into a folder you will keep, chrome://extensions -> Developer mode -> Load unpacked -> that folder.');
