@@ -112,7 +112,7 @@ source on 10 Nov. Edge is built on the same code.
 3. *View and manage your tab groups*: `tabGroups`.
 
 `tabs` adds no line of its own: its "Read your browsing history" is absorbed by both 1 and 2.
-`scripting`, `alarms`, `offscreen` and `unlimitedStorage` show nothing. Line 2 is the one that
+`scripting`, `alarms`, `offscreen`, `unlimitedStorage` and `favicon` show nothing. Line 2 is the one that
 costs installs, and it overstates what happens: Tab Amnesty only reads, and only visits to the
 addresses of open tabs.
 
@@ -141,6 +141,7 @@ addresses of open tabs.
 |---|---|
 | tabs | To read open tabs' addresses and titles and which tab opened which (that is the grouping), and to close a group's tabs and open them again when the user presses Archive & close, Bring back or Open all. It also keeps grouping working when the user limits the extension's site access. |
 | tabGroups | To name and colour the tab-strip groups it makes when the user asks ("Show these groups on my tab strip", Bring back, Open all). Tabs already in a group — the user's own, or a saved group — are left where they are. |
+| favicon | To show each page's site icon beside its title on the extension's own page, read from the browser's local favicon store, so a group is recognisable at a glance. No request is made to any site, and nothing is stored. |
 | history | Reads `history.getVisits` for the address of a tab that is open, and nothing else, to learn how that visit started (link, typed, bookmark) and, for tabs already open before installation, when they were opened. Grouping uses that timing. It never adds, changes or removes history, never reads other addresses and never sends anything. |
 | Host permissions (http, https) | A content script in every page builds a short digest — title, meta description, up to 20 headings, the first 1,000 characters of text — to name groups and make put-away pages searchable. It also checks whether a text box the user typed into still holds text (yes/no only), so Archive & close never closes a draft. It must already be in any tab that might be put away, and it runs in all frames because editors live in iframes. Everything is processed on the computer; nothing is sent. |
 | scripting | Only when the extension starts fresh (install, update, or being switched back on): injects its own packaged content-script file into tabs that were already open, so they are described and their drafts protected too. It never injects a code string, and discarded tabs are not reloaded. |

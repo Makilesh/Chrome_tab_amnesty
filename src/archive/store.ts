@@ -191,11 +191,19 @@ export async function getNeverRemember(): Promise<string[]> {
  * go, open ones lose their title and page text, and its lines leave archived cards (through
  * forgetTab, so the second copy first, as for any forget).
  */
+/**
+ * The site an entry in the never-remember box stands for, or null when it is not one. A site, not a
+ * whole ending: "com" or "co.uk" would forget every address under it, in one click.
+ */
+export function siteToNeverRemember(input: string): string | null {
+  const d = normaliseDomain(input);
+  return d && (d === 'localhost' || (d.includes('.') && !isPublicSuffix(d))) ? d : null;
+}
+
 export async function addNeverRemember(domain: string): Promise<string[]> {
-  const d = normaliseDomain(domain);
+  const d = siteToNeverRemember(domain);
   let list = await getNeverRemember();
-  // A site, not a whole ending: "com" or "co.uk" would forget every address under it, in one click.
-  if (!d || (d !== 'localhost' && (!d.includes('.') || isPublicSuffix(d)))) return list;
+  if (!d) return list;
   if (!list.includes(d)) {
     list = [...list, d];
     await backupNeverRemember(list); // first, like forgetting: an interrupted add must not be undone by a restore

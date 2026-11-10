@@ -22,11 +22,13 @@ import {
   getRememberedNames,
   removeNeverRemember,
   saveRememberedNames,
+  siteToNeverRemember,
 } from '../../archive/store';
-import { queryTerms, searchArchive } from '../../archive/search';
+import { fold, queryTerms, searchArchive } from '../../archive/search';
 import { archiveAndClose, bringBack, groupOnStrip, openCard, openOne, type StripPlace, ungroupOurs } from '../../archive/sweep';
 import type { ArchiveCard, ArchivedTab } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
+import { isUnsegmented } from '../../cluster/lexical';
 import type { Community, TabTrace } from '../../cluster/types';
 import { getOpenTraces, getTraceByTabId } from '../../collector/db';
 
@@ -41,18 +43,181 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return e;
 }
 
+/** Someone asked their computer for less motion: everything below then simply changes. */
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** The page's motion tokens (index.html): ease-out on the way in, ease-in on the way out. */
+const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const EASE_IN = 'cubic-bezier(0.4, 0, 1, 1)';
+
+/**
+ * A step that cannot be undone asks first (WCAG 3.3.4; .ux-profile.md, rule 5): the first press
+ * says what will happen and turns the button into the second step; the second press does it. It
+ * goes back after six seconds, or when focus leaves the button.
+ */
+function confirmFirst(btn: HTMLButtonElement, rest: string, armed: string, warning: () => string, act: () => Promise<void>): void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const disarm = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    setLabel(btn, rest);
+    btn.classList.remove('armed');
+  };
+  btn.addEventListener('blur', () => timer !== undefined && disarm());
+  btn.addEventListener('click', async () => {
+    if (timer === undefined) {
+      setLabel(btn, armed);
+      btn.classList.add('armed');
+      say(warning());
+      timer = setTimeout(disarm, 6000);
+      return;
+    }
+    clearTimeout(timer);
+    btn.disabled = true;
+    await act();
+  });
+}
+
+/** One of the page's own line icons (index.html, <symbol id="i-…">), only ever beside words. */
+function icon(name: string, cls = 'i'): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', cls);
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `#i-${name}`);
+  svg.append(use);
+  return svg;
+}
+
+/** A button whose words can change while its icon stays. Its text is exactly its words. */
+function button(label: string, cls?: string, iconName?: string): HTMLButtonElement {
+  const b = el('button', cls);
+  if (iconName) b.append(icon(iconName));
+  b.append(el('span', undefined, label));
+  return b;
+}
+
+function setLabel(b: HTMLButtonElement, label: string): void {
+  const words = b.querySelector('span');
+  if (words) words.textContent = label;
+  else b.textContent = label;
+}
+
+/** A group's mark: a small tab in its Chrome tab-group colour (index.html, .swatch). */
+const swatch = () => el('span', 'swatch');
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * A page's site icon, from Chrome's own copy on this computer (the "favicon" permission) — never a
+ * request to the site. A page that is not a web page gets the plain page icon.
+ */
+function favicon(url: string): Element {
+  if (!/^https?:/.test(url)) return icon('page', 'i fav');
+  const src = new URL(chrome.runtime.getURL('/_favicon/'));
+  src.searchParams.set('pageUrl', url);
+  src.searchParams.set('size', '32');
+  const img = el('img', 'fav');
+  img.src = src.href;
+  img.alt = '';
+  img.width = img.height = 16;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  return img;
+}
+
+/** The icons of a card's first few sites, side by side: what was in it, recognisable while it is shut. */
+function siteIcons(tabs: readonly { url: string; host: string }[]): HTMLElement {
+  const box = el('span', 'favs');
+  box.setAttribute('aria-hidden', 'true');
+  const seen = new Set<string>();
+  for (const t of tabs) {
+    if (seen.size === 4 || seen.has(t.host)) continue;
+    seen.add(t.host);
+    box.append(favicon(t.url));
+  }
+  return box;
+}
+
+/**
+ * `text` with the searched-for words marked where search.ts matched them: at the start of a word,
+ * or anywhere in scripts written without spaces. Accents and case are folded the same way.
+ */
+function marked(text: string, terms: readonly string[]): Node[] {
+  if (!terms.length || !text) return [document.createTextNode(text)];
+  // Fold one character at a time, so a place in the folded text maps back to the original.
+  let folded = '';
+  const at: number[] = []; // at[k]: where folded[k] came from in `text`
+  let i = 0;
+  for (const ch of text) {
+    const f = fold(ch);
+    for (let k = 0; k < f.length; k++) at.push(i);
+    folded += f;
+    i += ch.length;
+  }
+  at.push(text.length);
+  const ranges: [number, number][] = [];
+  for (const term of terms) {
+    const anywhere = [...term].some(isUnsegmented);
+    for (let from = folded.indexOf(term); from >= 0; from = folded.indexOf(term, from + 1)) {
+      if (anywhere || from === 0 || !/[\p{L}\p{N}]/u.test(folded[from - 1]!)) ranges.push([at[from]!, at[from + term.length]!]);
+    }
+  }
+  if (!ranges.length) return [document.createTextNode(text)];
+  ranges.sort((a, b) => a[0] - b[0]);
+  const out: Node[] = [];
+  let pos = 0;
+  for (const [s, e] of ranges) {
+    const start = Math.max(s, pos);
+    if (e <= start) continue;
+    if (start > pos) out.push(document.createTextNode(text.slice(pos, start)));
+    out.push(el('mark', undefined, text.slice(start, e)));
+    pos = e;
+  }
+  if (pos < text.length) out.push(document.createTextNode(text.slice(pos)));
+  return out;
+}
+
 let lineIds = 0;
 
-function line(title: string, host: string, url: string, summary?: string | null): HTMLLIElement {
+function line(title: string, host: string, url: string, summary?: string | null, terms: readonly string[] = []): HTMLLIElement {
   const li = el('li');
   const label = title || url;
-  const t = el('span', 't', label);
+  const t = el('span', 't');
+  t.append(...marked(label, terms));
   t.id = `line-${++lineIds}`; // a line's own buttons are described by it
   t.title = url;
-  li.append(t);
+  li.append(favicon(url), t);
   if (host && host !== label) li.append(el('span', 'host', host)); // a page titled by its own address shows it once
-  if (summary) li.append(el('span', 'sum', summary));
+  if (summary) {
+    const sum = el('span', 'sum');
+    sum.append(...marked(summary, terms));
+    li.append(sum);
+  }
   return li;
+}
+
+/**
+ * Change the page in one continuous movement instead of a jump: an element with the same
+ * view-transition-name before and after travels between its two places (index.html,
+ * ::view-transition rules). Where Chrome is older, or less motion was asked for, it just changes.
+ */
+async function morph(update: () => Promise<void> | void): Promise<void> {
+  if (calm() || !('startViewTransition' in document)) return update();
+  const t = document.startViewTransition(async () => {
+    await update();
+  });
+  t.ready.catch(() => {}); // a skipped animation is not an error; the change itself still happens
+  t.finished.catch(() => {});
+  await t.updateCallbackDone;
+}
+
+/** A put-away card's place: the group card takes the same name to travel to it (onArchive). */
+const shelfName = (cardId: string) => `card-${cardId}`;
+
+/** A name that improves in place fades in, rather than flickering (transitions.dev, text swap). */
+function swapText(e: HTMLElement, text: string): void {
+  e.textContent = text;
+  if (!calm()) e.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: EASE_OUT });
 }
 
 interface Group {
@@ -131,35 +296,47 @@ async function upgradeNames(byId: Map<string, TabTrace>, taken: string[]): Promi
     await updateNames((m) => rememberName(m, g.community.traceIds, better.name));
     g.name = better;
     const h = g.el?.querySelector('h2');
-    if (h) h.textContent = better.name;
+    if (h) swapText(h, better.name);
   }
 }
 
 function groupCard(g: Group): HTMLElement {
   const card = el('section', `group c-${g.name.color}`);
+  card.style.viewTransitionName = `group-${g.community.id}`; // the groups below close up smoothly
   g.el = card;
   const header = el('header');
+  const name = el('div', 'name');
   const h = el('h2', undefined, g.name.name);
   h.id = `group-${g.community.id}`;
-  const btn = el('button', 'primary', 'Archive & close');
+  name.append(swatch(), h);
+  // When, as an event (§6.5), beside the name. The sites are on the lines, each with its icon.
+  if (g.name.description.when) name.append(el('span', 'when', cap(g.name.description.when)));
+  const btn = button('Archive & close', 'primary', 'archive');
   btn.setAttribute('aria-describedby', h.id); // five "Archive & close" buttons, each says which group
   btn.addEventListener('click', () => void onArchive(g, card, btn));
-  header.append(h, btn);
+  header.append(name, btn);
   card.append(header);
-  const d = g.name.description;
-  card.append(el('p', 'when', [d.when, d.hosts.slice(0, 3).join(', ')].filter(Boolean).join(' · ')));
   const ul = el('ul');
   for (const t of g.members) ul.append(line(t.title, t.host, t.url));
   card.append(ul);
   return card;
 }
 
+/** Said in place of a list that has nothing in it, beside a quiet icon. */
+function emptyNote(text: string, iconName?: string): HTMLElement {
+  const p = el('p', 'empty');
+  if (iconName) p.append(icon(iconName));
+  p.append(text);
+  return p;
+}
+
 function renderGroups(): void {
   const root = $('groups');
   root.replaceChildren();
-  if (groups.length === 0) root.append(el('p', 'empty', 'Nothing to put away yet — this page fills in as you browse.'));
+  if (groups.length === 0) root.append(emptyNote('Nothing to put away yet — this page fills in as you browse.', 'rest'));
   for (const g of groups.slice(0, shown)) root.append(groupCard(g));
   $('more').hidden = groups.length <= shown;
+  $('strip').hidden = groups.length === 0; // nothing to show on the tab strip
 }
 
 function quoted(t: TabTrace): string {
@@ -171,25 +348,30 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement): P
   if (busy) return;
   busy = true;
   btn.disabled = true;
-  btn.textContent = 'Putting away…';
+  setLabel(btn, 'Putting away…');
   try {
     const d = g.name.description;
     const { card: saved, keptOpen } = await archiveAndClose(g.community, g.members, g.name, d.when, d.hosts, d.whenAt);
-    groups = groups.filter((x) => x !== g);
-    card.remove();
-    renderGroups();
+    // The card itself travels down onto the shelf, into its new place there: closing is seen to
+    // be putting away, not losing (the thesis — close it, you'll still have it).
+    if (saved) card.style.viewTransitionName = shelfName(saved.cardId);
+    await morph(async () => {
+      groups = groups.filter((x) => x !== g);
+      card.remove();
+      renderGroups();
+      await renderArchive();
+    });
     const kept = keptOpen.length
       ? ` Left open, because you typed something in ${keptOpen.length === 1 ? 'it' : 'them'}: ${keptOpen.map(quoted).join(', ')}.`
       : '';
-    if (saved) toast(`Put away “${saved.name}”.${kept}`, saved.cardId, saved.name);
+    if (saved) toast(`Put away “${saved.name}”.${kept}`, { cardId: saved.cardId, name: saved.name, ok: true });
     else if (keptOpen.length) toast(`Nothing put away.${kept}`);
     // Keyboard users keep their place on the next group's name — not its button, where a second
     // Enter would put that group away too.
     focusHeading($('groups').querySelector<HTMLElement>('.group h2')) || $<HTMLButtonElement>('strip').focus({ preventScroll: true });
-    await renderArchive();
   } catch (e) {
     btn.disabled = false;
-    btn.textContent = 'Archive & close';
+    setLabel(btn, 'Archive & close');
     card.append(el('p', 'note', `That did not work: ${(e as Error).message}`));
   } finally {
     busy = false;
@@ -268,32 +450,14 @@ async function onBringBack(cardId: string, button: HTMLButtonElement, name: stri
     document.querySelector('.toast')?.remove();
     say(`“${name}” is back on your tab strip.`);
   }
-  await renderArchive(true, { cardId, label: 'Open all' });
+  await morph(() => renderArchive(true, { cardId, label: 'Open all' }));
 }
 
-/**
- * Forget is for good, so the first press asks and the second forgets (WCAG 3.3.4; .ux-profile.md,
- * rule 5). The button goes back to "Forget this" after six seconds or when focus leaves it.
- */
+/** Forget is for good, so the first press asks and the second forgets (confirmFirst). */
 function forgetButton(what: string, forget: () => Promise<void>, describedBy: string): HTMLButtonElement {
   const btn = el('button', 'quiet', 'Forget this');
   btn.setAttribute('aria-describedby', describedBy);
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const disarm = () => {
-    clearTimeout(timer);
-    timer = undefined;
-    btn.textContent = 'Forget this';
-  };
-  btn.addEventListener('blur', () => timer !== undefined && disarm());
-  btn.addEventListener('click', async () => {
-    if (timer === undefined) {
-      btn.textContent = 'Forget for good';
-      say(`Press again to forget ${what}. This can't be undone.`);
-      timer = setTimeout(disarm, 6000);
-      return;
-    }
-    clearTimeout(timer);
-    btn.disabled = true;
+  confirmFirst(btn, 'Forget this', 'Forget for good', () => `Press again to forget ${what}. This can't be undone.`, async () => {
     await forget();
     say(`Forgot ${what}.`);
   });
@@ -305,7 +469,7 @@ async function onOpenAll(c: ArchiveCard, button: HTMLButtonElement): Promise<voi
   button.disabled = true;
   try {
     await openCard(c);
-    toast(`“${c.name}” is open again, at the end of your tab strip.`);
+    toast(`“${c.name}” is open again, at the end of your tab strip.`, { ok: true });
   } catch (e) {
     toast(`That did not work: ${(e as Error).message}`);
   } finally {
@@ -317,22 +481,26 @@ async function onOpenAll(c: ArchiveCard, button: HTMLButtonElement): Promise<voi
  * One put-away card. `matched`: a search found these of its tabs (not the card itself), so the
  * list is open and holds only them.
  */
-function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[]): HTMLElement {
+function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[], terms: readonly string[] = []): HTMLElement {
   const card = el('section', `group c-${c.color}`);
   card.dataset.card = c.cardId;
+  card.style.viewTransitionName = shelfName(c.cardId);
   const header = el('header');
-  const h = el('h3', undefined, c.name);
+  const name = el('div', 'name');
+  const h = el('h3');
+  h.append(...marked(c.name, terms));
   h.id = `card-${c.cardId}`;
-  header.append(h);
-  const actions = el('div');
+  name.append(swatch(), h);
+  header.append(name);
+  const actions = el('div', 'actions');
   // One action per card (§6.4): the undo for its first day, then opening it again, as often as wanted.
   if (undoable(c)) {
-    const back = el('button', undefined, 'Bring back');
+    const back = button('Bring back', undefined, 'back');
     back.setAttribute('aria-describedby', h.id);
     back.addEventListener('click', () => void onBringBack(c.cardId, back, c.name));
     actions.append(back);
   } else {
-    const all = el('button', undefined, 'Open all');
+    const all = button('Open all', undefined, 'open');
     all.setAttribute('aria-describedby', h.id);
     all.addEventListener('click', () => void onOpenAll(c, all));
     actions.append(all);
@@ -340,13 +508,15 @@ function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[]): HT
   actions.append(
     forgetButton(`“${c.name}”`, async () => {
       await forgetCard(c.cardId);
-      await renderArchive(true, { cardId: c.cardId });
+      await morph(() => renderArchive(true, { cardId: c.cardId }));
     }, h.id),
   );
   header.append(actions);
   card.append(header);
-  const when = [cardWhen(c), cardHosts(c).slice(0, 3).join(', ')].filter(Boolean).join(' · ');
-  card.append(el('p', `when${c.restoredAt ? ' done' : ''}`, c.restoredAt ? `${when} · brought back` : when));
+  const when = cap([cardWhen(c), cardHosts(c).slice(0, 3).join(', ')].filter(Boolean).join(' · '));
+  const meta = el('p', `when${c.restoredAt ? ' done' : ''}`);
+  meta.append(siteIcons(c.tabs), c.restoredAt ? `${when} · brought back` : when);
+  card.append(meta);
   const details = el('details');
   details.open = open || !!matched;
   const summary = el('summary', undefined, matched ? 'What matched' : 'What was in it');
@@ -354,14 +524,14 @@ function archiveCard(c: ArchiveCard, open: boolean, matched?: ArchivedTab[]): HT
   details.append(summary);
   const ul = el('ul');
   for (const t of matched ?? c.tabs) {
-    const li = line(t.title, t.host, t.url, t.summary);
+    const li = line(t.title, t.host, t.url, t.summary, terms);
     const lineId = li.querySelector('.t')!.id;
     const openBtn = el('button', 'quiet', 'Open');
     openBtn.setAttribute('aria-describedby', lineId);
     openBtn.addEventListener('click', () => void openOne(t.url));
     const fg = forgetButton(`“${t.title || t.host}”`, async () => {
       await forgetTab(c.cardId, t.traceId);
-      await renderArchive(true, { cardId: c.cardId, label: 'Open all' });
+      await morph(() => renderArchive(true, { cardId: c.cardId, label: 'Open all' }));
     }, lineId);
     li.append(openBtn, fg);
     ul.append(li);
@@ -405,8 +575,20 @@ async function renderArchive(force = false, keep?: { cardId: string; label?: str
   root.replaceChildren();
   section.hidden = cards.length === 0;
   const list = searching ? searchArchive(cards, query) : cards.map((card) => ({ card, tabs: card.tabs, whole: true }));
-  if (searching && list.length === 0) root.append(el('p', 'empty', 'Nothing put away matches that.'));
-  for (const h of list.slice(0, cardsShown)) root.append(archiveCard(h.card, open.has(h.card.cardId), h.whole ? undefined : h.tabs));
+  const terms = searching ? queryTerms(query) : [];
+  if (searching && list.length === 0) {
+    const none = emptyNote('Nothing put away matches that.');
+    const clear = el('button', 'quiet', 'Clear the search');
+    clear.addEventListener('click', () => {
+      const find = $<HTMLInputElement>('find');
+      find.value = '';
+      find.dispatchEvent(new Event('search')); // as the box's own clear button does
+      find.focus();
+    });
+    none.append(clear);
+    root.append(none);
+  }
+  for (const h of list.slice(0, cardsShown)) root.append(archiveCard(h.card, open.has(h.card.cardId), h.whole ? undefined : h.tabs, terms));
   $('cards-more').hidden = list.length <= cardsShown;
   if (searching && query !== saidFor) say(list.length ? `Best match: “${list[0]!.card.name}”.` : 'Nothing put away matches that.'); // no count (§6.1)
   saidFor = searching ? query : '';
@@ -487,18 +669,29 @@ function showFound(): void {
   $<HTMLInputElement>('find').focus({ preventScroll: true });
 }
 
-function toast(text: string, cardId?: string, name?: string): void {
+/** What just happened, at the bottom of the window. `ok`: it went as asked, said with a check. */
+function toast(text: string, opts: { cardId?: string; name?: string; ok?: boolean } = {}): void {
   document.querySelector('.toast')?.remove();
-  const t = el('div', 'toast', text);
+  const t = el('div', 'toast');
+  if (opts.ok) t.append(icon('check'));
+  t.append(el('span', undefined, text));
   say(text); // through the page's one status region: a region inserted with its text is not reliably read
-  if (cardId) {
+  if (opts.cardId) {
+    const { cardId, name } = opts;
     const back = el('button', undefined, 'Bring back');
     back.addEventListener('click', () => void onBringBack(cardId, back, name ?? 'It'));
     t.append(back);
   }
   document.body.append(t);
   // The same Bring back stays under "Put away" for a day, so nothing depends on catching this.
-  setTimeout(() => t.remove(), 12_000);
+  setTimeout(() => {
+    if (!t.isConnected) return;
+    if (calm()) return t.remove();
+    t.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(8px) scale(0.98)' }], { duration: 150, easing: EASE_IN }).finished.then(
+      () => t.remove(),
+      () => t.remove(),
+    );
+  }, 12_000);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -566,8 +759,8 @@ async function onBringInCopy(file: File): Promise<void> {
  */
 function offerNever(status: HTMLElement, sites: string[]): void {
   const yes = el('button', 'quiet', 'Never remember them here too');
-  yes.addEventListener('click', async () => {
-    yes.disabled = true;
+  const warning = () => `Press again to never remember ${sites.join(', ')} here. What was kept about them is forgotten for good.`;
+  confirmFirst(yes, 'Never remember them here too', 'Forget them for good', warning, async () => {
     let list = await getNeverRemember();
     for (const d of sites) list = await addNeverRemember(d);
     renderNever(list);
@@ -581,12 +774,66 @@ function offerNever(status: HTMLElement, sites: string[]): void {
 // Never remember
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * The never-remember box. Something that is not one site gets an example rather than silence; a
+ * site asks once before it is added, because adding it forgets what was kept about it
+ * (.ux-profile.md, rule 5). Enter in the box works as the button does.
+ */
+function wireNeverForm(): void {
+  const input = $<HTMLInputElement>('never-input');
+  const add = $<HTMLButtonElement>('never-add');
+  const hint = $('never-hint');
+  let armedFor = '';
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const disarm = () => {
+    clearTimeout(timer);
+    armedFor = '';
+    add.textContent = 'Never remember this site';
+    add.classList.remove('armed');
+  };
+  const tell = (text: string) => {
+    hint.textContent = text;
+    say(text);
+  };
+  input.addEventListener('input', () => {
+    disarm();
+    hint.textContent = '';
+  });
+  $('never-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const site = siteToNeverRemember(input.value);
+    if (!site) {
+      disarm();
+      tell('That is not one site. Enter one like reddit.com.');
+      return;
+    }
+    if (armedFor !== site) {
+      disarm();
+      armedFor = site;
+      add.textContent = 'Forget it and never remember';
+      add.classList.add('armed');
+      tell(`What Tab Amnesty kept about ${site} will be forgotten for good. Press again to go ahead.`);
+      timer = setTimeout(() => {
+        disarm();
+        hint.textContent = '';
+      }, 8000);
+      return;
+    }
+    disarm();
+    hint.textContent = '';
+    renderNever(await addNeverRemember(site));
+    input.value = '';
+    say(`${site} is never remembered now.`);
+    await renderArchive(true); // lines of the site just left the cards
+  });
+}
+
 function renderNever(list: string[]): void {
   const ul = $('never-list');
   ul.replaceChildren();
   list.forEach((d, i) => {
     const li = el('li', undefined, d);
-    const rm = el('button', 'quiet', 'remember again');
+    const rm = el('button', 'quiet', 'Remember again');
     rm.setAttribute('aria-label', `Remember ${d} again`);
     rm.addEventListener('click', async () => {
       renderNever(await removeNeverRemember(d));
@@ -630,14 +877,7 @@ async function main(): Promise<void> {
     input.value = ''; // so the same file can be chosen again
     if (file) void onBringInCopy(file);
   });
-  $('never-form').addEventListener('submit', async (e) => {
-    e.preventDefault(); // Enter in the box works too
-    const input = $<HTMLInputElement>('never-input');
-    if (!input.value.trim()) return;
-    renderNever(await addNeverRemember(input.value));
-    input.value = '';
-    await renderArchive(true); // lines of the site just left the cards
-  });
+  wireNeverForm();
   // Summaries arrive in the background; refresh the archive now and then to show them.
   setInterval(() => void renderArchive(), 20_000);
 }

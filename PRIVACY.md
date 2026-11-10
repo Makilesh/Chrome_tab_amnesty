@@ -78,6 +78,7 @@ putting it away, is removed 30 days after it closed.
 |---|---|
 | Tabs | See which tabs are open, which tab opened which, and close or reopen them when you ask. |
 | Tab groups | Show groups on your tab strip, and reopen a card as a named group. |
+| Favicons | Show each page's site icon beside it, from the copy Chrome already keeps on your computer. Nothing is fetched from the site. |
 | History | When a visit started (link, typed, …), and when tabs that were open before you installed it were visited. |
 | Access to the pages you visit (http and https) | Read each page's title, description, headings and opening text for its digest, and notice unsent typing — on your computer only. |
 | Scripting | Start reading the tabs that were already open when Tab Amnesty was installed or updated. |

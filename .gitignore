@@ -35,3 +35,5 @@ release/
 ci-build/
 .agent-notes/
 .claude/worktrees/
+.shots/
+.playwright-cli/

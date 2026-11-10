@@ -405,6 +405,17 @@ find and open all: "${word}" found ${JSON.stringify(found)}`);
  * a copy puts the card back (as Open all, not an undo); the same file again adds nothing, and a
  * file that is not a copy is refused.
  */
+
+/**
+ * Open one of the sweep page's fold-outs and wait until it has finished growing open (index.html
+ * animates it): a click sent at once would land while its buttons are still clipped, which no
+ * person can do but a script can.
+ */
+async function openPanel(page: Page, summary: string): Promise<void> {
+  await page.click(summary);
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+}
+
 async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard, userDataDir: string): Promise<void> {
   const page = await browser.newPage();
   const downloads = join(userDataDir, 'copy-downloads');
@@ -412,7 +423,7 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
   await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
   await page.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
   await page.waitForSelector('#cards .group', { timeout: 10_000 });
-  await page.click('#keep summary');
+  await openPanel(page, '#keep summary');
   await page.click('#copy-save');
   let file = '';
   for (let i = 0; i < 20 && !file; i++) {
@@ -462,7 +473,10 @@ async function checkKeepACopy(browser: Browser, extId: string, card: ArchiveCard
   const offered = await bringIn(offerFile);
   const neverList = () => page.$$eval('#never-list li', (lis) => lis.map((l) => l.firstChild?.textContent ?? ''));
   const neverBefore = await neverList();
-  await page.evaluate(() => ([...document.querySelectorAll('#copy-status button')].find((b) => b.textContent === 'Never remember them here too') as HTMLButtonElement | undefined)?.click());
+  // Asked first, then done (sweep.ts, confirmFirst): the second press is the one that adds them.
+  for (const label of ['Never remember them here too', 'Forget them for good']) {
+    await page.evaluate((l) => ([...document.querySelectorAll('#copy-status button')].find((b) => b.textContent === l) as HTMLButtonElement | undefined)?.click(), label);
+  }
   await sleep(1000);
   const neverAfter = await neverList();
 
@@ -640,8 +654,9 @@ async function checkDatabaseReplaced(browser: Browser, extId: string, origin: st
   const sweep = await browser.newPage();
   await sweep.goto(`chrome-extension://${extId}/src/ui/sweep/index.html`);
   await sweep.waitForSelector('#never-input');
-  await sweep.click('#never summary');
+  await openPanel(sweep, '#never summary');
   await sweep.type('#never-input', 'example.org');
+  await sweep.click('#never-add'); // asks first: what was kept about it is forgotten
   await sweep.click('#never-add');
   await sleep(500);
   await sweep.close();

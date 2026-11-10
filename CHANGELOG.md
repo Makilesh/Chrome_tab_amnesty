@@ -5,6 +5,23 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **A new look.** Tab Amnesty's page follows Notion's calm page style more closely: white cards on
+  a warm grey desk, a deeper shelf for what you put away, a small tab in each group's Chrome
+  tab-group colour, and line icons beside the buttons' words. Dark mode follows your system.
+- **Site icons** beside every page, from Chrome's own copy on your computer; nothing is fetched
+  from the sites (new permission: favicon, which adds no install warning).
+- **Search marks the words it found** in titles, summaries and names.
+- **Archive & close shows where things go:** the group's card travels down onto the "Put away"
+  shelf. Lists open smoothly, and nothing moves when your computer is set to reduce motion.
+- The copy saved by Keep a copy has the same look.
+- Adding a site to Sites never remembered asks once first, because it forgets what was kept about
+  the site, and says so plainly when what was typed is not one site.
+- A search that finds nothing offers to clear it, and the search box has a visible label.
+
+### For contributors
+- `npm run preview` shows the real page in any browser, on made-up tabs, without loading the extension.
+
 ## [0.2.0] - 2026-11-10
 
 ### Added

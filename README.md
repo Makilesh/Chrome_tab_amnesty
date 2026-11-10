@@ -129,7 +129,8 @@ No. It's designed with ADHD in mind — no counts, no streaks, no reminders, not
 
 ## Contributing
 
-Issues and pull requests are welcome. `npm test` runs the unit tests. `npm run check` drives a real
+Issues and pull requests are welcome. `npm test` runs the unit tests. `npm run preview` shows the
+real page in any browser, on made-up tabs, for design work. `npm run check` drives a real
 Chrome for Testing through recording, grouping, putting away, a restart, bringing back, search and
 copies (run `npm run check:setup` once first). More in [docs/RESEARCH.md](docs/RESEARCH.md).
 
