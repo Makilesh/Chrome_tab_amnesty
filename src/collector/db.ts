@@ -6,6 +6,7 @@
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { type Backup, markRestorePending, mergePresses, mergeSnapshots, noteCreated, noteReset, readBackup, type Reset } from '../archive/backup';
+import type { Corrections } from '../archive/corrections';
 import type { RememberedName } from '../archive/naming';
 import type { OpenSnapshot } from '../archive/study';
 import type { ArchiveCard, SummariseJob } from '../archive/types';
@@ -48,6 +49,8 @@ interface MetaRecords {
   firstRunShown: boolean;
   /** When the person pressed Start; nothing is recorded before it (consent.ts). */
   startedAt: number;
+  /** What the person corrected about the groups: put together, taken out (archive/corrections.ts). Ids only. */
+  corrections: Corrections;
 }
 
 interface TabAmnestyDB extends DBSchema {

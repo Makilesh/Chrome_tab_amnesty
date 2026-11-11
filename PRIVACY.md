@@ -39,8 +39,12 @@ to keep nothing about them.
 
 When you put a group away, it keeps a card for it: the group's name, when it was, its sites, and
 for each tab the address, title, digest and, if your browser's on-device model wrote one, a summary.
+A card is a record of the page, not a copy of it: bringing a tab back loads the page again.
 
-It never keeps or sends what you type, passwords, cookies or form contents. It does not run in
+When you correct a group, it keeps the correction so the group stays as you left it: which tabs
+you put together, which you took out, and the name if you typed one.
+
+It never keeps or sends what you type into web pages, passwords, cookies or form contents. It does not run in
 incognito windows at all.
 
 ## On-device AI

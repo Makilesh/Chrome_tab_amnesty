@@ -45,7 +45,7 @@ Close it, you'll still have it.
 
 Tab Amnesty is a memory for your browser. It notices which tabs belong together — the ones you opened from one another, in one sitting, and switched between — and shows them as groups named after what you were doing: "Lisbon", "asyncio", "Job search".
 
-Each group has one button: Archive & close. It writes everything down first — every page, its title, what it said — and only then closes the tabs. Changed your mind? Bring back puts the whole group back on your tab strip, in its order, for a day, even after a restart. After that, Open all brings it back whenever you like.
+Each group has one button: Archive & close. It writes every page down first — its address, its title and a short digest of what it said — and only then closes the tabs. Changed your mind? Bring back puts the whole group back on your tab strip, in its order, for a day, even after a restart. After that, Open all brings it back whenever you like.
 
 What it keeps, and why — on your computer only, never sent anywhere, and nothing at all until you press Start on the page it opens when installed:
 • For each tab in a normal window: its address, title and site; when it was opened, which page it was opened from, and when you switched to it and for how long. That is how it tells one project from another.
@@ -260,7 +260,7 @@ Close it, you'll still have it.
 
 Tab Amnesty is a memory for your browser. It notices which tabs belong together — the ones you opened from one another, in one sitting, and switched between — and shows them as groups named after what you were doing: "Lisbon", "asyncio", "Job search".
 
-Each group has one button: Archive & close. It writes everything down first — every page, its title, what it said — and only then closes the tabs. Changed your mind? Bring back puts the whole group back on your tab strip, in its order, for a day, even after a restart. After that, Open all brings it back whenever you like.
+Each group has one button: Archive & close. It writes every page down first — its address, its title and a short digest of what it said — and only then closes the tabs. Changed your mind? Bring back puts the whole group back on your tab strip, in its order, for a day, even after a restart. After that, Open all brings it back whenever you like.
 
 What it keeps, and why — on your computer only, never sent anywhere, and nothing at all until you press Start on the page it opens when installed:
 • For each tab in a normal window: its address, title and site; when it was opened, which page it was opened from, and when you switched to it and for how long. That is how it tells one project from another.
@@ -300,8 +300,8 @@ optional and meant mainly for logins:
 
 ```text
 No account, sign-in or server: everything runs on the computer, and the extension makes no network requests.
-1. Install. Open a page and three or four of its links in new tabs (for example a docs.python.org page). Then type an unrelated address and open a few of its links.
-2. Click the Tab Amnesty toolbar icon. The extension's own page opens in a tab and shows the open tabs grouped by what they were for, each group with one Archive & close button. Tabs that belong to no group are under "On their own".
+1. Install. The extension's page opens and says what it notes: press "Start grouping my tabs". Open a page and three or four of its links in new tabs (for example a docs.python.org page). Then type an unrelated address and open a few of its links.
+2. Click the Tab Amnesty toolbar icon. The extension's own page opens in a tab and shows the open tabs grouped by what they were for, each group with one Archive & close button. Tabs that belong to no group are under "On their own", with one Archive & close button for all of them. "Change this group" on a group renames it, puts it together with another group, or takes a tab out (it moves to "On their own", with "Put back" beside it).
 3. Press Archive & close on a group. Its tabs close and a card appears under "Put away". Bring back, on the card or in the message, reopens them as a named tab group.
 4. Type a word from one of those pages into the search box under "Put away".
 5. Type into a text box on some page without sending it, then press Archive & close on that page's group: that tab stays open.
