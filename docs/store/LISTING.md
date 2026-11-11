@@ -178,7 +178,7 @@ the policy and the extension's behaviour must agree. A contradiction is grounds 
 
 **Limited Use statement.** It must be "on your project's homepage" or "on a page one click away
 from the homepage; for example, in your privacy policy" (User Data FAQ). It is in both places:
-README.md, "Private by design" (the homepage above), and PRIVACY.md, "Chrome Web Store policy".
+README.md, "Private by design" (the homepage above), and PRIVACY.md, "Store policies".
 Keep both when editing either.
 
 **Prominent disclosure** (Disclosure Requirements, enforced since 1 Aug 2026). "Prior to
@@ -208,15 +208,15 @@ to press Publish.
 - [ ] **Upload `release/tab-amnesty-0.3.0-store-upload.zip`** (manifest.json at its top).
       `npm run package` makes it from the commit you are on, and the v0.3.0 GitHub release carries
       it. Older zips are not this listing.
-- [ ] **Summary:** keep it, or put the suggested line in `manifest.json` before packaging.
+- [x] **Summary:** the manifest description is the 127-character summary.
 - [x] **In-product disclosure:** the Start notice, in 0.3.0 (the owner chose it; DECISIONS
       2026-11-10). Nothing is recorded before the button is pressed.
-- [ ] `npm run check` passes on the commit being packaged. Load the store folder unpacked once
-      and press Archive & close and Bring back by hand.
-- [ ] **See the install prompt yourself.** In `chrome://extensions`, use Pack extension on the
-      store folder and drop the `.crx` on the page, or use the
-      [Extension Update Testing Tool](https://github.com/GoogleChromeLabs/extension-update-testing-tool).
-      Expect exactly lines 1–2 above.
+- [x] `npm run check` passes on 0.3.0 (exit 0), and the store folder itself, loaded unpacked in
+      Chrome for Testing 153 (11 Nov): the Start notice on first install; three linked pages grouped
+      as "Sourdough"; Archive & close closed all three and Bring back reopened them; no page errors.
+- [x] **The install prompt,** read from Chrome itself (`chrome.management.getPermissionWarningsByManifest`
+      on the 0.3.0 store build, 11 Nov): exactly "Read and change all your data on all websites"
+      and "View and manage your tab groups".
 - [ ] **Account steps only the owner can take:** register and pay the one-time fee, verify the
       contact email, and choose the publisher name. Also declare trader or non-trader (EU Digital
       Services Act): a trader's legal name, address and phone number are shown on the listing,
@@ -312,18 +312,20 @@ Tabs open before installation are covered too. Names and summaries from the brow
 Certification takes up to seven business days.
 
 **Before submitting to Edge:**
-- [ ] **A privacy policy that speaks of Edge.** Edge's policy says the privacy policy "should
+- [x] **A privacy policy that speaks of Edge** (done 11 Nov: browser-neutral, Chrome and Edge named
+      where they differ, Edge's developer policies beside the Chrome Web Store's). Edge's policy says the privacy policy "should
       primarily refer to the Microsoft Edge browser and not other browsers". PRIVACY.md is about
       Chrome throughout (Gemini Nano, "your Chrome profile", Chrome sync, the
       Chrome Web Store section). The simplest fix is to make it browser-neutral, with a line where
       the two differ. On Edge the on-device model is Microsoft's (Phi-4-mini, a preview there),
       and Edge downloads it from Microsoft. Add Edge's developer policies beside the Chrome Web
       Store statement. One URL then serves both stores.
-- [ ] **"Chrome" in the extension's own words.** Four sentences on the sweep page name Chrome:
+- [x] **"Chrome" in the extension's own words** (done 11 Nov: "your browser", and the health notes
+      name `edge://extensions` or `brave://extensions` where that is the browser). Four sentences on the sweep page name Chrome:
       the two health notes in `src/ui/sweep/index.html` (with `chrome://extensions`) and two
       tab-strip messages in `sweep.ts`. They show only in rare states, but on Edge they are wrong
       as well as against the rule. "Your browser" fixes both.
-- [ ] **On-device AI on Edge.** Edge's Summarizer and Prompt APIs are previews (Canary and Dev
+- [x] **On-device AI on Edge.** Edge's Summarizer and Prompt APIs are previews (Canary and Dev
       from 138.0.3309.2; they need 20 GB free and 5.5 GB of video memory). Expect title-based
       names and no summaries for most Edge users. The Edge description says so.
 - [ ] **The repository's address contains "Chrome".** That is unlikely to matter. If certification

@@ -32,6 +32,8 @@ versions follow [Semantic Versioning](https://semver.org/).
 - A search that finds nothing offers to clear it, and the search box has a visible label.
 - "Put away" shows two groups at a time, with "Show more put away" for the rest, so no more than
   five choices are on screen at once.
+- Messages name your browser's own pages (`edge://extensions` in Edge, `brave://extensions` in
+  Brave) and say "your browser" rather than Chrome.
 - When something fails, it says so in plain words, with a "Copy error details" button for bug
   reports instead of Chrome's own message.
 

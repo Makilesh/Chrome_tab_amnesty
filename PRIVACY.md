@@ -7,7 +7,9 @@ else. There is no account, no server, no tracking and no advertising. Nothing is
 **It asks first.** Nothing is recorded until you press **Start grouping my tabs** on the page Tab
 Amnesty opens when it is installed. That page lists what it notes, as this one does below.
 
-Last changed: 10 November 2026. Changes to this page are visible in the
+Tab Amnesty works in Chrome, Microsoft Edge and Brave; where they differ, this page says so.
+
+Last changed: 11 November 2026. Changes to this page are visible in the
 [repository's history](https://github.com/Makilesh/Chrome_tab_amnesty/commits/main/PRIVACY.md).
 
 ## What it records, and why
@@ -19,8 +21,8 @@ whole project away in one click and find it again later. For that, for each tab 
 - the page's **address, title and site**;
 - **when** the tab was opened, **which tab it was opened from**, when you switched to it and for
   how long, and which tabs you switched between — this is how it tells one project from another;
-- **how the visit started** (a link, a typed address, a bookmark…), as Chrome reports it when
-  the page loads. Tab Amnesty does not read your browsing history;
+- **how the visit started** (a link, a typed address, a bookmark…), as your browser reports it
+  when the page loads. Tab Amnesty does not read your browsing history;
 - a short **digest of the page**: its description, its headings and its opening text (about a
   thousand characters at most), so a group can be named and a page found again by what it said;
 - whether a text box you typed into **still holds text you have not sent**. To tell, it looks on
@@ -36,29 +38,31 @@ pages that show your messages are kept like any page; add their site to **Sites 
 to keep nothing about them.
 
 When you put a group away, it keeps a card for it: the group's name, when it was, its sites, and
-for each tab the address, title, digest and, if Chrome's on-device model wrote one, a summary.
+for each tab the address, title, digest and, if your browser's on-device model wrote one, a summary.
 
 It never keeps or sends what you type, passwords, cookies or form contents. It does not run in
 incognito windows at all.
 
 ## On-device AI
 
-When your Chrome offers its built-in on-device model (Gemini Nano), Tab Amnesty asks it to name
-groups and to summarise pages you put away. That runs on your computer, through Chrome; nothing
-goes to a server. The first time, Chrome may download the model itself — that is Chrome's own
-download from Google, and nothing about your tabs is part of it. Without the model, names come
-from the pages' own titles.
+When your browser offers a built-in on-device model — Gemini Nano in Chrome; in Microsoft Edge,
+Phi-4-mini, still a preview there — Tab Amnesty asks it to name groups and to summarise pages you
+put away. That runs on your computer, through the browser; nothing goes to a server. The first
+time, the browser may download the model itself — Chrome from Google, Edge from Microsoft — and
+nothing about your tabs is part of that download. Without the model, names come from the pages'
+own titles.
 
 ## Where it is kept
 
-In the extension's own storage inside your Chrome profile (its IndexedDB database, with a second
-copy of what you put away in its Cache Storage, so a database Chrome replaces does not take your
-archive along). Only Tab Amnesty can read it — web pages cannot. Uninstalling Tab Amnesty
+In the extension's own storage inside your browser profile (its IndexedDB database, with a second
+copy of what you put away in its Cache Storage, so a database the browser replaces does not take
+your archive along). Only Tab Amnesty can read it — web pages cannot. Uninstalling Tab Amnesty
 removes all of it.
 
-When you show groups on your tab strip, or bring a group back, Chrome makes named tab groups. If
-Chrome sync is on, Chrome itself may save those groups and their names to your Google account —
-that is Chrome's own feature, under your sync settings, not Tab Amnesty sending anything.
+When you show groups on your tab strip, or bring a group back, the browser makes named tab groups.
+If the browser's sync is on, it may save those groups and their names to your account (a Google
+account in Chrome, a Microsoft account in Edge) — that is the browser's own feature, under your
+sync settings, not Tab Amnesty sending anything.
 
 What you put away is kept until you forget it. The record of a tab you closed yourself, without
 putting it away, is removed 30 days after it closed.
@@ -81,27 +85,28 @@ putting it away, is removed 30 days after it closed.
 |---|---|
 | Tabs | See which tabs are open, which tab opened which, and close or reopen them when you ask. |
 | Tab groups | Show groups on your tab strip, and reopen a card as a named group. |
-| Favicons | Show each page's site icon beside it, from the copy Chrome already keeps on your computer. Nothing is fetched from the site. |
+| Favicons | Show each page's site icon beside it, from the copy your browser already keeps on your computer. Nothing is fetched from the site. |
 | Web navigation | How each visit started (a link, a typed address, a bookmark…), as the page loads. It does not read your browsing history. |
 | Access to the pages you visit (http and https) | Read each page's title, description, headings and opening text for its digest, and notice unsent typing — on your computer only. |
 | Scripting | Start reading the tabs that were already open when Tab Amnesty was installed or updated. |
 | Alarms | Do background work (summaries, keeping records in step) on a schedule rather than continuously. |
-| Offscreen document | Run Chrome's on-device summariser outside the background worker. |
-| Unlimited storage | Keep everything you put away for as long as you want it, without Chrome's storage cap deleting it. |
+| Offscreen document | Run the browser's on-device summariser outside the background worker. |
+| Unlimited storage | Keep everything you put away for as long as you want it, without the browser's storage limit deleting it. |
 
 ## The tester build
 
 Copies handed to testers for the research study (`npm run package -- --study`) also note, every few hours,
 **how many** tabs are open, and **when** Archive & close was pressed — numbers and times only, no
 addresses or titles. Those stay on the computer too; a tester sends them only by choosing
-**Export study summary** and handing the file over. The Chrome Web Store version does not include
-the study.
+**Export study summary** and handing the file over. The versions in the Chrome Web Store and Edge
+Add-ons do not include the study.
 
-## Chrome Web Store policy
+## Store policies
 
 Tab Amnesty's use of this information complies with the
 [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq),
-including the Limited Use requirements.
+including the Limited Use requirements, and with the
+[Microsoft Edge Add-ons developer policies](https://learn.microsoft.com/microsoft-edge/extensions-chromium/store-policies/developer-policies).
 
 ## Questions
 

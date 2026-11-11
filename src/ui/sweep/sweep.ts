@@ -337,6 +337,15 @@ function emptyNote(text: string, iconName?: string): HTMLElement {
 const PRIVACY_URL = 'https://github.com/Makilesh/Chrome_tab_amnesty/blob/main/PRIVACY.md';
 
 /**
+ * The browser's own extensions page, as the person would type it: Tab Amnesty's words name their
+ * browser, not Chrome (Edge and Brave open chrome:// addresses too, but call them their own).
+ */
+function extensionsPage(): string {
+  if (/\bEdg\//.test(navigator.userAgent)) return 'edge://extensions';
+  return 'brave' in navigator ? 'brave://extensions' : 'chrome://extensions';
+}
+
+/**
  * Asked first (collector/consent.ts): until the person presses Start nothing is recorded, so in
  * place of groups the page says plainly what Tab Amnesty would note, why, and where it stays —
  * the first screen of a first install. One button; closing the page is the other answer.
@@ -380,7 +389,7 @@ async function onStart(btn: HTMLButtonElement): Promise<void> {
   if (!r?.ok) {
     btn.disabled = false;
     setLabel(btn, 'Start grouping my tabs');
-    toast('Tab Amnesty could not start. Switch it off and on again in chrome://extensions, then press Start again.');
+    toast(`Tab Amnesty could not start. Switch it off and on again in ${extensionsPage()}, then press Start again.`);
     return;
   }
   await morph(load);
@@ -458,9 +467,9 @@ async function onStrip(): Promise<void> {
     moved.push(...r.moved);
     error ||= r.error ?? '';
   }
-  const parts = [error ? 'Chrome did not let every group onto your tab strip. Nothing was closed.' : 'Done — these groups are on your tab strip. Nothing was closed.'];
+  const parts = [error ? 'Your browser did not let every group onto your tab strip. Nothing was closed.' : 'Done — these groups are on your tab strip. Nothing was closed.'];
   if (leftInPlace) parts.push('Tabs you had already grouped were left where they were.');
-  if (locked) parts.push(`Chrome keeps ${locked === 1 ? 'one of these' : 'some of these'} locked as a saved group.`);
+  if (locked) parts.push(`Your browser keeps ${locked === 1 ? 'one of these' : 'some of these'} locked as a saved group.`);
   status.replaceChildren(parts.join(' '));
   if (made.length) {
     const undo = el('button', 'quiet', 'Undo');
@@ -938,6 +947,7 @@ function renderNever(list: string[]): void {
 // ---------------------------------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  for (const page of document.querySelectorAll('.ext-page')) page.textContent = extensionsPage();
   wireSearch();
   const asked = findFromAddress();
   if (!(await hasStarted().catch(() => true))) {
