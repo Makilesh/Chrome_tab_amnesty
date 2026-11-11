@@ -21,6 +21,7 @@ import {
 } from './backup';
 import { CLOSED_RECORD_DAYS, recordsToDrop } from './card';
 import { type Copy, cardsToBringIn } from './copy';
+import { type Corrections, NO_CORRECTIONS } from './corrections';
 import { isNeverRemembered, normaliseDomain } from './forget';
 import { type RememberedName, withoutTabs } from './naming';
 import type { ArchiveCard, SummariseJob } from './types';
@@ -176,6 +177,26 @@ export async function getRememberedNames(): Promise<RememberedName[]> {
 
 export async function saveRememberedNames(memory: RememberedName[]): Promise<void> {
   await setMeta('groupNames', memory);
+}
+
+// --- the person's corrections to the groups ------------------------------------------------
+
+export async function getCorrections(): Promise<Corrections> {
+  const c = await getMeta('corrections');
+  return c ? { together: c.together ?? {}, apart: c.apart ?? [] } : NO_CORRECTIONS;
+}
+
+/**
+ * Change the corrections from what is stored NOW, in one step: two sweep pages open at once each
+ * add their own instead of the second writing over the first.
+ */
+export async function updateCorrections(fn: (c: Corrections) => Corrections): Promise<Corrections> {
+  const tx = (await db()).transaction('meta', 'readwrite');
+  const cur = (await tx.store.get('corrections')) as Corrections | undefined;
+  const next = fn(cur ? { together: cur.together ?? {}, apart: cur.apart ?? [] } : NO_CORRECTIONS);
+  await tx.store.put(next, 'corrections');
+  await tx.done;
+  return next;
 }
 
 // --- never-remember list -------------------------------------------------------------------

@@ -2,31 +2,38 @@
  * The sweep page (Phase 1). Reads stored records — never live tabs — clusters them, names each
  * group, and offers exactly one action per group: Archive & close. Everything archived is listed
  * below, searchable (Phase 2's return path), with Bring back for a day, then Open all, and Forget
- * on every record.
+ * on every record. A group is a proposal: "Change this group" on each card lets the person correct
+ * it — rename it, put it together with another, take a tab out — and the tabs that fit no group
+ * ("On their own") can be put away together.
  *
  * §6 on this page: the first thing on screen is a group the person recognises (§6.3); at most
- * five group actions are visible at once (§6.4); no counts of tabs anywhere (§6.1); nothing to
- * name (§6.7); nothing closes without a click on its own group (§6.9); Bring back survives a
+ * five group actions are visible at once (§6.4), and what corrects a group stays folded away until
+ * asked for, one group at a time; no counts of tabs anywhere (§6.1); nothing to name — the name box
+ * holds the proposed name, never an empty one (§6.7); nothing closes without a click on its own
+ * group (§6.9); Bring back survives a
  * restart because the card is in IndexedDB (§6.8); Forget is on every card and every tab (§6.10).
  */
 import { cardHosts, cardWhen, undoable } from '../../archive/card';
 import { copyFileName, copyToHtml, MAX_COPY_BYTES, readCopy } from '../../archive/copy';
-import { betterName, type NamedGroup, quickName, type RememberedName, rememberedName, rememberName } from '../../archive/naming';
+import { applyCorrections, joinGroups, NO_CORRECTIONS, putBack, separate, takeOut } from '../../archive/corrections';
+import { betterName, clampName, type NamedGroup, quickName, type RememberedName, rememberedName, rememberName } from '../../archive/naming';
 import {
   addNeverRemember,
   bringInCopy,
   forgetCard,
   forgetTab,
   getCards,
+  getCorrections,
   getNeverRemember,
   getRememberedNames,
   removeNeverRemember,
   saveRememberedNames,
   siteToNeverRemember,
+  updateCorrections,
 } from '../../archive/store';
 import { fold, queryTerms, searchArchive } from '../../archive/search';
 import { archiveAndClose, bringBack, groupOnStrip, openCard, openOne, type StripPlace, ungroupOurs } from '../../archive/sweep';
-import type { ArchiveCard, ArchivedTab } from '../../archive/types';
+import { type ArchiveCard, type ArchivedTab, MAX_NAME_CHARS } from '../../archive/types';
 import { cluster } from '../../cluster/cluster';
 import { isUnsegmented } from '../../cluster/lexical';
 import type { Community, TabTrace } from '../../cluster/types';
@@ -230,28 +237,48 @@ interface Group {
   name: NamedGroup;
   /** The card element currently showing this group, so a better name can land in place. */
   el?: HTMLElement;
-  /** Named from memory: the model is not asked again. */
+  /** Named from memory, or by the person: the model is not asked again. */
   remembered?: boolean;
+  /** The person put these together: "Change this group" can separate them again. */
+  joined?: boolean;
 }
 
+/** The tabs that fit no group, as one thing that can be put away: never named by the model, always grey. */
+interface Loose extends Group {
+  /** Of its tabs, those the person took out of a group: each has "Put back". */
+  takenOut: Set<string>;
+}
+
+/** What "On their own" is called once it is put away: the words the person just pressed under. */
+const LOOSE_NAME = 'On their own';
+
 let groups: Group[] = [];
+let loose: Loose | null = null;
 let shown = VISIBLE;
 let busy = false;
+/** The group whose "Change this group" is open, by one of its tabs, so a redraw opens it again. */
+let editing: string | null = null;
+/** Each load's number: a naming pass from an earlier load stops when it sees a newer one. */
+let loads = 0;
 
 // ---------------------------------------------------------------------------------------------
 // Groups
 // ---------------------------------------------------------------------------------------------
 
 async function load(): Promise<void> {
+  const mine = ++loads;
   const traces = await getOpenTraces();
   const byId = new Map(traces.map((t) => [t.traceId, t]));
-  const result = cluster(traces);
+  // The clusterer proposes; what the person corrected is laid over it (archive/corrections.ts).
+  const result = applyCorrections(cluster(traces), await getCorrections().catch(() => NO_CORRECTIONS));
+  const joined = new Set(result.joined);
   // Heuristic names first so something recognisable is on screen at once (§6.3); on-device
   // names replace them one by one as the model answers.
   groups = result.communities.map((c) => ({
     community: c,
     members: c.traceIds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t),
     name: quickName(c, byId, traces),
+    joined: joined.has(c.id),
   }));
   // A group seen before keeps the name it had, from the first frame — no flicker, no renaming.
   const memory = await getRememberedNames().catch(() => []);
@@ -265,18 +292,40 @@ async function load(): Promise<void> {
     }
   }
   renderGroups();
-  void upgradeNames(byId, taken);
+  void upgradeNames(byId, taken, mine);
   // Most open web tabs adopted rather than seen opening (just after Start): their grouping goes by
   // place and text only, so the page says it gets better. It goes by itself as new tabs replace them.
   const web = traces.filter((t) => /^https?:/.test(t.url));
   $('learning').hidden = web.length === 0 || web.filter((t) => t.backfilled).length * 2 < web.length;
 
-  const looseTraces = result.looseEnds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
-  const loose = $('loose');
+  const members = result.looseEnds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
+  const community = { id: -1, traceIds: members.map((t) => t.traceId) };
+  loose = members.length
+    ? { community, members, name: { ...quickName(community, byId, traces), name: LOOSE_NAME, color: 'grey', tier: 'heuristic' }, takenOut: new Set(result.takenOut) }
+    : null;
+  renderLoose();
+}
+
+/** "On their own": the tabs in no group, one button for all of them, and Put back beside a tab the person took out. */
+function renderLoose(): void {
   const list = $('loose-list');
   list.replaceChildren();
-  loose.hidden = looseTraces.length === 0;
-  for (const t of looseTraces) list.append(line(t.title, t.host, t.url));
+  $('loose').querySelector('.note')?.remove();
+  $('loose').hidden = !loose;
+  const btn = $<HTMLButtonElement>('loose-archive');
+  btn.disabled = false;
+  setLabel(btn, 'Archive & close');
+  if (!loose) return;
+  for (const t of loose.members) {
+    const li = line(t.title, t.host, t.url);
+    if (loose.takenOut.has(t.traceId)) {
+      const back = el('button', 'quiet', 'Put back');
+      back.setAttribute('aria-describedby', li.querySelector('.t')!.id);
+      back.addEventListener('click', () => void onPutBack(t, back));
+      li.append(back);
+    }
+    list.append(li);
+  }
 }
 
 /**
@@ -289,7 +338,7 @@ async function updateNames(fn: (memory: RememberedName[]) => RememberedName[]): 
   if (fresh) await saveRememberedNames(fn(fresh)).catch(() => {});
 }
 
-async function upgradeNames(byId: Map<string, TabTrace>, taken: string[]): Promise<void> {
+async function upgradeNames(byId: Map<string, TabTrace>, taken: string[], mine: number): Promise<void> {
   // `taken`: names already on screen from memory, plus each new one the model gives in this sweep.
   // Groups named from memory are saved with their tabs as they are now, at once — a project's
   // memory follows its tabs even on a sweep where no group gets a new name (it used to drift
@@ -297,9 +346,10 @@ async function upgradeNames(byId: Map<string, TabTrace>, taken: string[]): Promi
   const known = groups.filter((g) => g.remembered);
   if (known.length) await updateNames((m) => known.reduce((acc, g) => rememberName(acc, g.community.traceIds, g.name.name), m));
   for (const g of [...groups]) {
+    if (mine !== loads) return; // the page was drawn again since: that load names its own groups
     if (g.remembered) continue;
     const better = await betterName(g.community, byId, g.name, taken);
-    if (!better || !groups.includes(g)) continue;
+    if (!better || !groups.includes(g) || g.remembered) continue; // renamed by the person meanwhile: theirs stands
     taken.push(better.name);
     await updateNames((m) => rememberName(m, g.community.traceIds, better.name));
     g.name = better;
@@ -325,9 +375,231 @@ function groupCard(g: Group): HTMLElement {
   header.append(name, btn);
   card.append(header);
   const ul = el('ul');
-  for (const t of g.members) ul.append(line(t.title, t.host, t.url));
-  card.append(ul);
+  for (const t of g.members) {
+    const li = line(t.title, t.host, t.url);
+    // Shown only while "Change this group" is open (index.html, .take-out): one button per group otherwise (§6.4).
+    const out = el('button', 'quiet take-out', 'Take out');
+    out.setAttribute('aria-describedby', li.querySelector('.t')!.id);
+    out.addEventListener('click', () => void onTakeOut(g, t));
+    li.append(out);
+    ul.append(li);
+  }
+  card.append(ul, changePanel(g, card, h.id));
   return card;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Change this group: the person corrects what was proposed (§6.7)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The fold-out at the foot of a group. Shut, it is one quiet line and the card has its one button
+ * (§6.4); open, the card's lines each get "Take out" and the fold-out holds the name and the other
+ * groups it could be put together with. The browser keeps one of these open at a time (they share a
+ * name), so at most one group is ever being changed. What is inside is built when it opens: names
+ * improve and groups come and go while it is shut.
+ */
+function changePanel(g: Group, card: HTMLElement, headingId: string): HTMLDetailsElement {
+  const d = el('details', 'change');
+  d.name = 'change-group';
+  const s = el('summary', undefined, 'Change this group');
+  s.setAttribute('aria-describedby', headingId);
+  d.append(s);
+  let filled = false;
+  const sync = () => {
+    card.classList.toggle('editing', d.open);
+    if (d.open && !filled) fillPanel(d, g, headingId);
+    if (!d.open) while (d.lastElementChild && d.lastElementChild !== s) d.lastElementChild.remove();
+    filled = d.open;
+  };
+  d.addEventListener('toggle', () => {
+    sync();
+    if (d.open) editing = g.community.traceIds[0] ?? null;
+    else if (editing !== null && g.community.traceIds.includes(editing)) editing = null;
+  });
+  if (editing !== null && g.community.traceIds.includes(editing)) {
+    d.open = true;
+    sync();
+  }
+  return d;
+}
+
+/** A group in a list of groups: its name, and when two share one, what tells them apart. */
+function optionLabel(g: Group, among: readonly Group[]): string {
+  const same = among.some((x) => x !== g && x.name.name.trim().toLowerCase() === g.name.name.trim().toLowerCase());
+  const more = g.name.description.when || g.members[0]?.title || g.members[0]?.host || '';
+  return same && more ? `${g.name.name} · ${more.length > 40 ? `${more.slice(0, 39)}…` : more}` : g.name.name;
+}
+
+function fillPanel(d: HTMLDetailsElement, g: Group, headingId: string): void {
+  const id = g.community.id;
+  d.append(el('p', undefined, 'A tab that does not belong here? “Take out” beside it moves it to “On their own”. It stays open.'));
+
+  // The name is proposed (§6.7); here it is corrected. The box holds the name as it is — never empty.
+  const rename = el('form', 'row');
+  const nameLabel = el('label', undefined, 'Name');
+  const input = el('input');
+  input.type = 'text';
+  input.id = nameLabel.htmlFor = `rename-${id}`;
+  input.value = g.name.name;
+  input.maxLength = MAX_NAME_CHARS;
+  input.autocomplete = 'off';
+  const note = el('p', 'field-note');
+  note.id = `rename-note-${id}`;
+  input.setAttribute('aria-describedby', note.id);
+  // Said on leaving the box empty, gone again on coming back to it or typing (never while typing).
+  const clear = () => {
+    note.textContent = '';
+    input.removeAttribute('aria-invalid');
+  };
+  input.addEventListener('input', clear);
+  input.addEventListener('focus', clear);
+  input.addEventListener('blur', () => {
+    if (!clampName(input.value)) needsName(input, note);
+  });
+  const save = el('button', undefined, 'Rename');
+  save.type = 'submit';
+  rename.addEventListener('submit', (e) => {
+    e.preventDefault();
+    void onRename(g, input, note);
+  });
+  rename.append(nameLabel, input, save);
+  d.append(rename, note);
+
+  // A project split across sittings is the grouping's commonest mistake: one step puts it back together.
+  const others = groups.filter((x) => x !== g);
+  if (others.length) {
+    const join = el('form', 'row');
+    const joinLabel = el('label', undefined, 'Put together with');
+    const select = el('select');
+    select.id = joinLabel.htmlFor = `join-${id}`;
+    for (const o of others) {
+      const opt = el('option', undefined, optionLabel(o, others));
+      opt.value = o.community.traceIds[0] ?? '';
+      select.append(opt);
+    }
+    const go = el('button', undefined, 'Put together');
+    go.type = 'submit';
+    join.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void onJoin(g, select.value, go);
+    });
+    join.append(joinLabel, select, go);
+    d.append(join);
+  }
+  if (g.joined) {
+    const row = el('div', 'row');
+    const apart = el('button', 'quiet', 'Separate them again');
+    apart.setAttribute('aria-describedby', headingId);
+    apart.addEventListener('click', () => void onSeparate(g, apart));
+    row.append(el('span', undefined, 'You put these together.'), apart);
+    d.append(row);
+  }
+}
+
+/** The card now showing the group that holds this tab, if it is on screen. */
+const cardOf = (traceId: string) => groups.find((x) => x.community.traceIds.includes(traceId))?.el;
+
+/** Draw the page again after a correction, said in a toast; a failure is said the same way and changes nothing. */
+async function corrected(change: () => Promise<void>, done: string, focus: () => void): Promise<void> {
+  if (busy) return;
+  busy = true;
+  try {
+    await change();
+    await morph(load);
+    toast(done, { ok: true });
+    focus();
+  } catch (e) {
+    toast('That did not work. Try again in a moment.', { error: e });
+  } finally {
+    busy = false;
+  }
+}
+
+/** The name box was left empty: say what to do, beside the box and aloud. */
+function needsName(input: HTMLInputElement, note: HTMLElement): void {
+  note.textContent = 'Type a name for this group, then press Rename.';
+  input.setAttribute('aria-invalid', 'true');
+  say(note.textContent);
+}
+
+async function onRename(g: Group, input: HTMLInputElement, note: HTMLElement): Promise<void> {
+  const name = clampName(input.value);
+  if (!name) {
+    input.focus(); // first: coming back to the box clears what was said before
+    needsName(input, note);
+    return;
+  }
+  input.value = name;
+  if (name !== g.name.name) {
+    // Remembered with the group's tabs, like a name from the model: it is there on the next visit.
+    await updateNames((m) => rememberName(m, g.community.traceIds, name));
+    g.name = { ...g.name, name };
+    const h = g.el?.querySelector('h2');
+    if (h) swapText(h, name);
+  }
+  g.remembered = true;
+  say(`This group is called “${name}” now.`);
+}
+
+async function onJoin(g: Group, intoId: string, btn: HTMLButtonElement): Promise<void> {
+  const into = groups.find((x) => x.community.traceIds[0] === intoId);
+  if (!into) return;
+  btn.disabled = true;
+  const name = into.name.name;
+  await corrected(
+    async () => {
+      const key = crypto.randomUUID();
+      await updateCorrections((c) => joinGroups(c, g.community.traceIds, into.community.traceIds, key));
+      // The two keep the name of the one they were added to.
+      await updateNames((m) => rememberName(m, [...into.community.traceIds, ...g.community.traceIds], name));
+      editing = null;
+    },
+    `“${g.name.name}” is together with “${name}” now. “Change this group” can separate them again.`,
+    () => focusHeading(cardOf(intoId)?.querySelector<HTMLElement>('h2')) || $<HTMLButtonElement>('strip').focus({ preventScroll: true }),
+  );
+  btn.disabled = false;
+}
+
+async function onSeparate(g: Group, btn: HTMLButtonElement): Promise<void> {
+  btn.disabled = true;
+  const first = g.community.traceIds[0] ?? '';
+  await corrected(
+    async () => {
+      await updateCorrections((c) => separate(c, g.community.traceIds));
+      editing = null;
+    },
+    `“${g.name.name}” is separate groups again.`,
+    () => focusHeading(cardOf(first)?.querySelector<HTMLElement>('h2')) || $<HTMLButtonElement>('strip').focus({ preventScroll: true }),
+  );
+  btn.disabled = false;
+}
+
+async function onTakeOut(g: Group, t: TabTrace): Promise<void> {
+  const at = g.members.indexOf(t);
+  const stay = g.community.traceIds.find((id) => id !== t.traceId) ?? '';
+  await corrected(
+    async () => {
+      await updateCorrections((c) => takeOut(c, t.traceId));
+      editing = stay || null; // the same group stays open for the next one
+    },
+    `Took ${quoted(t)} out of “${g.name.name}”. It is still open, under “On their own”.`,
+    () => {
+      // The next line's button, in the same group; if the group is gone, where its tabs went.
+      const outs = cardOf(stay)?.querySelectorAll<HTMLButtonElement>('.take-out');
+      if (outs?.length) outs[Math.min(at, outs.length - 1)]!.focus({ preventScroll: true });
+      else focusHeading($('loose-title'));
+    },
+  );
+}
+
+async function onPutBack(t: TabTrace, btn: HTMLButtonElement): Promise<void> {
+  btn.disabled = true;
+  await corrected(
+    () => updateCorrections((c) => putBack(c, t.traceId)).then(() => {}),
+    `Put ${quoted(t)} back.`,
+    () => focusHeading(cardOf(t.traceId)?.querySelector<HTMLElement>('h2') ?? $('loose-title')),
+  );
 }
 
 /** Said in place of a list that has nothing in it, beside a quiet icon. */
@@ -449,6 +721,43 @@ async function onArchive(g: Group, card: HTMLElement, btn: HTMLButtonElement, ke
     btn.disabled = false;
     setLabel(btn, 'Archive & close');
     card.append(failure('That did not work. Try again in a moment.', e, 'p'));
+  } finally {
+    busy = false;
+  }
+}
+
+/**
+ * "On their own", put away as one card: the same Archive & close as a group's — the card first,
+ * unsent typing left open, Bring back for a day. Its name is the list's own, never the model's:
+ * these tabs share nothing to be named for.
+ */
+async function onArchiveLoose(btn: HTMLButtonElement, keyboard = false): Promise<void> {
+  const g = loose;
+  if (busy || !g) return;
+  busy = true;
+  btn.disabled = true;
+  setLabel(btn, 'Putting away…');
+  try {
+    const d = g.name.description;
+    const { card: saved, keptOpen } = await archiveAndClose(g.community, g.members, g.name, d.when, d.hosts, d.whenAt);
+    await morph(async () => {
+      // What holds unsent typing is still open, and still on its own.
+      const open = new Set(keptOpen.map((t) => t.traceId));
+      const members = g.members.filter((t) => open.has(t.traceId));
+      loose = members.length ? { ...g, members, community: { id: -1, traceIds: members.map((t) => t.traceId) } } : null;
+      renderLoose();
+      await renderArchive();
+    });
+    const kept = keptOpen.length
+      ? ` Left open, because you typed something in ${keptOpen.length === 1 ? 'it' : 'them'}: ${keptOpen.map(quoted).join(', ')}.`
+      : '';
+    if (saved) toast(`Put away “${saved.name}”.${kept}`, { cardId: saved.cardId, name: saved.name, ok: true });
+    else if (keptOpen.length) toast(`Nothing put away.${kept}`);
+    // Not back onto a button a second Enter would press (as after a group's Archive & close).
+    focusHeading(saved ? document.getElementById(`card-${saved.cardId}`) : $('loose-title'), keyboard);
+  } catch (e) {
+    renderLoose();
+    $('loose').append(failure('That did not work. Try again in a moment.', e, 'p'));
   } finally {
     busy = false;
   }
@@ -972,6 +1281,7 @@ async function main(): Promise<void> {
   renderNever(await getNeverRemember());
 
   $('strip').addEventListener('click', () => void onStrip());
+  $('loose-archive').addEventListener('click', (e) => void onArchiveLoose($<HTMLButtonElement>('loose-archive'), e.detail === 0));
   $('more-btn').addEventListener('click', () => {
     const before = shown;
     shown += VISIBLE;

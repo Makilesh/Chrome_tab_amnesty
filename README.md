@@ -39,12 +39,15 @@ are no counts, streaks or reminders.
   sitting, and switched between are one project, even across sites. Each group gets a name you'll
   recognise ("asyncio", "Lisbon"), from Chrome's on-device model when your Chrome has it and from
   the pages' own titles when it doesn't. You never have to name anything.
-- **One button per group: Archive & close.** It saves every page — address, title, what the page
-  said — and only then closes the tabs. Nothing closes unless you press it, one group at a time,
-  and a tab holding a half-written message stays open.
+- **A group is a suggestion you can correct.** "Change this group" on each one lets you rename it,
+  put it together with another group, or take out a tab that doesn't belong. It remembers what you
+  corrected. Tabs that fit no group are listed "On their own" and can be put away together.
+- **One button per group: Archive & close.** It writes every page down first — its address, its
+  title and a short digest of what it said — and only then closes the tabs. Nothing closes unless
+  you press it, one group at a time, and a tab holding a half-written message stays open.
 - **Bring back** puts the whole group back on your tab strip, in its order, for a day — even after
   a restart. After that, **Open all** brings it back whenever you like.
-- **Find anything you put away** by a word from its title, its text, its site, or the day.
+- **Find anything you put away** by a word from its title, its opening text, its site, or the day.
 - **Or from the address bar:** type `ta`, press Tab, then a word. Pick a page to open it, or press
   Enter to see everything that matches.
 - **Alt+Shift+K** (Option+Shift+K on a Mac) opens Tab Amnesty from any tab. Change it at
@@ -117,8 +120,11 @@ Uninstalling removes everything Tab Amnesty kept, so press **Keep a copy** first
 **How is this different from OneTab or Chrome's tab groups?**
 Those keep the tabs you choose, in the groups you make (Chrome's Organize tabs can suggest one from similar tabs). Tab Amnesty works out which tabs belong together from how you opened and used them, even across sites, writes each page down before anything closes, and lets you search what you put away.
 
-**Some groups look wrong. Why?**
-It works from what it has seen since you installed it: which tab opened which, and what you switch between. Tabs that were already open have none of that yet, so they group more loosely until you've browsed for a few days, and a project you work on in between others can end up split. A group is only a suggestion: nothing changes until you press its button. How well the grouping works is still being measured: [docs/RESEARCH.md](docs/RESEARCH.md).
+**What exactly is kept when I put a tab away?**
+Its address, its title, and a short digest of the page: its description, its headings and about the first thousand characters of its text. That is enough to recognise it, find it again and open it again — it is not a copy of the page. Bringing a tab back loads the page afresh, so a page that has changed, moved or now asks you to sign in comes back as it is today, and where you had scrolled to is not kept. Text you typed and haven't sent is never closed over: that tab stays open.
+
+**Some groups look wrong. Why, and what can I do?**
+It works from what it has seen since you pressed Start: which tab opened which, and what you switch between. Tabs that were already open have none of that yet, so they group more loosely until you've browsed for a few days, and a project you work on in between others can end up split. A group is only a suggestion, and you can correct it: open **Change this group** on its card to rename it, put it together with another group, or take a tab out (it moves to "On their own" and stays open, with **Put back** beside it). Your corrections are remembered. Nothing closes until you press a group's button. How well the grouping works is still being measured: [docs/RESEARCH.md](docs/RESEARCH.md).
 
 **Why do some groups have plain names?**
 Names come from Chrome's on-device model when your computer can run it, and from the pages' own titles when it can't. Google lists [22 GB free on the drive with your Chrome profile, and 16 GB of memory with four cores or a graphics card with more than 4 GB](https://developer.chrome.com/docs/ai/get-started), so many computers get title-based names.

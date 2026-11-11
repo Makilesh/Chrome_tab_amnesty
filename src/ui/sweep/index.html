@@ -157,10 +157,28 @@
       .start .aside { color: var(--ink-2); margin-bottom: 0; }
       .note button.quiet { margin-left: 4px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
-      /* On their own: quiet rows, no action. */
-      section.later > h2 { font: 600 20px/1.25 var(--font-display); letter-spacing: -0.015em; margin: 0 0 16px; }
+      /* Change this group: folded away until asked for, one group at a time (sweep.ts, changePanel). */
+      .group:not(.editing) .take-out { display: none; }
+      .group .change { margin: 4px 0 0; padding: 4px 0 0; border-top: 1px solid var(--line); }
+      .group .change[open] { padding-bottom: 8px; }
+      .change p { max-width: 68ch; margin: 8px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; text-wrap: pretty; }
+      .change .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 0; color: var(--ink-2); font-size: 14px; }
+      .change label { flex: 0 0 136px; color: var(--ink); font-weight: 500; }
+      .change :is(input, select) { flex: 1 1 176px; min-width: 0; max-width: 320px; height: 40px; padding: 0 12px; border: 1px solid var(--edge); border-radius: 10px; background: var(--surface); color: var(--ink); font: 14px var(--font); }
+      .change :is(input, select):hover { border-color: var(--ink-2); }
+      .change form button { min-width: 128px; min-height: 40px; }
+      .change input[aria-invalid="true"] { border-color: var(--danger); }
+      .change .field-note { margin: 4px 0 0 144px; color: var(--danger); }
+      .change .field-note:empty { display: none; }
+
+      /* On their own: quiet rows, and one button for all of them. */
+      section.later > h2, .loose-head h2 { font: 600 20px/1.25 var(--font-display); letter-spacing: -0.015em; margin: 0 0 16px; }
       section.loose { margin-top: 48px; }
+      .loose-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 16px; }
+      .loose-head h2 { margin: 0 0 4px; }
+      .loose-head p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; max-width: 60ch; }
       .loose li { color: var(--ink-2); }
+      .loose .note { color: var(--danger); font-size: 14px; margin: 8px 0; }
 
       /* The shelf: everything put away, searchable, on a deeper ground across the window. */
       .shelf { margin-top: 64px; padding: 40px 0 48px; background: var(--shelf); box-shadow: 0 0 0 100vmax var(--shelf); clip-path: inset(0 -100vmax); }
@@ -241,6 +259,10 @@
         .group li .fav, .loose li .fav { margin-top: 2px; }
         .group li .t, .loose li .t { flex: 1 1 calc(100% - 24px); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .group li .host, .loose li .host { max-width: none; padding-left: 24px; flex-basis: 100%; }
+        .group li button, .loose li button { margin-left: 16px; }
+        .change label { flex-basis: 100%; }
+        .change :is(input, select) { max-width: none; }
+        .change .field-note { margin-left: 0; }
         .shelf { padding: 32px 0 40px; }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -279,7 +301,13 @@
       </div>
 
       <section class="later loose" id="loose" hidden>
-        <h2>On their own</h2>
+        <div class="loose-head">
+          <div>
+            <h2 id="loose-title">On their own</h2>
+            <p>These tabs are not in a group. Archive &amp; close puts them away together, as one card.</p>
+          </div>
+          <button id="loose-archive" aria-describedby="loose-title"><svg class="i" aria-hidden="true"><use href="#i-archive" /></svg><span>Archive &amp; close</span></button>
+        </div>
         <ul id="loose-list"></ul>
       </section>
 

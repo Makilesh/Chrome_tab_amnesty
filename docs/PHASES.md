@@ -206,6 +206,13 @@ week later?
       model sat on C: unused (12.5 GB free). Many users will see fallback names on good hardware.
 - [x] Archive & close: one action per group; archive card (name, event label, per-tab line, full
       digest, restore URLs) to IndexedDB, then close. Never deletes. Never auto-runs.
+- [x] The person corrects a group (§6.7), 11 Nov: "Change this group" folds out of each card —
+      rename (the box holds the proposed name), put together with another group, take a tab out
+      (to "On their own", with Put back). Corrections are stored (`meta.corrections`, ids only)
+      and laid over the clusterer's answer on every visit (`src/archive/corrections.ts`); the gate
+      is still measured on the clusterer alone. "On their own" has one Archive & close for the
+      whole list (DECISIONS 2026-11-11). Shown by `npm run check`: a tab taken out stays out
+      across a reload of the page, and Put back returns it.
 - [x] Undo: persisted, survives restart, reachable 24 h, restores whole group incl. order
       (shown by `npm run check`: 3 of 3 back in order after a restart)
 - [x] Forget: per-record control, per-domain never-remember list, incognito untouched

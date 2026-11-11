@@ -231,6 +231,29 @@ async function checkSweepArchive(browser: Browser, extId: string, userDataDir: s
   console.log(`  "recorder not keeping up" note shown: ${await page.$eval('#health', (e) => !(e as HTMLElement).hidden)} (must be false)`);
   console.log(`  "still running the older version" note shown: ${await page.$eval('#stale', (e) => !(e as HTMLElement).hidden)} (must be false: one build)`);
 
+  // A group is a proposal the person can correct: take a tab out, see that it holds across a
+  // reload of the page (the correction is stored, not just drawn), then put it back.
+  const linesOf = () => page.$$eval('#groups .group:first-child li', (l) => l.length);
+  const linesBefore = await linesOf();
+  await page.click('#groups .group:first-child details.change > summary');
+  await sleep(500);
+  const nameBox = await page.$eval('#groups .group:first-child input', (i) => (i as HTMLInputElement).value).catch(() => null);
+  const takeOutShown = await page.$$eval('#groups .take-out', (bs) => bs.filter((b) => (b as HTMLElement).offsetParent).length);
+  await page.click('#groups .group.editing .take-out');
+  await sleep(1500);
+  await page.reload();
+  await page.waitForSelector('#groups');
+  await sleep(2000);
+  const linesAfter = await linesOf();
+  const putBack = await page.$$eval('#loose-list li button', (bs) => bs.map((b) => b.textContent));
+  console.log(
+    `  Change this group: name box holds ${JSON.stringify(nameBox)} (must not be empty), ${takeOutShown} "Take out" shown (must be ${linesBefore}: its own lines only); ` +
+      `one tab taken out: group lines ${linesBefore} -> ${linesAfter} after a reload, on its own with ${JSON.stringify(putBack)} (must be ["Put back"])`,
+  );
+  if (putBack.length) await page.click('#loose-list li button');
+  await sleep(1500);
+  console.log(`  put back: group lines ${await linesOf()} (must be ${linesBefore}); "On their own" has one button for all: ${await page.$$eval('#loose-archive', (b) => b.length)} (must be 1)`);
+
   // The person's own group must survive "show on strip", and Undo must remove only ours.
   const ctl = await browser.newPage();
   await ctl.goto(`chrome-extension://${extId}/src/ui/dev/index.html`);

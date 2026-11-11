@@ -5,10 +5,24 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **You can correct a group.** "Change this group" on each group lets you rename it, put it
+  together with another group (a project that ended up split), or take out a tab that doesn't
+  belong. A tab you take out stays open under "On their own", with **Put back** beside it, and
+  groups you put together can be separated again. What you corrected is remembered on your
+  computer, so the group is the same the next time you look.
+- **"On their own" can be put away too.** The tabs that fit no group have one Archive & close
+  for all of them: one card, kept and searchable like any other, with Bring back for a day.
+
+### Changed
+- The README and the privacy page say plainly what is kept when a tab is put away: its address,
+  its title and a short digest of the page — a record of it, not a copy. Bringing a tab back
+  loads the page again.
+
 ## [0.3.1] - 2026-11-12
 
 ### Added
-- Right after you press Start, a line under your groups says they get better as you browse: tabs
+- Right after you press Start, a line above your groups says they get better as you browse: tabs
   that were already open can only be grouped by where they sit and what they say. It goes away on
   its own as you open new tabs. Anyone already using Tab Amnesty never sees it.
 
