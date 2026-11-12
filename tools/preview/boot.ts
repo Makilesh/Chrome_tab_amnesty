@@ -4,6 +4,7 @@
  *
  *   ?empty   a first visit: the Start notice, nothing recorded yet, nothing put away
  *   ?find=w  arrive searching, as from "ta w" in the address bar
+ *   ?fresh   just after Start: every open tab adopted, timing unknown
  *   ?slow    Archive & close's movement at a tenth of its speed, to look at it frame by frame
  */
 import { saveRememberedNames, putCard } from '../../src/archive/store';
@@ -49,6 +50,7 @@ if (asked.has('slow')) document.documentElement.style.setProperty('--dur-move', 
 await fresh();
 if (!asked.has('empty')) {
   const data = previewData();
+  if (asked.has('fresh')) for (const t of data.traces) Object.assign(t, { backfilled: true, transition: 'unknown' });
   for (const t of data.traces) await putTrace(t);
   for (const c of data.cards) await putCard(c);
   await saveRememberedNames(data.names);

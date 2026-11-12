@@ -135,6 +135,10 @@
       mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
 
       .more { margin: 16px 0 0; }
+      /* Right after Start, above the groups: most open tabs were adopted, so their grouping is rougher for now (sweep.ts, load). */
+      .learning { display: flex; gap: 8px; align-items: flex-start; max-width: 75ch; margin: 0 0 16px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+      .learning::before { content: ""; flex: none; width: 16px; height: 16px; margin-top: 2px; background: var(--accent); mask: var(--i-info) center / contain no-repeat; }
+      .learning strong { color: var(--ink); }
       .toolbar { display: flex; gap: 8px 16px; align-items: center; flex-wrap: wrap; margin: 16px 0 0; color: var(--ink-2); font-size: 14px; }
       .toolbar #strip-status { flex: 1 1 256px; }
       .empty { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 24px; color: var(--ink-2); font-size: 14px; background: var(--surface); border: 1px dashed var(--line-2); border-radius: var(--radius); }
@@ -266,6 +270,7 @@
       </header>
       <p class="health" id="health" role="status" hidden>Tab Amnesty isn’t keeping up with your tabs right now, so these groups may be out of date. Switching it off and on again in <strong class="ext-page">chrome://extensions</strong> fixes this.</p>
       <p class="health" id="stale" role="status" hidden>Tab Amnesty was updated, but your browser is still running part of the older version. Switching it off and on again in <strong class="ext-page">chrome://extensions</strong> finishes the update.</p>
+      <p class="learning" id="learning" hidden><span><strong>Groups get better as you browse.</strong> Tabs that were already open are grouped by where they sit and what they say; from now on, Tab Amnesty also sees which tab you open from which, and what you switch between.</span></p>
       <div id="groups"></div>
       <div class="more" id="more" hidden><button class="quiet" id="more-btn">Show more groups</button></div>
       <div class="toolbar">

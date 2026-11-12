@@ -205,8 +205,8 @@ to press Publish.
 
 - [x] **The Phase 0 gate.** Waived for the store by the owner on 10 Nov (DECISIONS 2026-11-10).
       The measurement goes on alongside, and the README says grouping quality is still measured.
-- [ ] **Upload `release/tab-amnesty-0.3.0-store-upload.zip`** (manifest.json at its top).
-      `npm run package` makes it from the commit you are on, and the v0.3.0 GitHub release carries
+- [ ] **Upload `release/tab-amnesty-0.3.1-store-upload.zip`** (manifest.json at its top).
+      `npm run package` makes it from the commit you are on, and the v0.3.1 GitHub release carries
       it. Older zips are not this listing.
 - [x] **Summary:** the manifest description is the 127-character summary.
 - [x] **In-product disclosure:** the Start notice, in 0.3.0 (the owner chose it; DECISIONS

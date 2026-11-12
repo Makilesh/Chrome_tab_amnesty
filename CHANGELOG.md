@@ -5,6 +5,13 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-12
+
+### Added
+- Right after you press Start, a line under your groups says they get better as you browse: tabs
+  that were already open can only be grouped by where they sit and what they say. It goes away on
+  its own as you open new tabs. Anyone already using Tab Amnesty never sees it.
+
 ## [0.3.0] - 2026-11-10
 
 ### Added

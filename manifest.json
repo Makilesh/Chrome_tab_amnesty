@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Amnesty",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Groups your tabs by what you were doing. Put a whole project away in one click and find it again. Nothing leaves your computer.",
   "permissions": [
     "tabs",

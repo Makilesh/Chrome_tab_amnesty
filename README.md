@@ -16,7 +16,7 @@
 doing, and lets you put a whole project away in one click — kept, searchable, and back whenever
 you want it. Everything stays on your computer.</p>
 
-<p align="center"><b>Status:</b> early (0.3.0). How well the grouping works is still being measured — <a href="docs/RESEARCH.md">how</a>.</p>
+<p align="center"><b>Status:</b> early (0.3.1). How well the grouping works is still being measured — <a href="docs/RESEARCH.md">how</a>.</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/sweep-dark.png">

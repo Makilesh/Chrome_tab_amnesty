@@ -546,3 +546,8 @@ Append; never rewrite history.
 - **Decision:** "Put away" shows two cards per step (each has two buttons, so four decisions on screen, §6.4), with "Show more put away" two at a time. A failure says what did not happen and what to do, with a "Copy error details" button holding Chrome's own message for a bug report, instead of putting that message in the sentence.
 - **Rejected:** Moving Forget inside each card's list (it would no longer be visible on every record, §6.10); five cards (ten buttons on screen).
 - **Why:** The owner chose two at a time, and the last UX audit flagged raw error text in the UI.
+
+## 2026-11-12 — "Groups get better as you browse", right after Start
+- **Decision:** While at least half of the open web tabs were adopted rather than seen opening (just after Start: their timing and lineage are unknown), a quiet line under the groups says the groups get better as you browse, and why. It is shown from the data, not a timer, so it goes by itself as new tabs replace the adopted ones; people who used Tab Amnesty before 0.3.0 never see it.
+- **Rejected:** Holding back groups until enough is known (nothing to show on the first screen, §6.3); a timed banner (it would outlast or undercut the reason for it); a count of how many tabs are "known" (§6.1).
+- **Why:** The owner's go-ahead (12 Nov) on the readiness review: the first five minutes after Start are the weakest moment, and someone judging the product then may not read the FAQ.
