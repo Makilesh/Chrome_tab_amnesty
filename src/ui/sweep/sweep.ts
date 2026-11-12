@@ -266,6 +266,10 @@ async function load(): Promise<void> {
   }
   renderGroups();
   void upgradeNames(byId, taken);
+  // Most open web tabs adopted rather than seen opening (just after Start): their grouping goes by
+  // place and text only, so the page says it gets better. It goes by itself as new tabs replace them.
+  const web = traces.filter((t) => /^https?:/.test(t.url));
+  $('learning').hidden = web.length === 0 || web.filter((t) => t.backfilled).length * 2 < web.length;
 
   const looseTraces = result.looseEnds.map((id) => byId.get(id)).filter((t): t is TabTrace => !!t);
   const loose = $('loose');
